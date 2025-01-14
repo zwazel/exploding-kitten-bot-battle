@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
+
 from card import Card, CardType
 from game_handling.game_state import GameState
 

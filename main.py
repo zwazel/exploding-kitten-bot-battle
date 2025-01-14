@@ -1,8 +1,8 @@
 import argparse
 import copy
 
-from card import CardCounts
 from bot_loader import load_bots
+from card import CardCounts
 from game_handling.game import Game
 
 

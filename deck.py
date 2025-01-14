@@ -10,6 +10,7 @@ class Deck:
     Represents the deck of cards in the game.
     0 is the top of the deck, len(deck) - 1 is the bottom of the deck. So drawing a card is deck.pop(0).
     """
+
     def __init__(self, card_counts: CardCounts, amount_players: int):
         self.cards: List[Card] = []
         self.discard_pile: List[Card] = []
