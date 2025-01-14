@@ -1,12 +1,21 @@
-from bot_class import Bot, MoveType
+from bot_template import Bot, MoveType, Move
 
-class ExampleBot(Bot):
+class TimBot(Bot):
     def __init__(self):
         super().__init__("Tim Bot")
 
-    def play(self, game_state: dict) -> dict:
-        # Example strategy: If we have a "Skip", play it, otherwise draw
-        for card in game_state["hand"]:
+    def play(self, game_state: dict) -> Move:
+        """
+        Make a decision for the current turn.
+        "game_state" provides information about the bot's hand, remaining draw cards,
+        last played cards, and the counts of each card type.
+        """
+        hand = game_state["hand"]
+
+        # Example strategy: play "Skip" if available, otherwise draw a card.
+        for card in hand:
             if card == "Skip":
                 return {"move": MoveType.PLAY_CARD, "card": "Skip"}
+
+        # No "Skip" available, draw a card.
         return {"move": MoveType.DRAW_CARD, "card": None}

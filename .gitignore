@@ -1,4 +1,4 @@
 
 .idea/
 
-bots/__pycache__/
+*.pyc
