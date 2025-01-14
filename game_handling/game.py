@@ -56,7 +56,9 @@ class Game:
         if card_played:
             # check if the card is in the bot's hand
             if card_played not in bot.hand:
-                print(f"{bot.name} tried to play a card they don't have, cheater detected? {card_played}. drawing a card", file=sys.stderr)
+                print(
+                    f"{bot.name} tried to play a card they don't have, cheater detected? {card_played}. drawing a card",
+                    file=sys.stderr)
             elif card_played.card_type == CardType.DEFUSE:
                 print(f"{bot.name} tried to play a defuse card, is he dumb? drawing a card", file=sys.stderr)
             else:
@@ -64,6 +66,7 @@ class Game:
                 self.handle_card_play(bot, card_played)
                 if card_played.card_type in [CardType.SKIP]:
                     print(f"{bot.name} played a skip card, they don't draw a card")
+                    self.game_state.was_last_card_exploding_kitten = False
                     return True
                 return False
         else:
@@ -78,11 +81,14 @@ class Game:
                 self.deck.discard(bot.use_defuse())
                 insert_index = bot.handle_exploding_kitten(self.game_state)
                 self.deck.insert_exploding_kitten(insert_index)
-                print(f"{bot.name} survived the exploding kitten and inserted the Exploding Kitten back into the deck at index {insert_index}")
+                print(
+                    f"{bot.name} survived the exploding kitten and inserted the Exploding Kitten back into the deck at index {insert_index}")
                 self.game_state.was_last_card_exploding_kitten = True
             else:
                 bot.alive = False
                 print(f"{bot.name} exploded!")
+                self.game_state.was_last_card_exploding_kitten = False
+                self.game_state.history_of_played_cards.append(drawn_card)
         else:
             bot.add_card(drawn_card)
         return True

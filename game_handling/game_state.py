@@ -15,5 +15,8 @@ class GameState:
     This is also FALSE if the last card drawn was NOT an exploding kitten.
     '''
     was_last_card_exploding_kitten: bool
-    # the history of the cards played
+    '''
+    the history of the cards played
+    exploding kitten cards are also added to this list, if they were NOT returned to the deck (they're out of the game now, so, in a way, "played")
+    '''
     history_of_played_cards: list[Card]
