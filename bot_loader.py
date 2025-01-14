@@ -1,7 +1,10 @@
-import os
 import importlib
+import os
+import random
 from typing import List
+
 from bot import Bot
+
 
 def load_bots(directory: str) -> List[Bot]:
     bots = []
@@ -14,4 +17,6 @@ def load_bots(directory: str) -> List[Bot]:
                 if isinstance(attr, type) and issubclass(attr, Bot) and attr != Bot:
                     bot_instance = attr(module_name)
                     bots.append(bot_instance)
+
+    random.shuffle(bots)
     return bots

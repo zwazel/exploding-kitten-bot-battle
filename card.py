@@ -1,23 +1,23 @@
-from enum import Enum, auto
+from enum import Enum
 from dataclasses import dataclass
 
 class CardType(Enum):
-    EXPLODING_KITTEN = auto()
-    DEFUSE = auto()
-    SKIP = auto()
-    ATTACK = auto()
-    SEE_THE_FUTURE = auto()
-    NORMAL = auto()
-
-@dataclass
-class Card:
-    card_type: CardType
+    EXPLODING_KITTEN = "Exploding Kitten"
+    DEFUSE = "Defuse"
+    SKIP = "Skip"
+    #ATTACK = "Attack"
+    SEE_THE_FUTURE = "See the Future"
+    NORMAL = "Normal"
 
 @dataclass
 class CardCounts:
     EXPLODING_KITTEN: int
     DEFUSE: int
     SKIP: int
-    ATTACK: int
+    #ATTACK: int
     SEE_THE_FUTURE: int
     NORMAL: int
+
+@dataclass
+class Card:
+    card_type: CardType
