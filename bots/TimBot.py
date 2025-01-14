@@ -6,7 +6,7 @@ from card import Card, CardType
 from game_handling.game_state import GameState
 
 
-class SimpleBot(Bot):
+class TimBot(Bot):
     def play(self, state: GameState) -> Optional[Card]:
         if random.random() < 0.5:
             return None

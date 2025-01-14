@@ -25,14 +25,14 @@ def main():
 
     card_counts = CardCounts(
         EXPLODING_KITTEN=amount_of_players - 1,
-        DEFUSE=amount_of_players + 4,
+        DEFUSE=amount_of_players + int(amount_of_players / 2 + 0.5),
         SKIP=amount_of_players + 6,
         SEE_THE_FUTURE=amount_of_players * 2,
         # ATTACK=amount_of_players,
         NORMAL=amount_of_players * 6,
     )
 
-    game = Game(bots, card_counts)
+    game = Game(args.test, bots, card_counts)
     game.setup()
     winner = game.play()
     print(f"{winner.name} wins!")

@@ -8,7 +8,8 @@ from game_handling.game_state import GameState
 
 
 class Game:
-    def __init__(self, bots: List[Bot], card_counts: CardCounts):
+    def __init__(self, testing: bool, bots: List[Bot], card_counts: CardCounts):
+        self.testing = testing
         self.bots = bots
         self.deck = Deck(card_counts, len(bots))
         self.current_bot_index = 0
@@ -18,6 +19,8 @@ class Game:
         self.deck.initialize_bot_hands(self.bots, self.game_state.total_cards_in_deck)
 
     def play(self) -> Bot:
+        print("Game started!")
+        print()
         while sum(1 for bot in self.bots if bot.alive) > 1:
             current_bot = self.bots[self.current_bot_index]
             if current_bot.alive:
@@ -31,13 +34,16 @@ class Game:
             self.game_state.cards_left = self.deck.cards_left()
 
             print(f"End of {current_bot.name}'s turn")
-            print(f"Cards left in {current_bot.name}'s hand: ")
             cards_left_string = ""
             for card in current_bot.hand:
                 cards_left_string += card.card_type.name + ", "
-            print(cards_left_string[:-2])
+            print(f"Cards left in {current_bot.name}'s hand: {cards_left_string[:-2]}")
             print(f"Amount of cards left in deck: {self.game_state.cards_left}")
             print()
+
+            if not self.testing:
+                # await user input for next turn
+                input("Press Enter to continue...")
         return next(bot for bot in self.bots if bot.alive)
 
     def take_turn(self, bot: Bot) -> bool:
@@ -73,6 +79,7 @@ class Game:
                 insert_index = bot.handle_exploding_kitten(self.game_state)
                 self.deck.insert_exploding_kitten(insert_index)
                 print(f"{bot.name} survived the exploding kitten and inserted the Exploding Kitten back into the deck at index {insert_index}")
+                self.game_state.was_last_card_exploding_kitten = True
             else:
                 bot.alive = False
                 print(f"{bot.name} exploded!")
@@ -83,6 +90,7 @@ class Game:
     def handle_card_play(self, bot: Bot, card: Card):
         bot.remove_card(card)
         self.deck.discard(card)
+        self.game_state.history_of_played_cards.append(card)
 
         if card.card_type == CardType.SEE_THE_FUTURE:
             print(f"{bot.name} can see the future!")
