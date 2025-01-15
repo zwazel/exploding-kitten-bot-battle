@@ -38,7 +38,7 @@ def main():
 
     if args.test:
         # Run the game x times
-        x = 100  # You can set this to any number of iterations
+        x = 100 # You can set this to any number of iterations
         win_counts = defaultdict(int)
 
         for _ in range(x):
