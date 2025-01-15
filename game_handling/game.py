@@ -15,6 +15,12 @@ class Game:
         self.current_bot_index = 0
         self.game_state = GameState(card_counts, self.deck.cards_left(), False, [], len(bots))
 
+    def reset(self, card_counts: CardCounts, bots: List[Bot]):
+        self.deck = Deck(card_counts, len(bots))
+        self.current_bot_index = 0
+        self.game_state = GameState(card_counts, self.deck.cards_left(), False, [], len(bots))
+        self.bots = bots
+
     def setup(self):
         self.deck.initialize_bot_hands(self.bots, self.game_state.total_cards_in_deck)
 

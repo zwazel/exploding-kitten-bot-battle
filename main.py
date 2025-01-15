@@ -4,6 +4,7 @@ import copy
 from bot_loader import load_bots
 from card import CardCounts
 from game_handling.game import Game
+from collections import defaultdict
 
 
 def main():
@@ -34,9 +35,26 @@ def main():
     )
 
     game = Game(args.test, bots, card_counts)
-    game.setup()
-    winner = game.play()
-    print(f"{winner.name} wins!")
+
+    if args.test:
+        # Run the game x times
+        x = 100  # You can set this to any number of iterations
+        win_counts = defaultdict(int)
+
+        for _ in range(x):
+            game.reset(copy.deepcopy(card_counts), copy.deepcopy(bots))
+            game.setup()
+            winner = game.play()
+            win_counts[winner.name] += 1
+
+        # Print out the total wins and win percentage of each bot
+        for bot_name, wins in win_counts.items():
+            win_percentage = (wins / x) * 100
+            print(f"{bot_name} wins: {wins} times, win percentage: {win_percentage:.2f}%")
+    else:
+        game.setup()
+        winner = game.play()
+        print(f"{winner.name} wins!")
 
 
 if __name__ == "__main__":
