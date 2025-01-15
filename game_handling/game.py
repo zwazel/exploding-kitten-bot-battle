@@ -13,7 +13,7 @@ class Game:
         self.bots = bots
         self.deck = Deck(card_counts, len(bots))
         self.current_bot_index = 0
-        self.game_state = GameState(card_counts, self.deck.cards_left(), False, [])
+        self.game_state = GameState(card_counts, self.deck.cards_left(), False, [], len(bots))
 
     def setup(self):
         self.deck.initialize_bot_hands(self.bots, self.game_state.total_cards_in_deck)
@@ -89,6 +89,7 @@ class Game:
                 print(f"{bot.name} exploded!")
                 self.game_state.was_last_card_exploding_kitten = False
                 self.game_state.history_of_played_cards.append(drawn_card)
+                self.game_state.alive_bots -= 1
         else:
             bot.add_card(drawn_card)
         return True

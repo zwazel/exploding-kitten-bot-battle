@@ -20,3 +20,5 @@ class GameState:
     exploding kitten cards are also added to this list, if they were NOT returned to the deck (they're out of the game now, so, in a way, "played")
     '''
     history_of_played_cards: list[Card]
+    # how many bots are still alive
+    alive_bots: int
