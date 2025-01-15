@@ -57,35 +57,6 @@ To create your own bot, follow these steps:
      - This method is called when you play a "See the Future" card.
      - You can see the top three cards of the draw pile.
 
-### Example Bot
-
-Here is an example of a very simple (and dumb) bot implementation:
-
-```python
-# bots/TimBot.py
-import random
-from typing import List, Optional
-from bot import Bot
-from card import Card, CardType
-from game_handling.game_state import GameState
-
-
-class TimBot(Bot):
-  def play(self, state: GameState) -> Optional[Card]:
-    if random.random() < 0.5:
-      return None
-    playable_cards = [card for card in self.hand if card.card_type != CardType.DEFUSE]
-    if playable_cards:
-      return random.choice(playable_cards)
-    return None
-
-  def handle_exploding_kitten(self, state: GameState) -> int:
-    return random.randint(0, state.cards_left_to_draw)
-
-  def see_the_future(self, state: GameState, top_three: List[Card]):
-    pass
-```
-
 ## How to Run the Game
 
 Run the game by starting the script without any flags. This will load all the bots in the `bots` folder and start the game. 
