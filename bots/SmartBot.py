@@ -4,6 +4,11 @@ from bot import Bot
 from card import Card, CardType
 from game_handling.game_state import GameState
 
+"""
+Design flaw: 
+- he correctly remembers the next 3 cards, and he then assumes that all 3 next cards that he draws are these 3.
+- but other bots draw them too. so they aren't even in there anymore. stupid.
+"""
 class ProbabilityOfNextExploding(Enum):
     DEFINITELY = 1.0
     PROBABLY = 0.5
