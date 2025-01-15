@@ -71,5 +71,3 @@ class SmartBot(Bot):
                 self.probability_of_next_exploding.append(ProbabilityOfNextExploding.DEFINITELY)
             else:
                 self.probability_of_next_exploding.append(ProbabilityOfNextExploding.DEFINITELY_NOT)
-        print(f"I can see the future! The top three cards are {top_three[0].card_type.name}, {top_three[1].card_type.name}, {top_three[2].card_type.name}")
-        print(f"I have this many probabilities of drawing an Exploding Kitten: {len(self.probability_of_next_exploding)}")
