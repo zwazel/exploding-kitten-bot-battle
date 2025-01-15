@@ -16,7 +16,7 @@ class TimBot(Bot):
         return None
 
     def handle_exploding_kitten(self, state: GameState) -> int:
-        return random.randint(0, state.cards_left)
+        return random.randint(0, state.cards_left_to_draw)
 
     def see_the_future(self, state: GameState, top_three: List[Card]):
         pass

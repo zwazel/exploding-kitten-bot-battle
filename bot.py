@@ -13,14 +13,27 @@ class Bot(ABC):
 
     @abstractmethod
     def play(self, state: GameState) -> Optional[Card]:
+        """
+        - This method is called when it's your turn to play
+        - You need to return the card you want to play, or None if you want to end your turn without playing anything
+        """
         pass
 
     @abstractmethod
     def handle_exploding_kitten(self, state: GameState) -> int:
+        """
+        - This method is called when you draw an exploding kitten card and had a defuse card in your hand
+        - As you're still alive, you need to put the exploding kitten card back into your hand
+        - You can choose where to put it back, so you need to return the index of the draw pile in which you want to put the card in
+        """
         pass
 
     @abstractmethod
     def see_the_future(self, state: GameState, top_three: List[Card]):
+        """
+        - This method is called when you play a "See the future" card
+        - You can see the top three cards of the draw pile
+        """
         pass
 
     def add_card(self, card: Card):
