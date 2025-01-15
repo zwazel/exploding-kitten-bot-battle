@@ -1,58 +1,110 @@
 # exploding-kitten-bot-battle
 
+## Project Overview
+
+This project is a simplified version of the popular card game "Exploding Kittens". The goal is to create a bot that can play the game autonomously. Each bot will compete against bots created by other students. The game logic and rules are already implemented, and your task is to write the logic for your bot.
+
+## Game Rules
+
+- Each player (bot) starts with a hand of cards.
+- Players take turns drawing cards from the deck.
+- If a player draws an Exploding Kitten card, they must use a Defuse card to avoid exploding. If they cannot defuse, they are out of the game.
+- Players can play various action cards to manipulate the game (e.g., Skip, See the Future).
+- The last player remaining wins the game.
+
 ## Code Overview
 
 ### Bots
-- Each bot has its own "Hand" field, which is a list of cards that the bot has in its hand.
-- Each bot gets the current GameState in each of its methods, so it can make decisions based on the current state of the game.
-- The bot gets a name assigned. The name is just the File Name minus the ".py" extension.
+
+- Each bot has its own `hand` field, which is a list of cards that the bot has in its hand.
+- Each bot gets the current `GameState` in each of its methods, so it can make decisions based on the current state of the game.
+- The bot gets a name assigned. The name is just the file name minus the `.py` extension.
 
 ### GameState
-The GameState class contains all the information about the current state of the game that is accessible to the bots.
-It's useful for the bots to make decisions based on the current state of the game.
-- total_cards_in_deck: CardCounts
-  - the amount of cards in the deck at the start of the game
-  - With this you can see all the Types of Cards and how many of them exist in the start of the deck
-  - For example, This is useful for calculating the probability of drawing a certain card
-- cards_left_to_draw: int
-  - the amount of cards left in the draw pile
-  - For example, this is useful for calculating the probability of drawing a certain card
-- was_last_card_exploding_kitten: bool
-  - This is TRUE if the last card drawn was an exploding kitten and was RETURNED to the deck by the last player (he had a defuse card and didn't explode). 
-  - This is FALSE if the last card drawn was an exploding kitten and was NOT RETURNED to the deck by the last player (he didn't have a defuse card and exploded). 
-  - This is also FALSE if the last card drawn was NOT an exploding kitten, but anything else.
-- history_of_played_cards: list[Card]
-  - the history of the cards played
-  - exploding kitten cards are also added to this list, if they were NOT returned to the deck / a player exploded and couldn't defuse it (they're out of the game now, so, in a way, "played")
-- alive_bots: int
-  - the amount of bots that are still alive
 
-## Creating your own Bot
-Have a look at the "TimBot.py" file to see an example of a very simple (and dumb) bot implementation.
+The `GameState` class contains all the information about the current state of the game that is accessible to the bots. It's useful for the bots to make decisions based on the current state of the game.
 
-You need to create a class that inherits from the Bot class and implement the following methods:
-- play(self, state: GameState) -> Optional[Card]
-  - This method is called when it's your turn to play
-  - You need to return the card you want to play, or None if you want to end your turn without playing anything
-- handle_exploding_kitten(self, state: GameState) -> int
-  - This method is called when you draw an exploding kitten card and had a defuse card in your hand
-  - As you're still alive, you need to put the exploding kitten card back into your hand
-  - You can choose where to put it back, so you need to return the index of the draw pile in which you want to put the card in
-- see_the_future(self, state: GameState, top_three: List[Card])
-  - This method is called when you play a "See the future" card
-  - You can see the top three cards of the draw pile
+- `total_cards_in_deck`: `CardCounts`
+  - The amount of cards in the deck at the start of the game.
+  - This is useful for calculating the probability of drawing a certain card.
+- `cards_left_to_draw`: `int`
+  - The amount of cards left in the draw pile.
+  - This is useful for calculating the probability of drawing a certain card.
+- `was_last_card_exploding_kitten`: `bool`
+  - This is `True` if the last card drawn was an Exploding Kitten and was returned to the deck by the last player (they had a Defuse card and didn't explode).
+  - This is `False` if the last card drawn was an Exploding Kitten and was not returned to the deck by the last player (they didn't have a Defuse card and exploded).
+  - This is also `False` if the last card drawn was not an Exploding Kitten.
+- `history_of_played_cards`: `list[Card]`
+  - The history of the cards played.
+  - Exploding Kitten cards are also added to this list if they were not returned to the deck (they're out of the game now, so, in a way, "played").
+- `alive_bots`: `int`
+  - The number of bots that are still alive.
 
+## Creating Your Own Bot
 
-## How to run the game
-Run the game by starting the script without any flags.
-This will load all the bots in the "bots" folder and start the game.
-After each turn, you need to press enter to continue. This way you can see what each bot is doing at each turn.
+To create your own bot, follow these steps:
 
+1. **Create a new Python file** in the `bots` directory. Name the file after your bot (e.g., `MyBot.py`).
+
+2. **Inherit from the `Bot` class** and implement the required methods:
+   - `play(self, state: GameState) -> Optional[Card]`
+     - This method is called when it's your turn to play.
+     - You need to return the card you want to play, or `None` if you want to end your turn without playing anything.
+   - `handle_exploding_kitten(self, state: GameState) -> int`
+     - This method is called when you draw an Exploding Kitten card and have a Defuse card in your hand.
+     - You need to return the index of the draw pile where you want to put the Exploding Kitten card back.
+   - `see_the_future(self, state: GameState, top_three: List[Card])`
+     - This method is called when you play a "See the Future" card.
+     - You can see the top three cards of the draw pile.
+
+### Example Bot
+
+Here is an example of a very simple (and dumb) bot implementation:
+
+```python
+# bots/TimBot.py
+import random
+from typing import List, Optional
+from bot import Bot
+from card import Card, CardType
+from game_handling.game_state import GameState
+
+class TimBot(Bot):
+    def play(self, state: GameState) -> Optional[Card]:
+        if random.random() < 0.5:
+            return None
+        playable_cards = [card for card in self.hand if card.card_type != CardType.DEFUSE]
+        if playable_cards:
+            return random.choice(playable_cards)
+        return None
+
+    def handle_exploding_kitten(self, state: GameState) -> int:
+        return random.randint(0, state.cards_left_to_draw)
+
+    def see_the_future(self, state: GameState, top_three: List[Card]):
+        pass
+```
+
+## How to Run the Game
+
+Run the game by starting the script without any flags. This will load all the bots in the `bots` folder and start the game. After each turn, you need to press enter to continue. This way you can see what each bot is doing at each turn.
+
+```sh
 python .\main.py
- 
-## How to run the game in test mode
-Test the game by starting the script with the --test flag.
-This will duplicate the first bot loaded. If you want your bot to be playing against himself, make sure that it's the only bot loaded.
+```
 
+## How to Run the Game in Test Mode
+
+Test the game by starting the script with the `--test` flag. This will duplicate the first bot loaded. If you want your bot to be playing against itself, make sure that it's the only bot loaded.
+
+```sh
 python .\main.py --test
+```
 
+## Rules for Students
+
+- **Do not modify any code** other than your own bot file.
+- Your goal is to write a bot that can play the game and compete against bots created by other students.
+- Make sure your bot follows the game rules and implements the required methods correctly.
+
+Good luck and have fun coding your bot!
