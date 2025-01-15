@@ -5,6 +5,7 @@
 ### Bots
 - Each bot has its own "Hand" field, which is a list of cards that the bot has in its hand.
 - Each bot gets the current GameState in each of its methods, so it can make decisions based on the current state of the game.
+- The bot gets a name assigned. The name is just the File Name minus the ".py" extension.
 
 ### GameState
 The GameState class contains all the information about the current state of the game that is accessible to the bots.
