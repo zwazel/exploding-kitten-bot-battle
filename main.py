@@ -48,7 +48,8 @@ def main():
             win_counts[winner.name] += 1
 
         # Print out the total wins and win percentage of each bot
-        for bot_name, wins in win_counts.items():
+        sorted_win_counts = sorted(win_counts.items(), key=lambda item: (item[1] / x) * 100, reverse=True)
+        for bot_name, wins in sorted_win_counts:
             win_percentage = (wins / x) * 100
             print(f"{bot_name} wins: {wins} times, win percentage: {win_percentage:.2f}%")
     else:
