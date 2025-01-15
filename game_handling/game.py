@@ -39,17 +39,20 @@ class Game:
             self.current_bot_index = (self.current_bot_index + 1) % len(self.bots)
             self.game_state.cards_left_to_draw = self.deck.cards_left()
 
-            print(f"End of {current_bot.name}'s turn")
-            cards_left_string = ""
-            for card in current_bot.hand:
-                cards_left_string += card.card_type.name + ", "
-            print(f"Cards left in {current_bot.name}'s hand: {cards_left_string[:-2]}")
-            print(f"Amount of cards left in deck: {self.game_state.cards_left_to_draw}")
-            print()
+            if current_bot.alive:
+                print(f"End of {current_bot.name}'s turn")
+                cards_left_string = ""
+                for card in current_bot.hand:
+                    cards_left_string += card.card_type.name + ", "
+                print(f"Cards left in {current_bot.name}'s hand: {cards_left_string[:-2]}")
+                print(f"Amount of cards left in deck: {self.game_state.cards_left_to_draw}")
+                print()
 
-            if not self.testing:
-                # await user input for next turn
-                input("Press Enter to continue...")
+                if not self.testing:
+                    # await user input for next turn
+                    input("Press Enter to continue...")
+            else:
+                print()
         return next(bot for bot in self.bots if bot.alive)
 
     def take_turn(self, bot: Bot) -> bool:
