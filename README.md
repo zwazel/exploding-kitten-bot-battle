@@ -88,7 +88,8 @@ class TimBot(Bot):
 
 ## How to Run the Game
 
-Run the game by starting the script without any flags. This will load all the bots in the `bots` folder and start the game. After each turn, you need to press enter to continue. This way you can see what each bot is doing at each turn.
+Run the game by starting the script without any flags. This will load all the bots in the `bots` folder and start the game. 
+After each turn, you need to press enter to continue. This way you can see what each bot is doing at each turn.
 
 ```sh
 python .\main.py
@@ -96,7 +97,9 @@ python .\main.py
 
 ## How to Run the Game in Test Mode
 
-Test the game by starting the script with the `--test` flag. This will duplicate the first bot loaded. If you want your bot to be playing against itself, make sure that it's the only bot loaded.
+Test the game by starting the script with the `--test` flag. This will duplicate the first bot loaded, if only 1 bot is loaded.
+If you want your bot to be playing against itself, make sure that it's the only bot loaded.
+Otherwise, if at least 2 bots are loaded, they are played against each other. The game will run automatically without any user input.
 
 ```sh
 python .\main.py --test
