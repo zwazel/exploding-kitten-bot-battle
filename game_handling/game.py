@@ -69,6 +69,7 @@ class Game:
                 print(
                     f"{bot.name} tried to play a card they don't have, cheater detected? {card_played}. drawing a card",
                     file=sys.stderr)
+            # check if the card is a defuse card (defuse cards can't be played)
             elif card_played.card_type == CardType.DEFUSE:
                 print(f"{bot.name} tried to play a defuse card, is he dumb? drawing a card", file=sys.stderr)
             else:
