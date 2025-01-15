@@ -1,8 +1,5 @@
 # exploding-kitten-bot-battle
 
-Test the game by starting the script with the --test flag.
-This will duplicate the first bot loaded. If you want your bot to be playing against himself, make sure that it's the only bot loaded.
-
 ## Code Overview
 
 ### Bots
@@ -10,6 +7,8 @@ This will duplicate the first bot loaded. If you want your bot to be playing aga
 - Each bot gets the current GameState in each of its methods, so it can make decisions based on the current state of the game.
 
 ### GameState
+The GameState class contains all the information about the current state of the game that is accessible to the bots.
+It's useful for the bots to make decisions based on the current state of the game.
 - total_cards_in_deck: CardCounts
   - the amount of cards in the deck at the start of the game
   - With this you can see all the Types of Cards and how many of them exist in the start of the deck
@@ -28,7 +27,7 @@ This will duplicate the first bot loaded. If you want your bot to be playing aga
   - the amount of bots that are still alive
 
 ## Creating your own Bot
-Have a look at the "TimBot.py" file to see an example of a bot implementation.
+Have a look at the "TimBot.py" file to see an example of a very simple (and dumb) bot implementation.
 
 You need to create a class that inherits from the Bot class and implement the following methods:
 - play(self, state: GameState) -> Optional[Card]
@@ -44,8 +43,15 @@ You need to create a class that inherits from the Bot class and implement the fo
 
 
 ## How to run the game
+Run the game by starting the script without any flags.
+This will load all the bots in the "bots" folder and start the game.
+After each turn, you need to press enter to continue. This way you can see what each bot is doing at each turn.
+
 python .\main.py
  
 ## How to run the game in test mode
+Test the game by starting the script with the --test flag.
+This will duplicate the first bot loaded. If you want your bot to be playing against himself, make sure that it's the only bot loaded.
+
 python .\main.py --test
 
