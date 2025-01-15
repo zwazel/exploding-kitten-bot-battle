@@ -46,6 +46,7 @@ class Game:
                     cards_left_string += card.card_type.name + ", "
                 print(f"Cards left in {current_bot.name}'s hand: {cards_left_string[:-2]}")
                 print(f"Amount of cards left in deck: {self.game_state.cards_left_to_draw}")
+                print(f"Amount of alive bots: {self.game_state.alive_bots}")
                 print()
 
                 if not self.testing:
