@@ -65,7 +65,7 @@ class Jarvis(Bot):
         """
         Assess if the current situation is dangerous based on game state.
         """
-        return state.was_last_card_exploding_kitten or state.cards_left <= max(3, state.alive_bots)
+        return state.was_last_card_exploding_kitten or state.cards_left_to_draw <= max(3, state.alive_bots)
 
     def _play_skip_card(self) -> Optional[Card]:
         """
@@ -102,9 +102,9 @@ class Jarvis(Bot):
         """
         Calculate the optimal position for the Exploding Kitten based on the deck and players.
         """
-        if state.cards_left > state.alive_bots:
-            return state.cards_left // state.alive_bots
-        return random.randint(0, state.cards_left - 1)
+        if state.cards_left_to_draw > state.alive_bots:
+            return state.cards_left_to_draw // state.alive_bots
+        return random.randint(0, state.cards_left_to_draw - 1)
 
     def place_exploding_kitten(self, state: GameState) -> int:
         """
@@ -116,7 +116,7 @@ class Jarvis(Bot):
         # to ensure other players are more likely to draw it.
 
         # If there are many cards, place it closer to the end, avoiding positions too near to the bot
-        position = state.cards_left - (state.alive_bots - 1)  # Place it just out of reach of the bot
+        position = state.cards_left_to_draw - (state.alive_bots - 1)  # Place it just out of reach of the bot
         print(f"Placing Exploding Kitten in a position that maximizes risk for other players: {position}")
         return position
 

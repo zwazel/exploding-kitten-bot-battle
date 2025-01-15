@@ -15,12 +15,12 @@ class Matheos(Bot):
         See_cards = [card for card in self.hand if card.card_type == CardType.SEE_THE_FUTURE]
         Skip_cards = [card for card in self.hand if card.card_type == CardType.SKIP]
         def_cards=[card for card in self.hand if card.card_type == CardType.DEFUSE]
-        curTop=(self.cards)-(state.cards_left)
+        curTop=(self.cards)-(state.cards_left_to_draw)
         if curTop==1 and Skip_cards and self.topC[1].card_type==CardType.EXPLODING_KITTEN:
             return random.choice(Skip_cards)
         if curTop==2 and Skip_cards and self.topC[2].card_type==CardType.EXPLODING_KITTEN:
             return random.choice(Skip_cards)
-        riskfactor=(state.alive_bots-1)/(state.cards_left)
+        riskfactor=(state.alive_bots-1)/(state.cards_left_to_draw)
         if riskfactor<0.2:
             print("low risk")
             return None
@@ -45,7 +45,7 @@ class Matheos(Bot):
 
     def see_the_future(self, state: GameState, top_three: List[Card]):
         self.topC=top_three
-        self.cards = state.cards_left
+        self.cards = state.cards_left_to_draw
         self.used=True
         if top_three[0] == CardType.EXPLODING_KITTEN:
             self.risk=True

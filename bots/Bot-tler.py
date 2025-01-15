@@ -19,7 +19,7 @@ class Bottler(Bot):
     def play(self, state: GameState) -> Optional[Card]:
         # Update exploding kitten probability based on game state
         exploding_kittens_left = state.alive_bots - 1
-        probability_of_exploding_next = exploding_kittens_left / state.cards_left if state.cards_left > 0 else 0.0
+        probability_of_exploding_next = exploding_kittens_left / state.cards_left_to_draw if state.cards_left_to_draw > 0 else 0.0
 
         # Adjust probability based on future insights
         if self.future_probabilities:
@@ -62,7 +62,7 @@ class Bottler(Bot):
 
     def handle_exploding_kitten(self, state: GameState) -> int:
         # Strategically place Exploding Kitten near the bottom, but with some randomness
-        position = max(1, state.cards_left - 3)  # Ensure it's not always the same predictable spot
+        position = max(1, state.cards_left_to_draw - 3)  # Ensure it's not always the same predictable spot
         print(f"[{self.name}] Placing Exploding Kitten at position {position}.")
         return position
 

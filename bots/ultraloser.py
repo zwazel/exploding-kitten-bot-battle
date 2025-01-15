@@ -41,7 +41,7 @@ class ultraloser(Bot):
                 known_probability_string += f"{probability.name}, "
         print(f"My known probability of drawing an Exploding Kitten is {known_probability_string}")
         exploding_kittens_left = state.alive_bots - 1
-        probability_of_exploding_next = exploding_kittens_left / state.cards_left
+        probability_of_exploding_next = exploding_kittens_left / state.cards_left_to_draw
         if len(self.probability_of_next_exploding) > 0:
             if self.probability_of_next_exploding[0] == ProbabilityOfNextExploding.DEFINITELY:
                 probability_of_exploding_next = ProbabilityOfNextExploding.DEFINITELY.value
@@ -89,7 +89,7 @@ class ultraloser(Bot):
             safe_positions = [i for i, card in enumerate(self.top_three) if card.card_type != CardType.EXPLODING_KITTEN]
             if safe_positions:
                 return safe_positions[0]
-        return max(0, state.cards_left - 2)
+        return max(0, state.cards_left_to_draw - 2)
 
     def see_the_future(self, state: GameState, top_three: List[Card]):
         # Analyze SEE_THE_FUTURE results and adjust strategy
@@ -107,7 +107,7 @@ class ultraloser(Bot):
         # Assess if the current situation is dangerous
         if probability_of_exploding_next > 0.2 or state.was_last_card_exploding_kitten:
             return True
-        return state.cards_left <= max(3, state.alive_bots)
+        return state.cards_left_to_draw <= max(3, state.alive_bots)
 
     def get_cards_by_type(self, card_type: CardType) -> List[Card]:
         # Helper method to filter cards by type

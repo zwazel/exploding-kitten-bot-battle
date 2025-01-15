@@ -44,7 +44,7 @@ class Stalinator(Bot):
 
     def handle_exploding_kitten(self, state: GameState) -> int:
         self.risk = 0.7
-        return random.randint(0, state.cards_left)
+        return random.randint(0, state.cards_left_to_draw)
 
     def see_the_future(self, state: GameState, top_three: List[Card]):
         # Analyze the future cards
