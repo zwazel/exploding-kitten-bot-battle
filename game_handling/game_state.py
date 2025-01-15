@@ -8,7 +8,7 @@ class GameState:
     # the amount of cards in the deck at the start of the game
     total_cards_in_deck: CardCounts
     # the amount of cards left in the draw deck
-    cards_left: int
+    cards_left_to_draw: int
     '''
     This is TRUE if the last card drawn was an exploding kitten and was RETURNED to the deck by the last player (he had a defuse card and didn't explode).
     This is FALSE if the last card drawn was an exploding kitten and was NOT RETURNED to the deck by the last player (he didn't have a defuse card and exploded).

@@ -31,14 +31,14 @@ class Game:
                 print(f"{current_bot.name} is dead, skipping turn")
 
             self.current_bot_index = (self.current_bot_index + 1) % len(self.bots)
-            self.game_state.cards_left = self.deck.cards_left()
+            self.game_state.cards_left_to_draw = self.deck.cards_left()
 
             print(f"End of {current_bot.name}'s turn")
             cards_left_string = ""
             for card in current_bot.hand:
                 cards_left_string += card.card_type.name + ", "
             print(f"Cards left in {current_bot.name}'s hand: {cards_left_string[:-2]}")
-            print(f"Amount of cards left in deck: {self.game_state.cards_left}")
+            print(f"Amount of cards left in deck: {self.game_state.cards_left_to_draw}")
             print()
 
             if not self.testing:
