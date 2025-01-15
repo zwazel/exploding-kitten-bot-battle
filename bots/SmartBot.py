@@ -1,5 +1,4 @@
-﻿# bots/SmartBot.py
-from enum import Enum
+﻿from enum import Enum
 from typing import List, Optional
 from bot import Bot
 from card import Card, CardType
