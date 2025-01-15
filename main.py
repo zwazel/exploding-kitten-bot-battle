@@ -16,10 +16,11 @@ def main():
 
     if args.test:
         # duplicate the first bot in the list x times so that we have multiple bots (deepcopy)
-        bots = [copy.deepcopy(bots[0]) for _ in range(4)]
+        if len(bots) == 1:
+            bots = [copy.deepcopy(bots[0]) for _ in range(4)]
 
-        for i in range(len(bots)):
-            bots[i].name = f"{bots[i].name}{i + 1}"
+            for i in range(len(bots)):
+                bots[i].name = f"{bots[i].name}{i + 1}"
 
     amount_of_players = len(bots)
 
