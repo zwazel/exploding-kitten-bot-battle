@@ -12,6 +12,7 @@ class Game:
     """
     The Game class is responsible for handling the game logic
     """
+
     def __init__(self, testing: bool, bots: List[Bot], card_counts: CardCounts):
         """
         Constructor for the Game class
@@ -19,11 +20,12 @@ class Game:
         :param bots: List of Bot objects
         :param card_counts: CardCounts object
         """
-        self.testing = testing
-        self.bots = bots
-        self.deck = Deck(card_counts, len(bots))
-        self.current_bot_index = 0
-        self.game_state = GameState(card_counts, self.deck.cards_left(), False, [], len(bots))
+        self._testing = testing
+        self._bots = bots
+        self._deck = Deck(card_counts, len(bots))
+        self._current_bot_index = 0
+        self._game_state = GameState(card_counts, self.deck.cards_left(), False, [], len(bots))
+        self._ranking = []
 
     def reset(self, card_counts: CardCounts, bots: List[Bot]) -> None:
         """
@@ -36,6 +38,7 @@ class Game:
         self.current_bot_index = 0
         self.game_state = GameState(card_counts, self.deck.cards_left(), False, [], len(bots))
         self.bots = bots
+        self.ranking = []
 
     def setup(self) -> None:
         """
@@ -126,6 +129,7 @@ class Game:
                 self.game_state.was_last_card_exploding_kitten = False
                 self.game_state.history_of_played_cards.append(drawn_card)
                 self.game_state.alive_bots -= 1
+                self.ranking.append(bot)
         else:
             bot.add_card(drawn_card)
         return True
@@ -151,3 +155,63 @@ class Game:
             print(f'Top three cards: {top_three_string[:-2]}')
 
             bot.see_the_future(self.game_state, top_three)
+
+    @property
+    def testing(self):
+        """ returns the testing """
+        return self._testing
+
+    @testing.setter
+    def testing(self, value):
+        """ sets the testing """
+        self._testing = value
+
+    @property
+    def bots(self):
+        """ returns the bots """
+        return self._bots
+
+    @bots.setter
+    def bots(self, value):
+        """ sets the bots """
+        self._bots = value
+
+    @property
+    def deck(self):
+        """ returns the deck """
+        return self._deck
+
+    @deck.setter
+    def deck(self, value):
+        """ sets the deck """
+        self._deck = value
+
+    @property
+    def current_bot_index(self):
+        """ returns the current_bot_index """
+        return self._current_bot_index
+
+    @current_bot_index.setter
+    def current_bot_index(self, value):
+        """ sets the current_bot_index """
+        self._current_bot_index = value
+
+    @property
+    def game_state(self):
+        """ returns the game_state """
+        return self._game_state
+
+    @game_state.setter
+    def game_state(self, value):
+        """ sets the game_state """
+        self._game_state = value
+
+    @property
+    def ranking(self):
+        """ returns the ranking """
+        return self._ranking
+
+    @ranking.setter
+    def ranking(self, value):
+        """ sets the ranking """
+        self._ranking = value

@@ -1,11 +1,11 @@
 """ Main file for running the Exploding Kittens game """
 import argparse
 import copy
+from collections import defaultdict
 
 from bot_loader import load_bots
 from card import CardCounts
 from game_handling.game import Game
-from collections import defaultdict
 
 
 def main() -> None:
@@ -45,22 +45,36 @@ def main() -> None:
         # Run the game x times
         x = 100  # You can set this to any number of iterations
         win_counts = defaultdict(int)
+        point_counts = defaultdict(int)
 
         for _ in range(x):
             game.reset(copy.deepcopy(card_counts), copy.deepcopy(bots))
             game.setup()
             winner = game.play()
+
+            for i in range(len(game.ranking)):
+                # Each bot gets points based on their standing
+                point_counts[game.ranking[i].name] += i
             win_counts[winner.name] += 1
+            point_counts[winner.name] += len(game.ranking)
 
         # Print out the total wins and win percentage of each bot
-        sorted_win_counts = sorted(win_counts.items(), key=lambda item: (item[1] / x) * 100, reverse=True)
+        sorted_win_counts = sorted(win_counts.items(), key=lambda item: (item[1] / x) * 100,
+                                   reverse=True)
         for bot_name, wins in sorted_win_counts:
             win_percentage = (wins / x) * 100
-            print(f'{bot_name} wins: {wins} times, win percentage: {win_percentage:.2f}%')
+            print(f'{bot_name:30} wins: {wins} times, win percentage: {win_percentage:.2f}%')
+
+        # Print out the total points of each bot
+        print('\nTotal points for each bot:')
+        sorted_points_counts = sorted(point_counts.items(), key=lambda item: item[1], reverse=True)
+        for bot_name, points in sorted_points_counts:
+            print(f'{bot_name:30} {points} points')
     else:
         game.setup()
         winner = game.play()
         print(f'{winner.name} wins!')
+        print(f'{game.ranking}')
 
 
 if __name__ == '__main__':
