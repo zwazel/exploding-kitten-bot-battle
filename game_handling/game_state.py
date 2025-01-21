@@ -1,3 +1,4 @@
+""" This file contains the GameState class, which is used to store the current state of the game. """
 from dataclasses import dataclass
 
 from card import CardCounts, Card
@@ -5,6 +6,9 @@ from card import CardCounts, Card
 
 @dataclass
 class GameState:
+    """
+    This class is used to store the current state of the game.
+    """
     # the amount of cards in the deck at the start of the game
     total_cards_in_deck: CardCounts
     # the amount of cards left in the draw deck

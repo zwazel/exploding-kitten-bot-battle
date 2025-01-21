@@ -1,3 +1,4 @@
+""" Main file for running the Exploding Kittens game """
 import argparse
 import copy
 
@@ -7,13 +8,17 @@ from game_handling.game import Game
 from collections import defaultdict
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Exploding Kittens Lite")
-    parser.add_argument("--test", action="store_true", help="Run in test mode")
+def main() -> None:
+    """
+    Main function
+    :return: None
+    """
+    parser = argparse.ArgumentParser(description='Exploding Kittens Lite')
+    parser.add_argument('--test', action='store_true', help='Run in test mode')
 
     args = parser.parse_args()
 
-    bots = load_bots("bots")
+    bots = load_bots('bots')
 
     if args.test:
         # duplicate the first bot in the list x times so that we have multiple bots (deepcopy)
@@ -21,7 +26,7 @@ def main():
             bots = [copy.deepcopy(bots[0]) for _ in range(4)]
 
             for i in range(len(bots)):
-                bots[i].name = f"{bots[i].name}{i + 1}"
+                bots[i].name = f'{bots[i].name}{i + 1}'
 
     amount_of_players = len(bots)
 
@@ -51,12 +56,12 @@ def main():
         sorted_win_counts = sorted(win_counts.items(), key=lambda item: (item[1] / x) * 100, reverse=True)
         for bot_name, wins in sorted_win_counts:
             win_percentage = (wins / x) * 100
-            print(f"{bot_name} wins: {wins} times, win percentage: {win_percentage:.2f}%")
+            print(f'{bot_name} wins: {wins} times, win percentage: {win_percentage:.2f}%')
     else:
         game.setup()
         winner = game.play()
-        print(f"{winner.name} wins!")
+        print(f'{winner.name} wins!')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
