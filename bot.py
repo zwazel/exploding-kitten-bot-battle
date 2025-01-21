@@ -35,7 +35,8 @@ class Bot(ABC):
         """
         This method is called when you draw an exploding kitten card and had a defuse card in your hand
         As you're still alive, you need to put the exploding kitten card back into your hand
-        You can choose where to put it back, so you need to return the index of the draw pile in which you want to put the card in
+        You can choose where to put it back, so you need to return the index of the draw pile
+        where you want to place the card
         :param state: GameState object
         :return: int index of the draw pile
         """
