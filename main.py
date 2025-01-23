@@ -51,7 +51,7 @@ def main() -> None:
         for _ in range(x):
             game.reset(copy.deepcopy(card_counts), copy.deepcopy(bots))
             game.setup()
-            winner = game.play()
+            winner = game.play_game()
 
             for i in range(len(game.ranking)):
                 # Each bot gets points based on their standing
