@@ -39,6 +39,12 @@ class Deck:
                 # 1 Defuse card is given to each player at the start of the game
                 count -= amount_players
             self.cards.extend([Card(card_type) for _ in range(count)])
+        self.shuffle()
+
+    def shuffle(self):
+        """
+        Shuffles the deck.
+        """
         random.shuffle(self.cards)
 
     def initialize_bot_hands(self, bots: List[Bot], card_counts: CardCounts) -> None:

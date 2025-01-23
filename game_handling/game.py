@@ -96,7 +96,7 @@ class Game:
                 print(
                     f'{bot.name} tried to play a card they don\'t have, cheater detected? {card_played}. drawing a card',
                     file=sys.stderr)
-            # check if the card is a defuse card (defuse cards can\'t be played)
+            # check if the card is a defuse card (defuse cards can't be played)
             elif card_played.card_type == CardType.DEFUSE:
                 print(f'{bot.name} tried to play a defuse card, is he dumb? drawing a card',
                       file=sys.stderr)
@@ -107,6 +107,10 @@ class Game:
                     print(f'{bot.name} played a skip card, they don\'t draw a card')
                     self.game_state.was_last_card_exploding_kitten = False
                     return True
+                if card_played.card_type in [CardType.SHUFFLE]:
+                    print(f'{bot.name} played a shuffle card, shuffling the deck')
+                    self.deck.shuffle()
+                    self.game_state.was_last_card_exploding_kitten = False
                 return False
         else:
             print(f'{bot.name} didn\'t play a card, drawing a card')

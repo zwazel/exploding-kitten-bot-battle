@@ -35,8 +35,9 @@ def main() -> None:
         DEFUSE=amount_of_players + int(amount_of_players / 2 + 0.5),
         SKIP=amount_of_players + 6,
         SEE_THE_FUTURE=amount_of_players * 2,
-        # ATTACK=amount_of_players,
+        ATTACK=amount_of_players,
         NORMAL=amount_of_players * 6,
+        SHUFFLE=4
     )
 
     game = Game(args.test, bots, card_counts)
