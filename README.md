@@ -25,10 +25,10 @@ This project is a simplified version of the popular card game "Exploding Kittens
 The `GameState` class contains all the information about the current state of the game that is accessible to the bots. It's useful for the bots to make decisions based on the current state of the game.
 
 - `total_cards_in_deck`: `CardCounts`
-  - The amount of cards in the deck at the start of the game.
+  - The number of cards in the deck at the start of the game.
   - This is useful for calculating the probability of drawing a certain card.
 - `cards_left_to_draw`: `int`
-  - The amount of cards left in the draw pile.
+  - The number of cards left in the draw pile.
   - This is useful for calculating the probability of drawing a certain card.
 - `was_last_card_exploding_kitten`: `bool`
   - This is `True` if the last card drawn was an Exploding Kitten and was returned to the deck by the last player (they had a Defuse card and didn't explode).

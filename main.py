@@ -1,19 +1,24 @@
+""" Main file for running the Exploding Kittens game """
 import argparse
 import copy
+from collections import defaultdict
 
 from bot_loader import load_bots
 from card import CardCounts
 from game_handling.game import Game
-from collections import defaultdict
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Exploding Kittens Lite")
-    parser.add_argument("--test", action="store_true", help="Run in test mode")
+def main() -> None:
+    """
+    Main function
+    :return: None
+    """
+    parser = argparse.ArgumentParser(description='Exploding Kittens Lite')
+    parser.add_argument('--test', action='store_true', help='Run in test mode')
 
     args = parser.parse_args()
 
-    bots = load_bots("bots")
+    bots = load_bots('bots')
 
     if args.test:
         # duplicate the first bot in the list x times so that we have multiple bots (deepcopy)
@@ -21,7 +26,7 @@ def main():
             bots = [copy.deepcopy(bots[0]) for _ in range(4)]
 
             for i in range(len(bots)):
-                bots[i].name = f"{bots[i].name}{i + 1}"
+                bots[i].name = f'{bots[i].name}{i + 1}'
 
     amount_of_players = len(bots)
 
@@ -30,8 +35,9 @@ def main():
         DEFUSE=amount_of_players + int(amount_of_players / 2 + 0.5),
         SKIP=amount_of_players + 6,
         SEE_THE_FUTURE=amount_of_players * 2,
-        # ATTACK=amount_of_players,
+        ATTACK=amount_of_players,
         NORMAL=amount_of_players * 6,
+        SHUFFLE=4
     )
 
     game = Game(args.test, bots, card_counts)
@@ -40,23 +46,37 @@ def main():
         # Run the game x times
         x = 100  # You can set this to any number of iterations
         win_counts = defaultdict(int)
+        point_counts = defaultdict(int)
 
         for _ in range(x):
             game.reset(copy.deepcopy(card_counts), copy.deepcopy(bots))
             game.setup()
-            winner = game.play()
+            winner = game.play_game()
+
+            for i in range(len(game.dead_bots)):
+                # Each bot gets points based on their standing
+                point_counts[game.dead_bots[i].name] += i
             win_counts[winner.name] += 1
+            point_counts[winner.name] += len(game.dead_bots)
 
         # Print out the total wins and win percentage of each bot
-        sorted_win_counts = sorted(win_counts.items(), key=lambda item: (item[1] / x) * 100, reverse=True)
+        sorted_win_counts = sorted(win_counts.items(), key=lambda item: (item[1] / x) * 100,
+                                   reverse=True)
         for bot_name, wins in sorted_win_counts:
             win_percentage = (wins / x) * 100
-            print(f"{bot_name} wins: {wins} times, win percentage: {win_percentage:.2f}%")
+            print(f'{bot_name:30} wins: {wins} times, win percentage: {win_percentage:.2f}%')
+
+        # Print out the total points of each bot
+        print('\nTotal points for each bot:')
+        sorted_points_counts = sorted(point_counts.items(), key=lambda item: item[1], reverse=True)
+        for bot_name, points in sorted_points_counts:
+            print(f'{bot_name:30} {points} points')
     else:
         game.setup()
-        winner = game.play()
-        print(f"{winner.name} wins!")
+        winner = game.play_game()
+        print(f'{winner.name} wins!')
+        print(f'{game.dead_bots}')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

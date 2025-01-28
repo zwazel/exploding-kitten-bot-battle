@@ -1,3 +1,4 @@
+""" Provides a function to load all bots from a directory. """
 import importlib
 import os
 import random
@@ -7,11 +8,16 @@ from bot import Bot
 
 
 def load_bots(directory: str) -> List[Bot]:
+    """
+    Load all bots from a directory.
+    :param directory: str directory path
+    :return: List of Bot objects
+    """
     bots = []
     for filename in os.listdir(directory):
-        if filename.endswith(".py") and filename != "__init__.py":
+        if filename.endswith('.py') and filename != '__init__.py':
             module_name = filename[:-3]
-            module = importlib.import_module(f"{directory}.{module_name}")
+            module = importlib.import_module(f'{directory}.{module_name}')
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
                 if isinstance(attr, type) and issubclass(attr, Bot) and attr != Bot:
