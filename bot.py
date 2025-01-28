@@ -20,6 +20,9 @@ class Bot(ABC):
         self._name: str = name
         self._hand: List[Card] = []
 
+    def __repr__(self):
+        return self.name
+
     @abstractmethod
     def play(self, state: GameState) -> Optional[Card]:
         """
@@ -42,7 +45,7 @@ class Bot(ABC):
         """
         pass
 
-    @abstractmethod
+
     def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
         """
         - This method is called when you play a "See the future" card
@@ -50,6 +53,27 @@ class Bot(ABC):
         :param state: GameState object
         :param top_three: List of top three cards of the draw pile
         :return: None
+        """
+        pass
+
+
+    def card_played(self, card_type: CardType, position: int) -> bool:
+        """
+        This method is called when a card is played by another bot
+        :param card_type: Type of the card that was played
+        :param position: Position of the bot that played the card
+        - 0=you
+        - 1=previous bot, you will be next
+        - 2=two spots away, you will be after the next turn
+        - etc.
+        :return: True=Play a "Nope" card, False=Don't play a "Nope" card
+        """
+        return False
+
+    def card_drawn(self, position: int) -> None:
+        """
+        This method is called when a card is drawn by a bot
+        :param position: Position of the bot that drew the card
         """
         pass
 

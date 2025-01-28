@@ -53,11 +53,11 @@ def main() -> None:
             game.setup()
             winner = game.play_game()
 
-            for i in range(len(game.ranking)):
+            for i in range(len(game.dead_bots)):
                 # Each bot gets points based on their standing
-                point_counts[game.ranking[i].name] += i
+                point_counts[game.dead_bots[i].name] += i
             win_counts[winner.name] += 1
-            point_counts[winner.name] += len(game.ranking)
+            point_counts[winner.name] += len(game.dead_bots)
 
         # Print out the total wins and win percentage of each bot
         sorted_win_counts = sorted(win_counts.items(), key=lambda item: (item[1] / x) * 100,
@@ -73,9 +73,9 @@ def main() -> None:
             print(f'{bot_name:30} {points} points')
     else:
         game.setup()
-        winner = game.play()
+        winner = game.play_game()
         print(f'{winner.name} wins!')
-        print(f'{game.ranking}')
+        print(f'{game.dead_bots}')
 
 
 if __name__ == '__main__':

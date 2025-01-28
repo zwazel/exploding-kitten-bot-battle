@@ -19,7 +19,7 @@ class CardType(Enum):
 @dataclass
 class CardCounts:
     """
-    Dataclass for the amount of each card type in the game
+    Dataclass for the number of each card type in the game
     """
     EXPLODING_KITTEN: int
     DEFUSE: int

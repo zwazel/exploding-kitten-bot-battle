@@ -9,8 +9,8 @@ from game_handling.game_state import GameState
 class RandomBot(Bot):
     def play(self, state: GameState) -> Optional[Card]:
         """
-        This method is called when it's your turn to play
-        It returns a random card or None
+        This method is called when it's my turn to play
+        I return a random card or None
 
         :param state: GameState object
         :return: Card object or None
@@ -24,9 +24,8 @@ class RandomBot(Bot):
 
     def handle_exploding_kitten(self, state: GameState) -> int:
         """
-        This method is called when you draw an exploding kitten card and
-        had a defuse card in your hand
-        It puts the exploding kitten card at a random spot in the draw pile
+        I drew an exploding kitten card and had a defuse card in my hand
+        I put the exploding kitten card at a random spot in the draw pile
         :param state: GameState object
         :return: int  index of the draw pile
         """
@@ -34,10 +33,20 @@ class RandomBot(Bot):
 
     def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
         """
-        This method is called when you play a "See the future" card
-        It does nothing
+        This method is called after I played a "See the future" card
+        I do nothing
         :param state: GameState object
         :param top_three: List of top three cards of the draw pile
         :return: None
         """
         pass
+
+    def card_played(self, card_type: CardType, position: int) -> bool:
+        """
+        This method is called when another bot plays a card
+        I do nothing
+        :param card_type: CardType object
+        :param position: int
+        :return: bool
+        """
+        return True
