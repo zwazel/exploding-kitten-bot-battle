@@ -1,5 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
+import uuid
 
 
 class CardType(Enum):
@@ -24,3 +25,4 @@ class CardCounts:
 @dataclass
 class Card:
     card_type: CardType
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))

@@ -56,6 +56,7 @@ def main():
         game.setup()
         winner = game.play()
         print(f"{winner.name} wins!")
+        game.export_log("game_log.json")
 
 
 if __name__ == "__main__":
