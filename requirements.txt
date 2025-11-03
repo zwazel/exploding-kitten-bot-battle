@@ -1,0 +1,7 @@
+# No external dependencies required for the base game
+# All functionality is built with Python standard library
+
+# For development (optional):
+# pytest>=7.0.0  # Alternative test runner
+# black>=22.0.0  # Code formatter
+# flake8>=4.0.0  # Linter
