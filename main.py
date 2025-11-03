@@ -60,7 +60,7 @@ def load_bots_from_directory(directory: str = "bots") -> List[Bot]:
     return bots
 
 
-def main():
+def main() -> None:
     """Main function to run the Exploding Kittens bot battle."""
     parser = argparse.ArgumentParser(description='Exploding Kittens Bot Battle')
     parser.add_argument('--test', action='store_true', 
