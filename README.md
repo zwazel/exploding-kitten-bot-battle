@@ -328,9 +328,9 @@ The replay JSON contains the following event types:
       "initial_hand_size": 7,
       "play_order": ["Bot1", "Bot2", "Bot3"],
       "initial_hands": {
-        "Bot1": ["Defuse", "Skip", "Attack", "Tacocat", "Shuffle", "Nope", "Favor"],
-        "Bot2": ["Defuse", "Attack", "See the Future", "Beard Cat", "Nope", "Skip", "Cattermelon"],
-        "Bot3": ["Defuse", "Shuffle", "Tacocat", "Rainbow-Ralphing Cat", "Attack", "Favor", "Skip"]
+        "Bot1": ["DEFUSE", "SKIP", "ATTACK", "TACOCAT", "SHUFFLE", "NOPE", "FAVOR"],
+        "Bot2": ["DEFUSE", "ATTACK", "SEE_THE_FUTURE", "BEARD_CAT", "NOPE", "SKIP", "CATTERMELON"],
+        "Bot3": ["DEFUSE", "SHUFFLE", "TACOCAT", "RAINBOW_RALPHING_CAT", "ATTACK", "FAVOR", "SKIP"]
       }
     },
     {
@@ -345,19 +345,19 @@ The replay JSON contains the following event types:
       "type": "card_play",
       "turn_number": 1,
       "player": "Bot1",
-      "card": "See the Future"
+      "card": "SEE_THE_FUTURE"
     },
     {
       "type": "nope",
       "turn_number": 1,
       "player": "Bot2",
-      "action": "Bot1 playing See the Future"
+      "action": "Bot1 playing SEE_THE_FUTURE"
     },
     {
       "type": "nope",
       "turn_number": 1,
       "player": "Bot3",
-      "action": "Bot2 playing NOPE on: Bot1 playing See the Future"
+      "action": "Bot2 playing NOPE on: Bot1 playing SEE_THE_FUTURE"
     }
   ],
   "winner": "Bot1"
