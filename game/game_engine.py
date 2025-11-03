@@ -396,7 +396,8 @@ class GameEngine:
         stolen_card = random.choice(target.hand)
         target.remove_card(stolen_card)
         bot.add_card(stolen_card)
-        self._log(f"  → {bot.name} randomly steals {stolen_card} from {target.name}")
+        # Only the two players involved know which specific card was stolen
+        self._log(f"  → {bot.name} randomly steals a card from {target.name}")
     
     def _execute_3_of_a_kind_with_target(self, bot: Bot, target: Bot) -> None:
         """Execute 3-of-a-kind combo with pre-selected target: request specific card type."""
@@ -405,13 +406,17 @@ class GameEngine:
             if not requested_type:
                 return
             
+            # Loudly announce the requested card type (everyone knows)
+            self._log(f"  → {bot.name} requests {requested_type.value} from {target.name}")
+            
             # Check if target has that card type
             matching_cards = [c for c in target.hand if c.card_type == requested_type]
             if matching_cards:
                 card_to_give = matching_cards[0]
                 target.remove_card(card_to_give)
                 bot.add_card(card_to_give)
-                self._log(f"  → {bot.name} requests {requested_type.value} from {target.name} and receives {card_to_give}")
+                # Everyone knows the request succeeded
+                self._log(f"  → {target.name} gives {requested_type.value} to {bot.name}")
             else:
                 self._log(f"  → {target.name} doesn't have {requested_type.value}")
         except Exception as e:
@@ -462,7 +467,8 @@ class GameEngine:
             if self._check_for_nope(f"{bot.name} playing See the Future", bot):
                 return False
             top_three = self.deck.peek(3)
-            self._log(f"  → See the Future: {', '.join(str(c) for c in top_three)}")
+            # Only the player knows what cards they saw - don't log publicly
+            self._log(f"  → See the Future: {bot.name} looks at the top 3 cards")
             try:
                 bot.see_the_future(self.game_state.copy(), top_three)
             except Exception as e:
@@ -522,7 +528,8 @@ class GameEngine:
             if card_to_give and target.has_card(card_to_give):
                 target.remove_card(card_to_give)
                 bot.add_card(card_to_give)
-                self._log(f"  → {target.name} gives {card_to_give} to {bot.name}")
+                # Only the two players involved know which specific card was transferred
+                self._log(f"  → {target.name} gives a card to {bot.name}")
             else:
                 self._log(f"  ERROR: {target.name} tried to give invalid card")
         except Exception as e:
