@@ -641,11 +641,14 @@ class GameEngine:
             self._log(f"  → {bot.name} targets {target.name}")
             
             # Check for Nope with target information
-            if self._check_for_nope(f"{bot.name} playing Favor on {target.name}", bot):
-                return
+            was_noped = self._check_for_nope(f"{bot.name} playing Favor on {target.name}", bot)
             
+            # Record favor (whether noped or not)
             if self.replay_recorder:
                 self.replay_recorder.record_favor(bot.name, target.name)
+            
+            if was_noped:
+                return
             
             if not target.hand:
                 self._log(f"  → {target.name} has no cards")
