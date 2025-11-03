@@ -777,6 +777,248 @@ class TestDeckConfiguration(unittest.TestCase):
         self.assertEqual(game.game_state.initial_card_counts[CardType.NOPE], 10)
 
 
+class TrackingBot(Bot):
+    """A bot that tracks all notifications for testing."""
+    
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.notifications = []
+    
+    def on_action_played(self, state: GameState, action_description: str, actor: 'Bot') -> None:
+        """Track all notifications."""
+        self.notifications.append({
+            'action': action_description,
+            'actor': actor.name,
+            'cards_left': state.cards_left_to_draw
+        })
+    
+    def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:
+        return None
+    
+    def handle_exploding_kitten(self, state: GameState) -> int:
+        return 0
+    
+    def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
+        pass
+    
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: str) -> Optional[Bot]:
+        return alive_players[0] if alive_players else None
+    
+    def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
+        return self.hand[0] if self.hand else None
+    
+    def choose_card_type(self, state: GameState) -> Optional[CardType]:
+        return CardType.SKIP
+    
+    def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
+        return discard_pile[0] if discard_pile else None
+    
+    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+        return False
+
+
+class TestNotificationSystem(unittest.TestCase):
+    """Test bot notification system."""
+    
+    def test_bots_notified_about_card_plays(self):
+        """Test that all bots are notified when a card is played."""
+        bot1 = TrackingBot("Bot1")
+        bot2 = TrackingBot("Bot2")
+        bot3 = TrackingBot("Bot3")
+        game = GameEngine([bot1, bot2, bot3], verbose=False)
+        
+        # Setup
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2, bot3]
+        bot1.hand = [Card(CardType.SKIP)]
+        
+        # Bot1 plays Skip
+        game._handle_card_play(bot1, Card(CardType.SKIP))
+        
+        # All bots should be notified (including bot1)
+        self.assertEqual(len(bot1.notifications), 1)
+        self.assertEqual(len(bot2.notifications), 1)
+        self.assertEqual(len(bot3.notifications), 1)
+        
+        # Check notification content
+        self.assertIn("Bot1 playing Skip", bot1.notifications[0]['action'])
+        self.assertEqual(bot1.notifications[0]['actor'], 'Bot1')
+    
+    def test_bots_notified_about_draws(self):
+        """Test that all bots are notified when a card is drawn."""
+        bot1 = TrackingBot("Bot1")
+        bot2 = TrackingBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Setup
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        game.deck.draw_pile = [Card(CardType.SKIP)]
+        game.game_state.cards_left_to_draw = 1
+        bot1.alive = True
+        bot2.alive = True
+        
+        # Bot1 draws
+        game._draw_phase(bot1)
+        
+        # Both bots should be notified
+        self.assertEqual(len(bot1.notifications), 1)
+        self.assertEqual(len(bot2.notifications), 1)
+        self.assertIn("draws a card", bot1.notifications[0]['action'])
+    
+    def test_bots_notified_about_exploding_kitten(self):
+        """Test that bots are notified when someone draws Exploding Kitten."""
+        bot1 = TrackingBot("Bot1")
+        bot2 = TrackingBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Setup
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        game.deck.draw_pile = [Card(CardType.EXPLODING_KITTEN)]
+        game.game_state.cards_left_to_draw = 1
+        bot1.hand = [Card(CardType.DEFUSE)]
+        bot1.alive = True
+        bot2.alive = True
+        
+        # Bot1 draws Exploding Kitten
+        game._draw_phase(bot1)
+        
+        # Both bots should be notified about both the draw and the defuse
+        self.assertGreaterEqual(len(bot1.notifications), 2)
+        self.assertGreaterEqual(len(bot2.notifications), 2)
+        
+        # Check for Exploding Kitten notification
+        actions = [n['action'] for n in bot1.notifications]
+        self.assertTrue(any("Exploding Kitten" in action for action in actions))
+        self.assertTrue(any("defused" in action for action in actions))
+    
+    def test_bots_notified_about_elimination(self):
+        """Test that bots are notified when a bot explodes."""
+        bot1 = TrackingBot("Bot1")
+        bot2 = TrackingBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Setup
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        game.deck.draw_pile = [Card(CardType.EXPLODING_KITTEN)]
+        game.game_state.cards_left_to_draw = 1
+        bot1.hand = []  # No Defuse
+        bot1.alive = True
+        bot2.alive = True
+        
+        # Bot1 draws Exploding Kitten and explodes
+        game._draw_phase(bot1)
+        
+        # Bot2 should be notified about elimination
+        actions = [n['action'] for n in bot2.notifications]
+        self.assertTrue(any("eliminated" in action or "exploded" in action for action in actions))
+    
+    def test_actor_notified_about_own_actions(self):
+        """Test that the actor is notified about their own actions."""
+        bot1 = TrackingBot("Bot1")
+        bot2 = TrackingBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Setup
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        bot1.hand = [Card(CardType.SHUFFLE)]
+        
+        # Bot1 plays Shuffle
+        game._handle_card_play(bot1, Card(CardType.SHUFFLE))
+        
+        # Bot1 should be notified about their own action
+        self.assertEqual(len(bot1.notifications), 1)
+        self.assertEqual(bot1.notifications[0]['actor'], 'Bot1')
+        self.assertIn("Shuffle", bot1.notifications[0]['action'])
+    
+    def test_notification_order_with_nope(self):
+        """Test that notifications happen before Nope checks."""
+        bot1 = TrackingBot("Bot1")
+        bot2 = TrackingBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Setup
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        bot1.hand = [Card(CardType.ATTACK)]
+        bot2.hand = []  # No Nope
+        bot1.alive = True
+        bot2.alive = True
+        
+        # Clear notifications
+        bot1.notifications = []
+        bot2.notifications = []
+        
+        # Bot1 plays Attack
+        game._handle_card_play(bot1, Card(CardType.ATTACK))
+        
+        # Both should be notified even though neither has Nope
+        self.assertGreaterEqual(len(bot1.notifications), 1)
+        self.assertGreaterEqual(len(bot2.notifications), 1)
+    
+    def test_bots_notified_about_combo_results(self):
+        """Test that bots are notified about combo results."""
+        bot1 = TrackingBot("Bot1")
+        bot2 = TrackingBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Setup
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        bot1.hand = []
+        bot2.hand = [Card(CardType.SKIP)]
+        bot1.alive = True
+        bot2.alive = True
+        
+        # Clear notifications
+        bot1.notifications = []
+        bot2.notifications = []
+        
+        # Execute 2-of-a-kind (bot1 steals from bot2)
+        game._execute_2_of_a_kind_with_target(bot1, bot2)
+        
+        # Both should be notified about the steal
+        self.assertGreaterEqual(len(bot1.notifications), 1)
+        self.assertGreaterEqual(len(bot2.notifications), 1)
+        
+        # Check notification content
+        actions = [n['action'] for n in bot1.notifications]
+        self.assertTrue(any("steals" in action for action in actions))
+    
+    def test_bots_notified_about_favor_result(self):
+        """Test that bots are notified about Favor card results."""
+        bot1 = TrackingBot("Bot1")
+        bot2 = TrackingBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Setup
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        bot1.hand = [Card(CardType.FAVOR)]
+        bot2.hand = [Card(CardType.SKIP)]
+        bot1.alive = True
+        bot2.alive = True
+        
+        # Clear notifications
+        bot1.notifications = []
+        bot2.notifications = []
+        
+        # Execute Favor
+        game._execute_favor(bot1)
+        
+        # Both should be notified about the card transfer
+        # There should be notifications for both the Favor play and the result
+        self.assertGreaterEqual(len(bot1.notifications), 1)
+        self.assertGreaterEqual(len(bot2.notifications), 1)
+        
+        # Check for "gives" in notifications
+        all_actions = [n['action'] for n in bot1.notifications + bot2.notifications]
+        self.assertTrue(any("gives" in action for action in all_actions))
+
+
 if __name__ == '__main__':
     unittest.main()
 
