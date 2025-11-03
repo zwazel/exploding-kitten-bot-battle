@@ -1034,7 +1034,7 @@ class TestReplayRecorder(unittest.TestCase):
         """Test that disabled recorder doesn't record events."""
         from game import ReplayRecorder
         recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=False)
-        recorder.record_card_play("Bot1", CardType.SKIP, False)
+        recorder.record_card_play("Bot1", CardType.SKIP)
         self.assertEqual(len(recorder.events), 0)
     
     def test_replay_recorder_game_setup(self):
@@ -1056,12 +1056,11 @@ class TestReplayRecorder(unittest.TestCase):
         """Test recording card plays."""
         from game import ReplayRecorder
         recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
-        recorder.record_card_play("Bot1", CardType.SKIP, False)
+        recorder.record_card_play("Bot1", CardType.SKIP)
         self.assertEqual(len(recorder.events), 1)
         self.assertEqual(recorder.events[0]["type"], "card_play")
         self.assertEqual(recorder.events[0]["player"], "Bot1")
         self.assertEqual(recorder.events[0]["card"], "Skip")
-        self.assertFalse(recorder.events[0]["was_noped"])
     
     def test_replay_recorder_combo_play(self):
         """Test recording combo plays."""
@@ -1069,7 +1068,7 @@ class TestReplayRecorder(unittest.TestCase):
         recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
         recorder.record_combo_play("Bot1", "2-of-a-kind", 
                                    [CardType.TACOCAT, CardType.TACOCAT],
-                                   target="Bot2", was_noped=False)
+                                   target="Bot2")
         self.assertEqual(len(recorder.events), 1)
         self.assertEqual(recorder.events[0]["type"], "combo_play")
         self.assertEqual(recorder.events[0]["combo_type"], "2-of-a-kind")

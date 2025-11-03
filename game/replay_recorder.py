@@ -68,8 +68,7 @@ class ReplayRecorder:
             "cards_in_deck": cards_in_deck
         })
     
-    def record_card_play(self, player_name: str, card_type: CardType, 
-                        was_noped: bool = False) -> None:
+    def record_card_play(self, player_name: str, card_type: CardType) -> None:
         """Record a single card being played."""
         if not self.enabled:
             return
@@ -78,13 +77,11 @@ class ReplayRecorder:
             "type": "card_play",
             "turn_number": self.turn_number,
             "player": player_name,
-            "card": card_type.value,
-            "was_noped": was_noped
+            "card": card_type.value
         })
     
     def record_combo_play(self, player_name: str, combo_type: str, 
-                         cards: List[CardType], target: Optional[str] = None,
-                         was_noped: bool = False) -> None:
+                         cards: List[CardType], target: Optional[str] = None) -> None:
         """Record a combo being played."""
         if not self.enabled:
             return
@@ -94,8 +91,7 @@ class ReplayRecorder:
             "turn_number": self.turn_number,
             "player": player_name,
             "combo_type": combo_type,
-            "cards": [card.value for card in cards],
-            "was_noped": was_noped
+            "cards": [card.value for card in cards]
         }
         
         if target:

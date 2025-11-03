@@ -341,11 +341,37 @@ The replay JSON contains the following event types:
       "hand_size": 7,
       "cards_in_deck": 33
     },
-    ...
+    {
+      "type": "card_play",
+      "turn_number": 1,
+      "player": "Bot1",
+      "card": "See the Future"
+    },
+    {
+      "type": "nope",
+      "turn_number": 1,
+      "player": "Bot2",
+      "action": "Bot1 playing See the Future"
+    },
+    {
+      "type": "nope",
+      "turn_number": 1,
+      "player": "Bot3",
+      "action": "Bot2 playing NOPE on: Bot1 playing See the Future"
+    }
   ],
   "winner": "Bot1"
 }
 ```
+
+**Event Ordering:**
+Events are recorded in chronological order as they happen during the game:
+1. When a card is played, a `card_play` event is recorded
+2. If someone plays a Nope, a `nope` event is recorded immediately after
+3. Multiple Nopes can be chained (Nope the Nope)
+4. The final outcome (whether the action succeeds or is noped) is determined by the sequence of events
+
+This ordering makes it easy to replay the game visually, showing each action as it happens.
 
 ### Game Logging
 

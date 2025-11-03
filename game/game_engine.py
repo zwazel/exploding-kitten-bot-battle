@@ -450,6 +450,15 @@ class GameEngine:
                 self._log(f"  ERROR: {bot.name} raised exception in choose_target: {e}")
                 return
         
+        # Record combo play before checking for nope
+        if self.replay_recorder:
+            self.replay_recorder.record_combo_play(
+                player_name=bot.name,
+                combo_type=combo_type.value,
+                cards=[card.card_type for card in cards],
+                target=target.name if target else None
+            )
+        
         # Check for Nope with target information
         if combo_type in [ComboType.TWO_OF_A_KIND, ComboType.THREE_OF_A_KIND]:
             action_desc = f"{bot.name} playing {combo_type.value} combo targeting {target.name}"
@@ -457,16 +466,6 @@ class GameEngine:
             action_desc = f"{bot.name} playing {combo_type.value} combo"
         
         was_noped = self._check_for_nope(action_desc, bot)
-        
-        # Record combo play
-        if self.replay_recorder:
-            self.replay_recorder.record_combo_play(
-                player_name=bot.name,
-                combo_type=combo_type.value,
-                cards=[card.card_type for card in cards],
-                target=target.name if target else None,
-                was_noped=was_noped
-            )
         
         if was_noped:
             return  # Combo was noped
@@ -567,20 +566,22 @@ class GameEngine:
         
         # Handle card effects
         if card.card_type == CardType.SKIP:
+            # Record card play before checking for nope
+            if self.replay_recorder:
+                self.replay_recorder.record_card_play(bot.name, card.card_type)
             # Check for Nope
             was_noped = self._check_for_nope(f"{bot.name} playing Skip", bot)
-            if self.replay_recorder:
-                self.replay_recorder.record_card_play(bot.name, card.card_type, was_noped)
             if was_noped:
                 return False
             self._log("  → Skip: Skips one turn without drawing")
             # Skip is handled in _play_phase by returning True
             return True
         elif card.card_type == CardType.SEE_THE_FUTURE:
+            # Record card play before checking for nope
+            if self.replay_recorder:
+                self.replay_recorder.record_card_play(bot.name, card.card_type)
             # Check for Nope
             was_noped = self._check_for_nope(f"{bot.name} playing See the Future", bot)
-            if self.replay_recorder:
-                self.replay_recorder.record_card_play(bot.name, card.card_type, was_noped)
             if was_noped:
                 return False
             top_three = self.deck.peek(CARDS_TO_SEE_IN_FUTURE)
@@ -595,10 +596,11 @@ class GameEngine:
                 self._log(f"  ERROR: {bot.name} raised exception in see_the_future: {e}")
             return True
         elif card.card_type == CardType.SHUFFLE:
+            # Record card play before checking for nope
+            if self.replay_recorder:
+                self.replay_recorder.record_card_play(bot.name, card.card_type)
             # Check for Nope
             was_noped = self._check_for_nope(f"{bot.name} playing Shuffle", bot)
-            if self.replay_recorder:
-                self.replay_recorder.record_card_play(bot.name, card.card_type, was_noped)
             if was_noped:
                 return False
             self._log("  → Shuffle: Deck shuffled")
@@ -607,10 +609,11 @@ class GameEngine:
                 self.replay_recorder.record_shuffle(bot.name)
             return True
         elif card.card_type == CardType.ATTACK:
+            # Record card play before checking for nope
+            if self.replay_recorder:
+                self.replay_recorder.record_card_play(bot.name, card.card_type)
             # Check for Nope
             was_noped = self._check_for_nope(f"{bot.name} playing Attack", bot)
-            if self.replay_recorder:
-                self.replay_recorder.record_card_play(bot.name, card.card_type, was_noped)
             if was_noped:
                 return False
             # Attack: End current turn without drawing, give remaining turns + 2 to next player
@@ -619,16 +622,19 @@ class GameEngine:
             self.turns_to_take = -(self.turns_to_take + 1)  # Negative signals Attack was played
             return True
         elif card.card_type == CardType.FAVOR:
+            # Record card play before executing favor
+            if self.replay_recorder:
+                self.replay_recorder.record_card_play(bot.name, card.card_type)
             self._execute_favor(bot)
             return True
         elif card.card_type == CardType.NOPE:
             self._log("  → Nope can only be played in response to actions")
             if self.replay_recorder:
-                self.replay_recorder.record_card_play(bot.name, card.card_type, False)
+                self.replay_recorder.record_card_play(bot.name, card.card_type)
             return True
         # Cat cards have no effect when played alone
         if self.replay_recorder:
-            self.replay_recorder.record_card_play(bot.name, card.card_type, False)
+            self.replay_recorder.record_card_play(bot.name, card.card_type)
         return True
     
     def _execute_favor(self, bot: Bot) -> None:
@@ -647,12 +653,12 @@ class GameEngine:
             
             self._log(f"  → {bot.name} targets {target.name}")
             
-            # Check for Nope with target information
-            was_noped = self._check_for_nope(f"{bot.name} playing Favor on {target.name}", bot)
-            
-            # Record favor (whether noped or not)
+            # Record favor event before checking for nope
             if self.replay_recorder:
                 self.replay_recorder.record_favor(bot.name, target.name)
+            
+            # Check for Nope with target information
+            was_noped = self._check_for_nope(f"{bot.name} playing Favor on {target.name}", bot)
             
             if was_noped:
                 return
