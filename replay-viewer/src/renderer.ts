@@ -13,6 +13,8 @@ export class ReplayRenderer {
 
   /**
    * Escape HTML to prevent XSS
+   * @param text - Raw text that may contain HTML characters
+   * @returns HTML-safe string with special characters escaped
    */
   private escapeHtml(text: string): string {
     const div = document.createElement('div');
@@ -22,6 +24,7 @@ export class ReplayRenderer {
 
   /**
    * Render the initial game setup
+   * Note: All user-provided content (player names, timestamps) is escaped via escapeHtml()
    */
   renderGameSetup(replayData: ReplayData): void {
     const metadata = replayData.metadata;
@@ -54,6 +57,7 @@ export class ReplayRenderer {
       `;
     }
 
+    // Safe to use innerHTML here - all user content has been escaped via escapeHtml()
     this.container.innerHTML = html;
   }
 
@@ -113,6 +117,7 @@ export class ReplayRenderer {
 
   /**
    * Render the game state
+   * Note: All user-provided content is escaped via escapeHtml() before rendering
    */
   private renderGameState(
     gameState: {
@@ -164,6 +169,7 @@ export class ReplayRenderer {
     if (existingState) existingState.remove();
 
     // Add new state after setup
+    // Safe to use innerHTML - all user content has been escaped via escapeHtml()
     if (existingGameSetup) {
       existingGameSetup.insertAdjacentHTML("afterend", gameStateHtml);
     } else if (existingGameInfo) {
