@@ -86,7 +86,7 @@ Optional development tools are listed in `requirements.txt`:
 ### Required Imports
 ```python
 from typing import Optional, List, Union
-from game import Bot, GameState, Card, CardType, TargetContext
+from game import Bot, GameState, Card, CardType, TargetContext, GameAction
 ```
 
 ### Required Methods to Implement
@@ -121,13 +121,15 @@ All bots MUST implement these 8 methods from the `Bot` base class:
    - Called for 5-unique combo to pick from discard pile
    - Return the Card to take
 
-8. **`should_play_nope(state: GameState, action_description: str) -> bool`**
+8. **`should_play_nope(state: GameState, action: GameAction) -> bool`**
    - Called when another player's action can be noped
+   - `action` is a GameAction object containing action details
    - Return True to play Nope, False otherwise
 
 ### Optional Override
-**`on_action_played(state: GameState, action_description: str, actor: Bot) -> None`**
+**`on_action_played(state: GameState, action: GameAction, actor: Bot) -> None`**
 - Called when ANY action occurs in the game
+- `action` is a GameAction object containing action details
 - Use to track game state, opponent behavior, etc.
 - Helps with strategy and decision-making
 
@@ -205,7 +207,7 @@ if defuse_cards:
 
 When your bot receives `GameState`, it contains:
 ```python
-state.total_cards_in_deck: CardCounts  # Original card counts
+state.initial_card_counts: Dict[CardType, int]  # Original card counts by type
 state.cards_left_to_draw: int          # Cards remaining in deck
 state.was_last_card_exploding_kitten: bool  # If last drawn kitten was returned
 state.history_of_played_cards: List[Card]   # All cards played so far
