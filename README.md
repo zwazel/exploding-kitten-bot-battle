@@ -289,14 +289,14 @@ python3 main.py --test --replay game_replay.json
 
 The replay file will contain:
 - **Game metadata**: timestamp, player list, version
-- **Game setup**: deck size, initial hand size, play order
+- **Game setup**: deck size, initial hand size, play order, and initial hands for each player
 - **All game events**: turn starts, card plays, draws, combos, nopes, eliminations
 - **Game result**: winner information
 
 #### Replay File Structure
 
 The replay JSON contains the following event types:
-- `game_setup` - Initial game configuration
+- `game_setup` - Initial game configuration with each player's starting hand
 - `turn_start` - Beginning of each player's turn
 - `card_play` - Single card plays (Skip, Attack, Shuffle, etc.)
 - `card_draw` - Cards drawn from the deck
@@ -326,7 +326,12 @@ The replay JSON contains the following event types:
       "type": "game_setup",
       "deck_size": 33,
       "initial_hand_size": 7,
-      "play_order": ["Bot1", "Bot2", "Bot3"]
+      "play_order": ["Bot1", "Bot2", "Bot3"],
+      "initial_hands": {
+        "Bot1": ["Defuse", "Skip", "Attack", "Tacocat", "Shuffle", "Nope", "Favor"],
+        "Bot2": ["Defuse", "Attack", "See the Future", "Beard Cat", "Nope", "Skip", "Cattermelon"],
+        "Bot3": ["Defuse", "Shuffle", "Tacocat", "Rainbow-Ralphing Cat", "Attack", "Favor", "Skip"]
+      }
     },
     {
       "type": "turn_start",

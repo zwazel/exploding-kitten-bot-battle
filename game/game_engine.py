@@ -244,10 +244,17 @@ class GameEngine:
         
         # Record game setup
         if self.replay_recorder:
+            # Collect initial hands for each bot
+            initial_hands = {
+                bot.name: [card.card_type.value for card in bot.hand]
+                for bot in self.bots
+            }
+            
             self.replay_recorder.record_game_setup(
                 deck_size=self.deck.size(),
                 initial_hand_size=INITIAL_HAND_SIZE,
-                play_order=[bot.name for bot in self.bots]
+                play_order=[bot.name for bot in self.bots],
+                initial_hands=initial_hands
             )
 
     def play_game(self) -> Optional[Bot]:

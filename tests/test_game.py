@@ -1041,10 +1041,16 @@ class TestReplayRecorder(unittest.TestCase):
         """Test recording game setup."""
         from game import ReplayRecorder
         recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
-        recorder.record_game_setup(20, 7, ["Bot1", "Bot2"])
+        initial_hands = {
+            "Bot1": ["Defuse", "Skip", "Attack"],
+            "Bot2": ["Defuse", "Nope", "Shuffle"]
+        }
+        recorder.record_game_setup(20, 7, ["Bot1", "Bot2"], initial_hands=initial_hands)
         self.assertEqual(len(recorder.events), 1)
         self.assertEqual(recorder.events[0]["type"], "game_setup")
         self.assertEqual(recorder.events[0]["deck_size"], 20)
+        self.assertIn("initial_hands", recorder.events[0])
+        self.assertEqual(recorder.events[0]["initial_hands"]["Bot1"], ["Defuse", "Skip", "Attack"])
     
     def test_replay_recorder_card_play(self):
         """Test recording card plays."""

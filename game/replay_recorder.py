@@ -33,17 +33,23 @@ class ReplayRecorder:
         self.turn_number = 0
     
     def record_game_setup(self, deck_size: int, initial_hand_size: int, 
-                         play_order: List[str]) -> None:
+                         play_order: List[str], 
+                         initial_hands: Optional[Dict[str, List[str]]] = None) -> None:
         """Record initial game setup information."""
         if not self.enabled:
             return
         
-        self.events.append({
+        event = {
             "type": "game_setup",
             "deck_size": deck_size,
             "initial_hand_size": initial_hand_size,
             "play_order": play_order
-        })
+        }
+        
+        if initial_hands:
+            event["initial_hands"] = initial_hands
+        
+        self.events.append(event)
     
     def record_turn_start(self, player_name: str, turn_number: int, 
                          turns_remaining: int, hand_size: int, 
