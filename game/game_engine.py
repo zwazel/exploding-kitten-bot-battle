@@ -4,7 +4,7 @@ import random
 from typing import List, Optional, Tuple, Union, Dict
 from .bot import Bot
 from .deck import Deck
-from .cards import Card, CardType, ComboType, TargetContext
+from .cards import Card, CardType, ComboType, TargetContext, ActionType, GameAction
 from .game_state import GameState
 from .replay_recorder import ReplayRecorder
 from .config import (
@@ -78,14 +78,18 @@ class GameEngine:
         
         return result
     
-    def _notify_all_bots(self, action_description: str, actor: Bot) -> None:
+    def _notify_all_bots(self, action: GameAction) -> None:
         """
         Notify all alive bots about an action.
         
         Args:
-            action_description: Description of the action
-            actor: The bot who performed the action
+            action: The game action that occurred
         """
+        # Get the actor bot
+        actor = next((bot for bot in self.bots if bot.name == action.player), None)
+        if not actor:
+            return
+            
         # Notify ALL bots in play order (including the actor)
         # Start from the bot after the actor
         bots_in_order = self._get_bots_in_play_order_after(actor)
@@ -94,44 +98,44 @@ class GameEngine:
             if not bot.alive:
                 continue
             
-            self._log(f"  → Notifying {bot.name} about: {action_description}")
             try:
-                bot.on_action_played(self.game_state.copy(), action_description, actor)
+                bot.on_action_played(self.game_state.copy(), action, actor)
             except Exception as e:
                 self._log(f"  ERROR: {bot.name} raised exception in on_action_played: {e}")
         
         # Also notify the actor themselves
         if actor.alive:
-            self._log(f"  → Notifying {actor.name} about: {action_description}")
             try:
-                actor.on_action_played(self.game_state.copy(), action_description, actor)
+                actor.on_action_played(self.game_state.copy(), action, actor)
             except Exception as e:
                 self._log(f"  ERROR: {actor.name} raised exception in on_action_played: {e}")
     
-    def _check_for_nope(self, action_description: str, initiator: Bot) -> bool:
+    def _check_for_nope(self, action: GameAction) -> bool:
         """
         Check if any player wants to play a Nope card in play order. Can be chained.
         First notifies all players about the action, then checks for Nopes.
         When someone Nopes, notify everyone about the Nope, then check again.
         
         Args:
-            action_description: Description of the action being played
-            initiator: The bot who initiated the action
+            action: The action being played that can be noped
             
         Returns:
             True if action is noped (odd number of nopes), False otherwise
         """
         nope_count = 0
-        current_action = action_description
-        last_actor = initiator
+        current_action = action
         
         while True:
             # FIRST: Notify all bots about the current action
-            self._notify_all_bots(current_action, last_actor)
+            self._notify_all_bots(current_action)
             
             # SECOND: Check if anyone wants to Nope
             noped = False
-            bots_in_order = self._get_bots_in_play_order_after(last_actor)
+            actor = next((bot for bot in self.bots if bot.name == current_action.player), None)
+            if not actor:
+                break
+                
+            bots_in_order = self._get_bots_in_play_order_after(actor)
             
             for bot in bots_in_order:
                 if not bot.alive:
@@ -146,15 +150,32 @@ class GameEngine:
                             bot.remove_card(nope_card)
                             self.deck.discard_pile.append(nope_card)
                             nope_count += 1
-                            last_actor = bot
                             self._log(f"  🚫 {bot.name} plays NOPE! (Nope #{nope_count})")
                             
-                            # Record Nope
+                            # Record Nope - use original action description for replay
                             if self.replay_recorder:
-                                self.replay_recorder.record_nope(bot.name, current_action)
+                                # Build description string for replay recorder
+                                if current_action.action_type == ActionType.CARD_PLAY:
+                                    if current_action.target:
+                                        desc = f"{current_action.player} playing {current_action.card.value} on {current_action.target}"
+                                    else:
+                                        desc = f"{current_action.player} playing {current_action.card.value}"
+                                elif current_action.action_type == ActionType.COMBO_PLAY:
+                                    if current_action.target:
+                                        desc = f"{current_action.player} playing {current_action.combo_type.value} combo targeting {current_action.target}"
+                                    else:
+                                        desc = f"{current_action.player} playing {current_action.combo_type.value} combo"
+                                elif current_action.action_type == ActionType.NOPE:
+                                    desc = f"{current_action.player} playing NOPE"
+                                else:
+                                    desc = f"{current_action.player} action"
+                                self.replay_recorder.record_nope(bot.name, desc)
                             
-                            # Update action description for next round
-                            current_action = f"{bot.name} playing NOPE on: {current_action}"
+                            # Create new nope action for next round
+                            current_action = GameAction(
+                                action_type=ActionType.NOPE,
+                                player=bot.name
+                            )
                             noped = True
                             break  # Stop checking, go to notification phase for this Nope
                     except Exception as e:
@@ -454,18 +475,21 @@ class GameEngine:
         if self.replay_recorder:
             self.replay_recorder.record_combo_play(
                 player_name=bot.name,
-                combo_type=combo_type.value,
+                combo_type=combo_type.name,
                 cards=[card.card_type for card in cards],
                 target=target.name if target else None
             )
         
-        # Check for Nope with target information
-        if combo_type in [ComboType.TWO_OF_A_KIND, ComboType.THREE_OF_A_KIND]:
-            action_desc = f"{bot.name} playing {combo_type.value} combo targeting {target.name}"
-        else:
-            action_desc = f"{bot.name} playing {combo_type.value} combo"
+        # Check for Nope with GameAction
+        action = GameAction(
+            action_type=ActionType.COMBO_PLAY,
+            player=bot.name,
+            combo_type=combo_type,
+            cards=[card.card_type for card in cards],
+            target=target.name if target else None
+        )
         
-        was_noped = self._check_for_nope(action_desc, bot)
+        was_noped = self._check_for_nope(action)
         
         if was_noped:
             return  # Combo was noped
@@ -482,7 +506,6 @@ class GameEngine:
         """Execute 2-of-a-kind combo with pre-selected target: randomly steal a card."""
         if not target.hand:
             self._log(f"  → {target.name} has no cards")
-            self._notify_all_bots(f"{bot.name}'s 2-of-a-kind combo failed (target has no cards)", bot)
             return
         
         stolen_card = random.choice(target.hand)
@@ -491,7 +514,7 @@ class GameEngine:
         # Show full details in user-facing logs (bots don't get this info in GameState)
         self._log(f"  → {bot.name} randomly steals {stolen_card} from {target.name}")
         # Notify bots (they don't know which specific card, just that a card was stolen)
-        self._notify_all_bots(f"{bot.name} steals a card from {target.name}", bot)
+        self._notify_all_bots(GameAction(ActionType.CARD_STEAL, bot.name, target=target.name))
         if self.replay_recorder:
             self.replay_recorder.record_card_steal(bot.name, target.name, "2-of-a-kind")
     
@@ -504,8 +527,6 @@ class GameEngine:
             
             # Loudly announce the requested card type (everyone knows)
             self._log(f"  → {bot.name} requests {requested_type.value} from {target.name}")
-            # Notify all bots about the request (public announcement)
-            self._notify_all_bots(f"{bot.name} requests {requested_type.value} from {target.name}", bot)
             
             # Check if target has that card type
             matching_cards = [c for c in target.hand if c.card_type == requested_type]
@@ -515,12 +536,12 @@ class GameEngine:
                 bot.add_card(card_to_give)
                 # Everyone knows the request succeeded
                 self._log(f"  → {target.name} gives {requested_type.value} to {bot.name}")
-                self._notify_all_bots(f"{target.name} gives {requested_type.value} to {bot.name}", bot)
+                self._notify_all_bots(GameAction(ActionType.CARD_REQUEST, bot.name, card=requested_type, target=target.name, success=True))
                 if self.replay_recorder:
                     self.replay_recorder.record_card_request(bot.name, target.name, requested_type, True)
             else:
                 self._log(f"  → {target.name} doesn't have {requested_type.value}")
-                self._notify_all_bots(f"{target.name} doesn't have {requested_type.value}", bot)
+                self._notify_all_bots(GameAction(ActionType.CARD_REQUEST, bot.name, card=requested_type, target=target.name, success=False))
                 if self.replay_recorder:
                     self.replay_recorder.record_card_request(bot.name, target.name, requested_type, False)
         except Exception as e:
@@ -530,7 +551,6 @@ class GameEngine:
         """Execute 5-unique combo: take any card from discard pile."""
         if not self.deck.discard_pile:
             self._log(f"  → Discard pile is empty")
-            self._notify_all_bots(f"{bot.name}'s 5-unique combo failed (discard pile empty)", bot)
             return
         
         try:
@@ -539,13 +559,10 @@ class GameEngine:
                 self.deck.discard_pile.remove(chosen_card)
                 bot.add_card(chosen_card)
                 self._log(f"  → {bot.name} takes {chosen_card} from discard pile")
-                # Notify all bots (this is public information)
-                self._notify_all_bots(f"{bot.name} takes {chosen_card.card_type.value} from discard pile", bot)
                 if self.replay_recorder:
                     self.replay_recorder.record_discard_take(bot.name, chosen_card.card_type)
             else:
                 self._log(f"  → Invalid card selection from discard")
-                self._notify_all_bots(f"{bot.name}'s 5-unique combo failed (invalid selection)", bot)
         except Exception as e:
             self._log(f"  ERROR: {bot.name} raised exception in choose_from_discard: {e}")
 
@@ -570,7 +587,8 @@ class GameEngine:
             if self.replay_recorder:
                 self.replay_recorder.record_card_play(bot.name, card.card_type)
             # Check for Nope
-            was_noped = self._check_for_nope(f"{bot.name} playing Skip", bot)
+            action = GameAction(ActionType.CARD_PLAY, bot.name, card=card.card_type)
+            was_noped = self._check_for_nope(action)
             if was_noped:
                 return False
             self._log("  → Skip: Skips one turn without drawing")
@@ -581,7 +599,8 @@ class GameEngine:
             if self.replay_recorder:
                 self.replay_recorder.record_card_play(bot.name, card.card_type)
             # Check for Nope
-            was_noped = self._check_for_nope(f"{bot.name} playing See the Future", bot)
+            action = GameAction(ActionType.CARD_PLAY, bot.name, card=card.card_type)
+            was_noped = self._check_for_nope(action)
             if was_noped:
                 return False
             top_three = self.deck.peek(CARDS_TO_SEE_IN_FUTURE)
@@ -600,7 +619,8 @@ class GameEngine:
             if self.replay_recorder:
                 self.replay_recorder.record_card_play(bot.name, card.card_type)
             # Check for Nope
-            was_noped = self._check_for_nope(f"{bot.name} playing Shuffle", bot)
+            action = GameAction(ActionType.CARD_PLAY, bot.name, card=card.card_type)
+            was_noped = self._check_for_nope(action)
             if was_noped:
                 return False
             self._log("  → Shuffle: Deck shuffled")
@@ -613,7 +633,8 @@ class GameEngine:
             if self.replay_recorder:
                 self.replay_recorder.record_card_play(bot.name, card.card_type)
             # Check for Nope
-            was_noped = self._check_for_nope(f"{bot.name} playing Attack", bot)
+            action = GameAction(ActionType.CARD_PLAY, bot.name, card=card.card_type)
+            was_noped = self._check_for_nope(action)
             if was_noped:
                 return False
             # Attack: End current turn without drawing, give remaining turns + 2 to next player
@@ -658,7 +679,8 @@ class GameEngine:
                 self.replay_recorder.record_favor(bot.name, target.name)
             
             # Check for Nope with target information
-            was_noped = self._check_for_nope(f"{bot.name} playing Favor on {target.name}", bot)
+            action = GameAction(ActionType.CARD_PLAY, bot.name, card=CardType.FAVOR, target=target.name)
+            was_noped = self._check_for_nope(action)
             
             if was_noped:
                 return
@@ -674,8 +696,6 @@ class GameEngine:
                 bot.add_card(card_to_give)
                 # Show full details in user-facing logs (bots don't get this info in GameState)
                 self._log(f"  → {target.name} gives {card_to_give} to {bot.name}")
-                # Notify bots (they don't know which specific card)
-                self._notify_all_bots(f"{target.name} gives a card to {bot.name}", bot)
                 if self.replay_recorder:
                     self.replay_recorder.record_card_steal(bot.name, target.name, "favor")
             else:
@@ -702,7 +722,7 @@ class GameEngine:
         if drawn_card.card_type == CardType.EXPLODING_KITTEN:
             self._log(f"  💣 {bot.name} drew an EXPLODING KITTEN!")
             # Notify all bots about the Exploding Kitten draw
-            self._notify_all_bots(f"{bot.name} drew an Exploding Kitten", bot)
+            self._notify_all_bots(GameAction(ActionType.EXPLODING_KITTEN_DRAW, bot.name))
             self._handle_exploding_kitten(bot, drawn_card)
         else:
             self._log(f"  → Drew: {drawn_card}")
@@ -710,7 +730,7 @@ class GameEngine:
             if self.replay_recorder:
                 self.replay_recorder.record_card_draw(bot.name, drawn_card.card_type)
             # Notify all bots about the draw (but not which card)
-            self._notify_all_bots(f"{bot.name} draws a card", bot)
+            self._notify_all_bots(GameAction(ActionType.CARD_DRAW, bot.name))
 
     def _handle_exploding_kitten(self, bot: Bot, exploding_kitten: Card) -> None:
         """
@@ -741,7 +761,7 @@ class GameEngine:
                 self.deck.insert_at(exploding_kitten, position)
                 self._log(f"  → Defused! Exploding Kitten inserted at position {position}")
                 # Notify all bots about the defuse
-                self._notify_all_bots(f"{bot.name} defused an Exploding Kitten", bot)
+                self._notify_all_bots(GameAction(ActionType.DEFUSE, bot.name))
                 self.game_state.was_last_card_exploding_kitten = True
                 if self.replay_recorder:
                     self.replay_recorder.record_defuse(bot.name, position)
@@ -751,7 +771,7 @@ class GameEngine:
                 self.deck.add_to_top(exploding_kitten)
                 self._log(f"  → Defused! Exploding Kitten placed on top (default)")
                 # Notify all bots about the defuse
-                self._notify_all_bots(f"{bot.name} defused an Exploding Kitten", bot)
+                self._notify_all_bots(GameAction(ActionType.DEFUSE, bot.name))
                 self.game_state.was_last_card_exploding_kitten = True
                 if self.replay_recorder:
                     self.replay_recorder.record_defuse(bot.name, 0)
@@ -762,6 +782,6 @@ class GameEngine:
             if self.replay_recorder:
                 self.replay_recorder.record_player_elimination(bot.name)
             # Notify all bots about the elimination
-            self._notify_all_bots(f"{bot.name} exploded and is eliminated", bot)
+            self._notify_all_bots(GameAction(ActionType.ELIMINATION, bot.name))
             self.game_state.history_of_played_cards.append(exploding_kitten)
             self.game_state.was_last_card_exploding_kitten = False

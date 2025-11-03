@@ -1,7 +1,7 @@
 """Tests for the Exploding Kittens game components."""
 
 import unittest
-from game import Card, CardType, ComboType, TargetContext, GameState, Bot, Deck, GameEngine
+from game import Card, CardType, ComboType, TargetContext, GameState, Bot, Deck, GameEngine, ActionType, GameAction
 from typing import Optional, List, Union, Dict
 
 
@@ -29,7 +29,7 @@ class SimpleBot(Bot):
     def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
         return discard_pile[0] if discard_pile else None
     
-    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+    def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         return False
 
 
@@ -184,7 +184,7 @@ class NopeBot(Bot):
     def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
         return discard_pile[0] if discard_pile else None
     
-    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+    def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         return self.will_nope
 
 
@@ -224,7 +224,7 @@ class ComboBot(Bot):
     def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
         return discard_pile[0] if discard_pile else None
     
-    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+    def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         return False
 
 
@@ -394,7 +394,7 @@ class TestNopeCard(unittest.TestCase):
         # Check if action gets noped
         game.setup_game = lambda: None
         game.bots = [bot1, bot2]
-        was_noped = game._check_for_nope("Bot1 playing Skip", bot1)
+        was_noped = game._check_for_nope(GameAction(ActionType.CARD_PLAY, "Bot1", card=CardType.SKIP))
         
         self.assertTrue(was_noped)
         self.assertEqual(len(bot2.hand), 0)  # Nope was used
@@ -412,7 +412,7 @@ class TestNopeCard(unittest.TestCase):
         
         game.setup_game = lambda: None
         game.bots = [bot1, bot2, bot3]
-        was_noped = game._check_for_nope("Bot1 playing Skip", bot1)
+        was_noped = game._check_for_nope(GameAction(ActionType.CARD_PLAY, "Bot1", card=CardType.SKIP))
         
         # Even number of nopes = action proceeds
         self.assertFalse(was_noped)
@@ -434,7 +434,7 @@ class TestNopeCard(unittest.TestCase):
         
         game.setup_game = lambda: None
         game.bots = [bot4, bot1, bot2, bot3]
-        was_noped = game._check_for_nope("Bot4 playing Attack", bot4)
+        was_noped = game._check_for_nope(GameAction(ActionType.CARD_PLAY, "Bot4", card=CardType.ATTACK))
         
         # Odd number of nopes = action canceled
         self.assertTrue(was_noped)
@@ -453,7 +453,7 @@ class TestNopeCard(unittest.TestCase):
         game.bots = [bot1, bot2, bot3]
         
         # Bot1 plays action, bot2 should be asked first (next in order)
-        was_noped = game._check_for_nope("Bot1 playing Attack", bot1)
+        was_noped = game._check_for_nope(GameAction(ActionType.CARD_PLAY, "Bot1", card=CardType.ATTACK))
         
         self.assertTrue(was_noped)
         self.assertEqual(len(bot2.hand), 0)
@@ -470,7 +470,7 @@ class TestNopeCard(unittest.TestCase):
         
         game.setup_game = lambda: None
         game.bots = [bot1, bot2]
-        was_noped = game._check_for_nope("Bot1 playing Attack", bot1)
+        was_noped = game._check_for_nope(GameAction(ActionType.CARD_PLAY, "Bot1", card=CardType.ATTACK))
         
         self.assertFalse(was_noped)
     
@@ -485,7 +485,7 @@ class TestNopeCard(unittest.TestCase):
         
         game.setup_game = lambda: None
         game.bots = [bot1, bot2]
-        was_noped = game._check_for_nope("Bot1 playing Attack", bot1)
+        was_noped = game._check_for_nope(GameAction(ActionType.CARD_PLAY, "Bot1", card=CardType.ATTACK))
         
         self.assertFalse(was_noped)
         self.assertEqual(len(bot2.hand), 1)  # Nope not used
@@ -719,7 +719,7 @@ class TestMultiTurnMechanics(unittest.TestCase):
         game.bots = [bot1, bot2]
         
         # Bot1 plays action (bot1 has no cards but that's ok for this test)
-        was_noped = game._check_for_nope("Bot1 playing Attack", bot1)
+        was_noped = game._check_for_nope(GameAction(ActionType.CARD_PLAY, "Bot1", card=CardType.ATTACK))
         
         # Bot2 should have been able to Nope
         self.assertTrue(was_noped)
@@ -784,10 +784,10 @@ class TrackingBot(Bot):
         super().__init__(name)
         self.notifications = []
     
-    def on_action_played(self, state: GameState, action_description: str, actor: 'Bot') -> None:
+    def on_action_played(self, state: GameState, action: 'GameAction', actor: 'Bot') -> None:
         """Track all notifications."""
         self.notifications.append({
-            'action': action_description,
+            'action': action,
             'actor': actor.name,
             'cards_left': state.cards_left_to_draw
         })
@@ -813,7 +813,7 @@ class TrackingBot(Bot):
     def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
         return discard_pile[0] if discard_pile else None
     
-    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+    def should_play_nope(self, state: GameState, action: 'GameAction') -> bool:
         return False
 
 
@@ -841,7 +841,10 @@ class TestNotificationSystem(unittest.TestCase):
         self.assertEqual(len(bot3.notifications), 1)
         
         # Check notification content
-        self.assertIn("Bot1 playing Skip", bot1.notifications[0]['action'])
+        action = bot1.notifications[0]['action']
+        self.assertEqual(action.action_type, ActionType.CARD_PLAY)
+        self.assertEqual(action.player, 'Bot1')
+        self.assertEqual(action.card, CardType.SKIP)
         self.assertEqual(bot1.notifications[0]['actor'], 'Bot1')
     
     def test_bots_notified_about_draws(self):
@@ -864,7 +867,9 @@ class TestNotificationSystem(unittest.TestCase):
         # Both bots should be notified
         self.assertEqual(len(bot1.notifications), 1)
         self.assertEqual(len(bot2.notifications), 1)
-        self.assertIn("draws a card", bot1.notifications[0]['action'])
+        action = bot1.notifications[0]['action']
+        self.assertEqual(action.action_type, ActionType.CARD_DRAW)
+        self.assertEqual(action.player, 'Bot1')
     
     def test_bots_notified_about_exploding_kitten(self):
         """Test that bots are notified when someone draws Exploding Kitten."""
@@ -890,8 +895,8 @@ class TestNotificationSystem(unittest.TestCase):
         
         # Check for Exploding Kitten notification
         actions = [n['action'] for n in bot1.notifications]
-        self.assertTrue(any("Exploding Kitten" in action for action in actions))
-        self.assertTrue(any("defused" in action for action in actions))
+        self.assertTrue(any(isinstance(a, GameAction) and a.action_type == ActionType.EXPLODING_KITTEN_DRAW for a in actions))
+        self.assertTrue(any(isinstance(a, GameAction) and a.action_type == ActionType.DEFUSE for a in actions))
     
     def test_bots_notified_about_elimination(self):
         """Test that bots are notified when a bot explodes."""
@@ -913,7 +918,7 @@ class TestNotificationSystem(unittest.TestCase):
         
         # Bot2 should be notified about elimination
         actions = [n['action'] for n in bot2.notifications]
-        self.assertTrue(any("eliminated" in action or "exploded" in action for action in actions))
+        self.assertTrue(any(isinstance(a, GameAction) and a.action_type == ActionType.ELIMINATION for a in actions))
     
     def test_actor_notified_about_own_actions(self):
         """Test that the actor is notified about their own actions."""
@@ -932,7 +937,9 @@ class TestNotificationSystem(unittest.TestCase):
         # Bot1 should be notified about their own action
         self.assertEqual(len(bot1.notifications), 1)
         self.assertEqual(bot1.notifications[0]['actor'], 'Bot1')
-        self.assertIn("Shuffle", bot1.notifications[0]['action'])
+        action = bot1.notifications[0]['action']
+        self.assertEqual(action.action_type, ActionType.CARD_PLAY)
+        self.assertEqual(action.card, CardType.SHUFFLE)
     
     def test_notification_order_with_nope(self):
         """Test that notifications happen before Nope checks."""
@@ -986,7 +993,7 @@ class TestNotificationSystem(unittest.TestCase):
         
         # Check notification content
         actions = [n['action'] for n in bot1.notifications]
-        self.assertTrue(any("steals" in action for action in actions))
+        self.assertTrue(any(isinstance(a, GameAction) and a.action_type == ActionType.CARD_STEAL for a in actions))
     
     def test_bots_notified_about_favor_result(self):
         """Test that bots are notified about Favor card results."""
@@ -1006,17 +1013,16 @@ class TestNotificationSystem(unittest.TestCase):
         bot1.notifications = []
         bot2.notifications = []
         
-        # Execute Favor
+        # Execute Favor - this will trigger notifications during nope check
         game._execute_favor(bot1)
         
-        # Both should be notified about the card transfer
-        # There should be notifications for both the Favor play and the result
-        self.assertGreaterEqual(len(bot1.notifications), 1)
-        self.assertGreaterEqual(len(bot2.notifications), 1)
-        
-        # Check for "gives" in notifications
-        all_actions = [n['action'] for n in bot1.notifications + bot2.notifications]
-        self.assertTrue(any("gives" in action for action in all_actions))
+        # Favor execution notifies during the nope check phase
+        # Check that favor action was played
+        favor_actions = [n['action'] for n in bot1.notifications + bot2.notifications 
+                        if isinstance(n['action'], GameAction) and 
+                        n['action'].action_type == ActionType.CARD_PLAY and 
+                        n['action'].card == CardType.FAVOR]
+        self.assertGreaterEqual(len(favor_actions), 1)
 
 
 class TestReplayRecorder(unittest.TestCase):

@@ -70,33 +70,6 @@ class GameAction:
     target: Optional[str] = None
     cards: Optional[List[CardType]] = None
     success: Optional[bool] = None
-    
-    def to_description(self) -> str:
-        """Convert action to human-readable description (for backward compatibility)."""
-        if self.action_type == ActionType.CARD_PLAY:
-            if self.target:
-                return f"{self.player} playing {self.card.value} on {self.target}"
-            return f"{self.player} playing {self.card.value}"
-        elif self.action_type == ActionType.COMBO_PLAY:
-            if self.target:
-                return f"{self.player} playing {self.combo_type.value} combo targeting {self.target}"
-            return f"{self.player} playing {self.combo_type.value} combo"
-        elif self.action_type == ActionType.CARD_DRAW:
-            return f"{self.player} draws a card"
-        elif self.action_type == ActionType.CARD_STEAL:
-            return f"{self.player} steals a card from {self.target}"
-        elif self.action_type == ActionType.CARD_REQUEST:
-            status = "gives" if self.success else "doesn't have"
-            return f"{self.target} {status} {self.card.value} to {self.player}"
-        elif self.action_type == ActionType.EXPLODING_KITTEN_DRAW:
-            return f"{self.player} drew an Exploding Kitten"
-        elif self.action_type == ActionType.DEFUSE:
-            return f"{self.player} defused an Exploding Kitten"
-        elif self.action_type == ActionType.ELIMINATION:
-            return f"{self.player} exploded and is eliminated"
-        elif self.action_type == ActionType.NOPE:
-            return f"{self.player} playing NOPE"
-        return f"{self.player} performed an action"
 
 
 @dataclass
