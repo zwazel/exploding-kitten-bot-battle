@@ -279,6 +279,69 @@ Test mode features:
 - If only 1 bot is found, it duplicates it to play against itself
 - Requires at least 2 bots to run
 
+### Replay Recording
+
+Record games to JSON files for later replay or analysis:
+
+```bash
+python3 main.py --test --replay game_replay.json
+```
+
+The replay file will contain:
+- **Game metadata**: timestamp, player list, version
+- **Game setup**: deck size, initial hand size, play order
+- **All game events**: turn starts, card plays, draws, combos, nopes, eliminations
+- **Game result**: winner information
+
+#### Replay File Structure
+
+The replay JSON contains the following event types:
+- `game_setup` - Initial game configuration
+- `turn_start` - Beginning of each player's turn
+- `card_play` - Single card plays (Skip, Attack, Shuffle, etc.)
+- `card_draw` - Cards drawn from the deck
+- `combo_play` - Combo plays (2-of-a-kind, 3-of-a-kind, 5-unique)
+- `nope` - Nope cards played in response to actions
+- `exploding_kitten_draw` - When a player draws an Exploding Kitten
+- `defuse` - When a player defuses an Exploding Kitten
+- `player_elimination` - When a player is eliminated
+- `card_steal` - When cards are stolen (combos or Favor)
+- `card_request` - When specific cards are requested (3-of-a-kind)
+- `favor` - When Favor cards are played
+- `shuffle` - When the deck is shuffled
+- `see_future` - When See the Future is played
+- `discard_take` - When cards are taken from discard (5-unique)
+- `game_end` - End of game with winner
+
+**Example replay file:**
+```json
+{
+  "metadata": {
+    "timestamp": "2025-11-03T12:39:15.013346",
+    "players": ["Bot1", "Bot2", "Bot3"],
+    "version": "1.0"
+  },
+  "events": [
+    {
+      "type": "game_setup",
+      "deck_size": 33,
+      "initial_hand_size": 7,
+      "play_order": ["Bot1", "Bot2", "Bot3"]
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 1,
+      "player": "Bot1",
+      "turns_remaining": 1,
+      "hand_size": 7,
+      "cards_in_deck": 33
+    },
+    ...
+  ],
+  "winner": "Bot1"
+}
+```
+
 ### Game Logging
 
 The game provides detailed console output showing all game actions:

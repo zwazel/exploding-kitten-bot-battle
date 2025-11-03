@@ -1019,6 +1019,128 @@ class TestNotificationSystem(unittest.TestCase):
         self.assertTrue(any("gives" in action for action in all_actions))
 
 
+class TestReplayRecorder(unittest.TestCase):
+    """Test ReplayRecorder class."""
+    
+    def test_replay_recorder_creation(self):
+        """Test creating a replay recorder."""
+        from game import ReplayRecorder
+        recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
+        self.assertTrue(recorder.enabled)
+        self.assertEqual(len(recorder.events), 0)
+        self.assertIsNone(recorder.winner)
+    
+    def test_replay_recorder_disabled(self):
+        """Test that disabled recorder doesn't record events."""
+        from game import ReplayRecorder
+        recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=False)
+        recorder.record_card_play("Bot1", CardType.SKIP, False)
+        self.assertEqual(len(recorder.events), 0)
+    
+    def test_replay_recorder_game_setup(self):
+        """Test recording game setup."""
+        from game import ReplayRecorder
+        recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
+        recorder.record_game_setup(20, 7, ["Bot1", "Bot2"])
+        self.assertEqual(len(recorder.events), 1)
+        self.assertEqual(recorder.events[0]["type"], "game_setup")
+        self.assertEqual(recorder.events[0]["deck_size"], 20)
+    
+    def test_replay_recorder_card_play(self):
+        """Test recording card plays."""
+        from game import ReplayRecorder
+        recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
+        recorder.record_card_play("Bot1", CardType.SKIP, False)
+        self.assertEqual(len(recorder.events), 1)
+        self.assertEqual(recorder.events[0]["type"], "card_play")
+        self.assertEqual(recorder.events[0]["player"], "Bot1")
+        self.assertEqual(recorder.events[0]["card"], "Skip")
+        self.assertFalse(recorder.events[0]["was_noped"])
+    
+    def test_replay_recorder_combo_play(self):
+        """Test recording combo plays."""
+        from game import ReplayRecorder
+        recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
+        recorder.record_combo_play("Bot1", "2-of-a-kind", 
+                                   [CardType.TACOCAT, CardType.TACOCAT],
+                                   target="Bot2", was_noped=False)
+        self.assertEqual(len(recorder.events), 1)
+        self.assertEqual(recorder.events[0]["type"], "combo_play")
+        self.assertEqual(recorder.events[0]["combo_type"], "2-of-a-kind")
+        self.assertEqual(recorder.events[0]["target"], "Bot2")
+    
+    def test_replay_recorder_to_json(self):
+        """Test converting replay to JSON."""
+        from game import ReplayRecorder
+        import json
+        recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
+        recorder.record_game_setup(20, 7, ["Bot1", "Bot2"])
+        recorder.record_game_end("Bot1")
+        
+        json_str = recorder.to_json()
+        data = json.loads(json_str)
+        
+        self.assertIn("metadata", data)
+        self.assertIn("events", data)
+        self.assertIn("winner", data)
+        self.assertEqual(data["winner"], "Bot1")
+        self.assertEqual(len(data["events"]), 2)
+    
+    def test_game_with_replay_recorder(self):
+        """Test that game engine works with replay recorder."""
+        from game import ReplayRecorder
+        bot1 = SimpleBot("Bot1")
+        bot2 = SimpleBot("Bot2")
+        recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
+        
+        game = GameEngine([bot1, bot2], verbose=False, replay_recorder=recorder)
+        winner = game.play_game()
+        
+        # Check that events were recorded
+        self.assertGreater(len(recorder.events), 0)
+        self.assertIsNotNone(recorder.winner)
+        
+        # Verify game_setup event exists
+        setup_events = [e for e in recorder.events if e["type"] == "game_setup"]
+        self.assertEqual(len(setup_events), 1)
+        
+        # Verify game_end event exists
+        end_events = [e for e in recorder.events if e["type"] == "game_end"]
+        self.assertEqual(len(end_events), 1)
+    
+    def test_replay_recorder_turn_start(self):
+        """Test recording turn start."""
+        from game import ReplayRecorder
+        recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
+        recorder.record_turn_start("Bot1", 1, 1, 7, 20)
+        self.assertEqual(len(recorder.events), 1)
+        self.assertEqual(recorder.events[0]["type"], "turn_start")
+        self.assertEqual(recorder.events[0]["turn_number"], 1)
+    
+    def test_replay_recorder_exploding_kitten(self):
+        """Test recording exploding kitten events."""
+        from game import ReplayRecorder
+        recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
+        recorder.record_exploding_kitten_draw("Bot1", True)
+        recorder.record_defuse("Bot1", 5)
+        
+        self.assertEqual(len(recorder.events), 2)
+        self.assertEqual(recorder.events[0]["type"], "exploding_kitten_draw")
+        self.assertTrue(recorder.events[0]["had_defuse"])
+        self.assertEqual(recorder.events[1]["type"], "defuse")
+        self.assertEqual(recorder.events[1]["insert_position"], 5)
+    
+    def test_replay_recorder_player_elimination(self):
+        """Test recording player elimination."""
+        from game import ReplayRecorder
+        recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
+        recorder.record_player_elimination("Bot1")
+        
+        self.assertEqual(len(recorder.events), 1)
+        self.assertEqual(recorder.events[0]["type"], "player_elimination")
+        self.assertEqual(recorder.events[0]["player"], "Bot1")
+
+
 if __name__ == '__main__':
     unittest.main()
 
