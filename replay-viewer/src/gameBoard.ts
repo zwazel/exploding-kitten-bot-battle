@@ -3,6 +3,7 @@
  */
 
 import type { CardType } from "./types";
+import { CARD_COLORS, DEFAULT_CARD_COLOR } from "./cardConfig";
 
 export interface Position {
   x: number;
@@ -64,22 +65,7 @@ export class GameBoard {
    * Get card color based on type
    */
   private getCardColor(cardType: CardType): string {
-    const colors: Record<string, string> = {
-      EXPLODING_KITTEN: "#ff4444",
-      DEFUSE: "#44ff44",
-      SKIP: "#ffff44",
-      SEE_THE_FUTURE: "#4444ff",
-      SHUFFLE: "#ff44ff",
-      ATTACK: "#ff8844",
-      FAVOR: "#ff88ff",
-      NOPE: "#888888",
-      TACOCAT: "#88ffff",
-      CATTERMELON: "#ffaa88",
-      HAIRY_POTATO_CAT: "#aa88ff",
-      BEARD_CAT: "#88ff88",
-      RAINBOW_RALPHING_CAT: "#ffaaff",
-    };
-    return colors[cardType] || "#cccccc";
+    return CARD_COLORS[cardType] || DEFAULT_CARD_COLOR;
   }
 
   /**
@@ -200,9 +186,6 @@ export class GameBoard {
       playerArea.id = `player-${name}`;
       playerArea.className = "player-area";
       
-      // Calculate rotation so cards face the center
-      const rotationDeg = (angle * 180 / Math.PI) + 90;
-      
       playerArea.style.cssText = `
         position: absolute;
         left: ${x - 100}px;
@@ -217,7 +200,7 @@ export class GameBoard {
 
       playerArea.innerHTML = `
         <div style="color: #44ff44; font-weight: bold; margin-bottom: 4px; text-align: center;">${this.escapeHtml(name)}</div>
-        <div id="hand-${name}" class="player-hand" data-rotation="${rotationDeg}" style="position: relative; min-height: 150px;"></div>
+        <div id="hand-${name}" class="player-hand" data-rotation="0" style="position: relative; min-height: 150px;"></div>
       `;
 
       playerAreas.appendChild(playerArea);

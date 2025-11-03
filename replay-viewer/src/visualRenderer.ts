@@ -5,6 +5,7 @@
 import type { ReplayData, ReplayEvent } from "./types";
 import { GameBoard } from "./gameBoard";
 import { AnimationController } from "./animationController";
+import { CARD_COLORS } from "./cardConfig";
 
 export class VisualRenderer {
   private container: HTMLElement;
@@ -26,24 +27,57 @@ export class VisualRenderer {
    */
   private setupLayout(): void {
     this.container.innerHTML = `
-      <div class="visual-layout" style="display: flex; flex-direction: column; gap: 1rem;">
-        <!-- Game info header -->
-        <div id="game-info" class="game-info" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333;">
+      <div class="visual-layout" style="display: flex; gap: 1rem;">
+        <!-- Main game area -->
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 1rem;">
+          <!-- Game info header -->
+          <div id="game-info" class="game-info" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333;">
+          </div>
+          
+          <!-- Visual game board -->
+          <div id="visual-board" style="min-height: 800px;">
+          </div>
+          
+          <!-- Current event display -->
+          <div id="event-display" class="event-display" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333;">
+            <h3 style="color: #888; margin: 0 0 0.5rem 0;">Current Event</h3>
+            <div id="event-content" class="event-content" style="padding: 1rem; background: #0f0f0f; border-radius: 6px; border-left: 4px solid #646cff;">
+              <em style="color: #888;">No event</em>
+            </div>
+          </div>
         </div>
         
-        <!-- Visual game board -->
-        <div id="visual-board" style="min-height: 800px;">
-        </div>
-        
-        <!-- Current event display -->
-        <div id="event-display" class="event-display" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333;">
-          <h3 style="color: #888; margin: 0 0 0.5rem 0;">Current Event</h3>
-          <div id="event-content" class="event-content" style="padding: 1rem; background: #0f0f0f; border-radius: 6px; border-left: 4px solid #646cff;">
-            <em style="color: #888;">No event</em>
+        <!-- Color legend sidebar -->
+        <div id="color-legend" style="width: 200px; background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333; height: fit-content; position: sticky; top: 1rem;">
+          <h3 style="color: #646cff; margin: 0 0 1rem 0; font-size: 1rem;">Card Colors</h3>
+          <div id="legend-items" style="display: flex; flex-direction: column; gap: 0.5rem;">
           </div>
         </div>
       </div>
     `;
+    
+    // Populate legend
+    this.populateLegend();
+  }
+
+  /**
+   * Populate the color legend
+   */
+  private populateLegend(): void {
+    const legendItems = document.querySelector("#legend-items") as HTMLElement;
+    if (!legendItems) return;
+
+    const items = Object.entries(CARD_COLORS).map(([cardType, color]) => {
+      const displayName = cardType.replace(/_/g, " ");
+      return `
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <div style="width: 20px; height: 20px; background: ${color}; border: 1px solid #333; border-radius: 3px; flex-shrink: 0;"></div>
+          <div style="color: #ccc; font-size: 0.75rem; line-height: 1.2;">${this.escapeHtml(displayName)}</div>
+        </div>
+      `;
+    }).join('');
+
+    legendItems.innerHTML = items;
   }
 
   /**
