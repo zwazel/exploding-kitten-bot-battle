@@ -143,12 +143,36 @@ class SmartBot(Bot):
         super().__init__(name)
         self.last_seen_future = []
         self.known_top_cards = []
+        self.actions_log = []  # Track all game actions
+    
+    def on_action_played(self, state: GameState, action_description: str, actor: 'Bot') -> None:
+        """
+        Called whenever ANY action happens in the game.
+        Override this to track game actions for better decision making.
+        """
+        # Store action for analysis
+        self.actions_log.append({
+            'action': action_description,
+            'actor': actor.name,
+            'cards_left': state.cards_left_to_draw
+        })
+        
+        # Track if someone drew an Exploding Kitten
+        if "drew an Exploding Kitten" in action_description:
+            # Someone hit a kitten - update your strategy
+            pass
     
     def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
         """Store what we saw for later use."""
         self.last_seen_future = top_three.copy()
         self.known_top_cards = top_three.copy()
 ```
+
+**Benefits of tracking actions:**
+- Know when opponents draw/play certain cards
+- Track when Exploding Kittens are drawn/defused
+- Infer opponent strategies from their actions
+- Make better Nope decisions based on who's being targeted
 
 ### Adaptive Strategy
 

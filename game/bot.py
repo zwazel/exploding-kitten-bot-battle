@@ -117,6 +117,19 @@ class Bot(ABC):
         """
         pass
     
+    def on_action_played(self, state: GameState, action_description: str, actor: 'Bot') -> None:
+        """
+        Called whenever ANY action happens in the game to notify the bot.
+        This is for information tracking, not for response.
+        
+        Args:
+            state: The current game state
+            action_description: Description of the action being played
+            actor: The bot who performed the action
+        """
+        # Default implementation does nothing. Bots can override to track game state.
+        pass
+    
     @abstractmethod
     def should_play_nope(self, state: GameState, action_description: str) -> bool:
         """

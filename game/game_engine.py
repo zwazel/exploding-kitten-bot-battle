@@ -69,10 +69,31 @@ class GameEngine:
         
         return result
     
+    def _notify_all_bots(self, action_description: str, actor: Bot) -> None:
+        """
+        Notify all alive bots about an action in play order.
+        
+        Args:
+            action_description: Description of the action
+            actor: The bot who performed the action
+        """
+        bots_in_order = self._get_bots_in_play_order_after(actor)
+        
+        for bot in bots_in_order:
+            if not bot.alive:
+                continue
+            
+            self._log(f"  → Notifying {bot.name} about: {action_description}")
+            try:
+                bot.on_action_played(self.game_state.copy(), action_description, actor)
+            except Exception as e:
+                self._log(f"  ERROR: {bot.name} raised exception in on_action_played: {e}")
+    
     def _check_for_nope(self, action_description: str, initiator: Bot) -> bool:
         """
         Check if any player wants to play a Nope card in play order. Can be chained.
-        Each action is announced to all players in turn order before they can respond.
+        First notifies all players about the action, then checks for Nopes.
+        When someone Nopes, notify everyone about the Nope, then check again.
         
         Args:
             action_description: Description of the action being played
@@ -86,16 +107,16 @@ class GameEngine:
         last_actor = initiator
         
         while True:
+            # FIRST: Notify all bots about the current action
+            self._notify_all_bots(current_action, last_actor)
+            
+            # SECOND: Check if anyone wants to Nope
             noped = False
-            # Notify bots in play order starting from the one after last_actor
             bots_in_order = self._get_bots_in_play_order_after(last_actor)
             
             for bot in bots_in_order:
                 if not bot.alive:
                     continue
-                
-                # Notify bot about the action
-                self._log(f"  → Notifying {bot.name} about: {current_action}")
                 
                 # Check if bot wants to play Nope
                 if bot.has_card_type(CardType.NOPE):
@@ -112,7 +133,7 @@ class GameEngine:
                             # Update action description for next round
                             current_action = f"{bot.name} playing NOPE on: {current_action}"
                             noped = True
-                            break
+                            break  # Stop checking, go to notification phase for this Nope
                     except Exception as e:
                         self._log(f"  ERROR: {bot.name} raised exception in should_play_nope: {e}")
             
@@ -391,6 +412,7 @@ class GameEngine:
         """Execute 2-of-a-kind combo with pre-selected target: randomly steal a card."""
         if not target.hand:
             self._log(f"  → {target.name} has no cards")
+            self._notify_all_bots(f"{bot.name}'s 2-of-a-kind combo failed (target has no cards)", bot)
             return
         
         stolen_card = random.choice(target.hand)
@@ -398,6 +420,8 @@ class GameEngine:
         bot.add_card(stolen_card)
         # Show full details in user-facing logs (bots don't get this info in GameState)
         self._log(f"  → {bot.name} randomly steals {stolen_card} from {target.name}")
+        # Notify bots (they don't know which specific card, just that a card was stolen)
+        self._notify_all_bots(f"{bot.name} steals a card from {target.name}", bot)
     
     def _execute_3_of_a_kind_with_target(self, bot: Bot, target: Bot) -> None:
         """Execute 3-of-a-kind combo with pre-selected target: request specific card type."""
@@ -408,6 +432,8 @@ class GameEngine:
             
             # Loudly announce the requested card type (everyone knows)
             self._log(f"  → {bot.name} requests {requested_type.value} from {target.name}")
+            # Notify all bots about the request (public announcement)
+            self._notify_all_bots(f"{bot.name} requests {requested_type.value} from {target.name}", bot)
             
             # Check if target has that card type
             matching_cards = [c for c in target.hand if c.card_type == requested_type]
@@ -417,8 +443,10 @@ class GameEngine:
                 bot.add_card(card_to_give)
                 # Everyone knows the request succeeded
                 self._log(f"  → {target.name} gives {requested_type.value} to {bot.name}")
+                self._notify_all_bots(f"{target.name} gives {requested_type.value} to {bot.name}", bot)
             else:
                 self._log(f"  → {target.name} doesn't have {requested_type.value}")
+                self._notify_all_bots(f"{target.name} doesn't have {requested_type.value}", bot)
         except Exception as e:
             self._log(f"  ERROR: {bot.name} raised exception: {e}")
     
@@ -426,6 +454,7 @@ class GameEngine:
         """Execute 5-unique combo: take any card from discard pile."""
         if not self.deck.discard_pile:
             self._log(f"  → Discard pile is empty")
+            self._notify_all_bots(f"{bot.name}'s 5-unique combo failed (discard pile empty)", bot)
             return
         
         try:
@@ -434,8 +463,11 @@ class GameEngine:
                 self.deck.discard_pile.remove(chosen_card)
                 bot.add_card(chosen_card)
                 self._log(f"  → {bot.name} takes {chosen_card} from discard pile")
+                # Notify all bots (this is public information)
+                self._notify_all_bots(f"{bot.name} takes {chosen_card.card_type.value} from discard pile", bot)
             else:
                 self._log(f"  → Invalid card selection from discard")
+                self._notify_all_bots(f"{bot.name}'s 5-unique combo failed (invalid selection)", bot)
         except Exception as e:
             self._log(f"  ERROR: {bot.name} raised exception in choose_from_discard: {e}")
 
@@ -531,6 +563,8 @@ class GameEngine:
                 bot.add_card(card_to_give)
                 # Show full details in user-facing logs (bots don't get this info in GameState)
                 self._log(f"  → {target.name} gives {card_to_give} to {bot.name}")
+                # Notify bots (they don't know which specific card)
+                self._notify_all_bots(f"{target.name} gives a card to {bot.name}", bot)
             else:
                 self._log(f"  ERROR: {target.name} tried to give invalid card")
         except Exception as e:
@@ -554,10 +588,14 @@ class GameEngine:
         
         if drawn_card.card_type == CardType.EXPLODING_KITTEN:
             self._log(f"  💣 {bot.name} drew an EXPLODING KITTEN!")
+            # Notify all bots about the Exploding Kitten draw
+            self._notify_all_bots(f"{bot.name} drew an Exploding Kitten", bot)
             self._handle_exploding_kitten(bot, drawn_card)
         else:
             self._log(f"  → Drew: {drawn_card}")
             bot.add_card(drawn_card)
+            # Notify all bots about the draw (but not which card)
+            self._notify_all_bots(f"{bot.name} draws a card", bot)
 
     def _handle_exploding_kitten(self, bot: Bot, exploding_kitten: Card) -> None:
         """
@@ -584,16 +622,22 @@ class GameEngine:
                 position = max(0, min(position, self.deck.size()))
                 self.deck.insert_at(exploding_kitten, position)
                 self._log(f"  → Defused! Exploding Kitten inserted at position {position}")
+                # Notify all bots about the defuse
+                self._notify_all_bots(f"{bot.name} defused an Exploding Kitten", bot)
                 self.game_state.was_last_card_exploding_kitten = True
             except Exception as e:
                 self._log(f"  ERROR: {bot.name} raised exception in handle_exploding_kitten: {e}")
                 # Default: put it back on top
                 self.deck.add_to_top(exploding_kitten)
                 self._log(f"  → Defused! Exploding Kitten placed on top (default)")
+                # Notify all bots about the defuse
+                self._notify_all_bots(f"{bot.name} defused an Exploding Kitten", bot)
                 self.game_state.was_last_card_exploding_kitten = True
         else:
             self._log(f"  💀 {bot.name} has no Defuse card and EXPLODES!")
             bot.alive = False
             self.game_state.alive_bots -= 1
+            # Notify all bots about the elimination
+            self._notify_all_bots(f"{bot.name} exploded and is eliminated", bot)
             self.game_state.history_of_played_cards.append(exploding_kitten)
             self.game_state.was_last_card_exploding_kitten = False
