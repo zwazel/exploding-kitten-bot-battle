@@ -1,8 +1,8 @@
 """Tests for the Exploding Kittens game components."""
 
 import unittest
-from game import Card, CardType, GameState, CardCounts, Bot, Deck, GameEngine
-from typing import Optional, List, Union
+from game import Card, CardType, GameState, Bot, Deck, GameEngine
+from typing import Optional, List, Union, Dict
 
 
 class SimpleBot(Bot):
@@ -126,9 +126,13 @@ class TestGameState(unittest.TestCase):
     
     def test_game_state_creation(self):
         """Test creating a game state."""
-        counts = CardCounts(exploding_kitten=2, defuse=4)
+        initial_counts = {
+            CardType.EXPLODING_KITTEN: 2,
+            CardType.DEFUSE: 4,
+            CardType.SKIP: 3
+        }
         state = GameState(
-            total_cards_in_deck=counts,
+            initial_card_counts=initial_counts,
             cards_left_to_draw=10,
             was_last_card_exploding_kitten=False,
             alive_bots=3
@@ -136,11 +140,12 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(state.cards_left_to_draw, 10)
         self.assertEqual(state.alive_bots, 3)
         self.assertFalse(state.was_last_card_exploding_kitten)
+        self.assertEqual(state.initial_card_counts[CardType.EXPLODING_KITTEN], 2)
     
     def test_game_state_copy(self):
         """Test copying game state."""
         state = GameState(
-            total_cards_in_deck=CardCounts(),
+            initial_card_counts={CardType.DEFUSE: 6, CardType.SKIP: 4},
             cards_left_to_draw=5,
             was_last_card_exploding_kitten=True,
             alive_bots=2
@@ -148,6 +153,7 @@ class TestGameState(unittest.TestCase):
         copy = state.copy()
         self.assertEqual(copy.cards_left_to_draw, state.cards_left_to_draw)
         self.assertEqual(copy.alive_bots, state.alive_bots)
+        self.assertEqual(copy.initial_card_counts, state.initial_card_counts)
 
 
 class NopeBot(Bot):
@@ -718,6 +724,57 @@ class TestMultiTurnMechanics(unittest.TestCase):
         # Bot2 should have been able to Nope
         self.assertTrue(was_noped)
         self.assertEqual(len(bot2.hand), 0)
+
+
+class TestDeckConfiguration(unittest.TestCase):
+    """Test deck configuration system."""
+    
+    def test_default_deck_config(self):
+        """Test that default deck configuration works."""
+        deck = Deck(3)
+        initial_counts = deck.get_initial_card_counts()
+        
+        # Check some expected counts
+        self.assertEqual(initial_counts[CardType.DEFUSE], 6)
+        self.assertEqual(initial_counts[CardType.SKIP], 4)
+        self.assertEqual(initial_counts[CardType.EXPLODING_KITTEN], 2)  # 3 players - 1
+        self.assertEqual(initial_counts[CardType.TACOCAT], 4)
+    
+    def test_custom_deck_config(self):
+        """Test that custom deck configuration works."""
+        custom_config = {
+            CardType.DEFUSE: 10,
+            CardType.SKIP: 8,
+            CardType.ATTACK: 2,
+        }
+        deck = Deck(2, custom_config)
+        initial_counts = deck.get_initial_card_counts()
+        
+        # Custom values should override defaults
+        self.assertEqual(initial_counts[CardType.DEFUSE], 10)
+        self.assertEqual(initial_counts[CardType.SKIP], 8)
+        self.assertEqual(initial_counts[CardType.ATTACK], 2)
+        
+        # Non-overridden values should use defaults
+        self.assertEqual(initial_counts[CardType.NOPE], 5)
+        
+        # Exploding Kittens based on players
+        self.assertEqual(initial_counts[CardType.EXPLODING_KITTEN], 1)  # 2 players - 1
+    
+    def test_game_engine_with_custom_config(self):
+        """Test GameEngine with custom deck config."""
+        custom_config = {
+            CardType.DEFUSE: 12,
+            CardType.NOPE: 10,
+        }
+        bot1 = SimpleBot("Bot1")
+        bot2 = SimpleBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False, deck_config=custom_config)
+        game.setup_game()
+        
+        # Check that game state has the custom initial counts
+        self.assertEqual(game.game_state.initial_card_counts[CardType.DEFUSE], 12)
+        self.assertEqual(game.game_state.initial_card_counts[CardType.NOPE], 10)
 
 
 if __name__ == '__main__':

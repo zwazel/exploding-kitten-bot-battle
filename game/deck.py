@@ -1,77 +1,59 @@
 """Deck management for Exploding Kittens game."""
 
 import random
-from typing import List
+from typing import List, Dict
 from .cards import Card, CardType
-from .game_state import CardCounts
+from .config import get_deck_config
 
 
 class Deck:
     """Manages the draw pile and discard pile for the game."""
 
-    def __init__(self, num_players: int):
+    def __init__(self, num_players: int, custom_config: Dict[CardType, int] = None):
         """
         Initialize the deck for a game.
         
         Args:
             num_players: Number of players in the game
+            custom_config: Optional custom card counts to override defaults
         """
         self.draw_pile: List[Card] = []
         self.discard_pile: List[Card] = []
-        self._initialize_deck(num_players)
+        self.config = get_deck_config(custom_config)
+        self.num_players = num_players
+        self._initialize_deck()
 
-    def _initialize_deck(self, num_players: int) -> None:
+    def _initialize_deck(self) -> None:
         """
-        Create and shuffle the initial deck.
+        Create and shuffle the initial deck based on configuration.
         
-        Standard Exploding Kittens deck composition:
-        - Exploding Kittens: num_players - 1 (inserted after initial deal)
-        - Defuse cards: 6 total (1 dealt to each player, rest in deck)
-        - Skip: 4
-        - See the Future: 5
-        - Shuffle: 4
-        - Favor: 4
-        - Attack: 4
-        - Nope: 5
-        - Cat cards: 4 of each type (Tacocat, Cattermelon, Hairy Potato Cat, Beard Cat, Rainbow-Ralphing Cat)
+        Exploding Kittens are added separately: num_players - 1 (inserted after initial deal)
         """
         cards = []
         
-        # Add Defuse cards (will be distributed to players and deck)
-        for _ in range(6):
-            cards.append(Card(CardType.DEFUSE))
-        
-        # Add action cards
-        for _ in range(4):
-            cards.append(Card(CardType.SKIP))
-        for _ in range(5):
-            cards.append(Card(CardType.SEE_THE_FUTURE))
-        for _ in range(4):
-            cards.append(Card(CardType.SHUFFLE))
-        for _ in range(4):
-            cards.append(Card(CardType.FAVOR))
-        for _ in range(4):
-            cards.append(Card(CardType.ATTACK))
-        for _ in range(5):
-            cards.append(Card(CardType.NOPE))
-        
-        # Add cat cards (4 of each type)
-        for _ in range(4):
-            cards.append(Card(CardType.TACOCAT))
-        for _ in range(4):
-            cards.append(Card(CardType.CATTERMELON))
-        for _ in range(4):
-            cards.append(Card(CardType.HAIRY_POTATO_CAT))
-        for _ in range(4):
-            cards.append(Card(CardType.BEARD_CAT))
-        for _ in range(4):
-            cards.append(Card(CardType.RAINBOW_RALPHING_CAT))
+        # Add cards based on configuration
+        for card_type, count in self.config.items():
+            for _ in range(count):
+                cards.append(Card(card_type))
 
         # Shuffle the deck
         random.shuffle(cards)
         
         self.draw_pile = cards
         # Exploding Kittens will be added after initial deal
+
+    def get_initial_card_counts(self) -> Dict[CardType, int]:
+        """
+        Get the initial card counts that were used to create the deck.
+        This includes Exploding Kittens that will be added.
+        
+        Returns:
+            Dictionary mapping CardType to initial count
+        """
+        counts = self.config.copy()
+        # Add Exploding Kittens count (num_players - 1)
+        counts[CardType.EXPLODING_KITTEN] = self.num_players - 1
+        return counts
 
     def shuffle(self) -> None:
         """Shuffle the draw pile."""
@@ -126,43 +108,3 @@ class Deck:
     def size(self) -> int:
         """Get the number of cards in the draw pile."""
         return len(self.draw_pile)
-
-    def get_total_card_counts(self) -> CardCounts:
-        """
-        Count all cards that were in the initial deck.
-        
-        Returns:
-            CardCounts object with the total count of each card type
-        """
-        counts = CardCounts()
-        all_cards = self.draw_pile + self.discard_pile
-        
-        for card in all_cards:
-            if card.card_type == CardType.EXPLODING_KITTEN:
-                counts.exploding_kitten += 1
-            elif card.card_type == CardType.DEFUSE:
-                counts.defuse += 1
-            elif card.card_type == CardType.SKIP:
-                counts.skip += 1
-            elif card.card_type == CardType.SEE_THE_FUTURE:
-                counts.see_the_future += 1
-            elif card.card_type == CardType.SHUFFLE:
-                counts.shuffle += 1
-            elif card.card_type == CardType.FAVOR:
-                counts.favor += 1
-            elif card.card_type == CardType.ATTACK:
-                counts.attack += 1
-            elif card.card_type == CardType.NOPE:
-                counts.nope += 1
-            elif card.card_type == CardType.TACOCAT:
-                counts.tacocat += 1
-            elif card.card_type == CardType.CATTERMELON:
-                counts.cattermelon += 1
-            elif card.card_type == CardType.HAIRY_POTATO_CAT:
-                counts.hairy_potato_cat += 1
-            elif card.card_type == CardType.BEARD_CAT:
-                counts.beard_cat += 1
-            elif card.card_type == CardType.RAINBOW_RALPHING_CAT:
-                counts.rainbow_ralphing_cat += 1
-        
-        return counts

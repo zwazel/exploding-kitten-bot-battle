@@ -1,32 +1,33 @@
 """Game engine for Exploding Kittens bot battle."""
 
 import random
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Dict
 from .bot import Bot
 from .deck import Deck
 from .cards import Card, CardType
-from .game_state import GameState, CardCounts
+from .game_state import GameState
 
 
 class GameEngine:
     """Main game engine that runs the Exploding Kittens game."""
 
-    def __init__(self, bots: List[Bot], verbose: bool = True):
+    def __init__(self, bots: List[Bot], verbose: bool = True, deck_config: Dict[CardType, int] = None):
         """
         Initialize the game engine.
         
         Args:
             bots: List of bots to play the game
             verbose: Whether to print game events
+            deck_config: Optional custom deck configuration
         """
         if len(bots) < 2:
             raise ValueError("Need at least 2 bots to play")
         
         self.bots = bots
         self.verbose = verbose
-        self.deck = Deck(len(bots))
+        self.deck = Deck(len(bots), deck_config)
         self.game_state = GameState(
-            total_cards_in_deck=CardCounts(),
+            initial_card_counts={},
             cards_left_to_draw=0,
             was_last_card_exploding_kitten=False,
             history_of_played_cards=[],
@@ -185,8 +186,8 @@ class GameEngine:
         # Shuffle the deck
         self.deck.shuffle()
         
-        # Update game state
-        self.game_state.total_cards_in_deck = self.deck.get_total_card_counts()
+        # Update game state with initial card counts
+        self.game_state.initial_card_counts = self.deck.get_initial_card_counts()
         self.game_state.cards_left_to_draw = self.deck.size()
         self.game_state.alive_bots = len([b for b in self.bots if b.alive])
         
