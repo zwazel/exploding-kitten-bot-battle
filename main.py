@@ -91,14 +91,8 @@ def main():
     # Create and run the game
     game = GameEngine(bots, verbose=True)
     
-    if args.test:
-        # Test mode: run automatically
-        winner = game.play_game()
-    else:
-        # Interactive mode: pause after each turn
-        print("\nPress Enter after each turn to continue...")
-        # For now, just run automatically (interactive mode would require game engine modification)
-        winner = game.play_game()
+    # Run the game (both modes run automatically for now)
+    winner = game.play_game()
     
     if winner:
         print(f"\n🏆 Victory goes to: {winner.name}! 🏆")

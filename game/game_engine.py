@@ -114,16 +114,22 @@ class GameEngine:
             # Play phase: Bot can play cards before drawing
             self._play_phase(current_bot)
             
-            # Draw phase: Bot must draw a card
-            if current_bot.alive:
+            # Draw phase: Bot must draw a card (unless Skip or Attack was played)
+            if current_bot.alive and self.turns_to_take > 0:
                 self._draw_phase(current_bot)
             
-            # Move to next bot if no attack card was played
+            # Decrement turns for this player
+            self.turns_to_take -= 1
+            
+            # Move to next bot when current bot has no more turns
             if self.turns_to_take <= 0:
                 self.current_bot_index = (self.current_bot_index + 1) % len(self.bots)
-                self.turns_to_take = 1
-            else:
-                self.turns_to_take -= 1
+                if self.turns_to_take == -1:
+                    # Attack was played, next player takes 2 turns
+                    self.turns_to_take = 2
+                else:
+                    # Normal turn
+                    self.turns_to_take = 1
         
         # Find the winner
         alive_bots = [bot for bot in self.bots if bot.alive]
@@ -195,8 +201,7 @@ class GameEngine:
             self.deck.shuffle()
         elif card.card_type == CardType.ATTACK:
             self._log("  → Attack: Next player takes 2 turns")
-            self.turns_to_take = 0  # Current bot ends turn
-            # Next bot will take 2 turns (handled in main loop)
+            self.turns_to_take = -1  # End turn without drawing, next player gets 2 turns
         # Other cards (Favor, Nope, Cat) would be implemented in full version
 
     def _draw_phase(self, bot: Bot) -> None:

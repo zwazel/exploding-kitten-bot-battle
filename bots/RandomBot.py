@@ -5,6 +5,10 @@ from typing import Optional, List
 from game import Bot, GameState, Card, CardType
 
 
+# Probability of playing a card when available
+PLAY_CARD_PROBABILITY = 0.3
+
+
 class RandomBot(Bot):
     """A bot that makes random decisions."""
 
@@ -16,7 +20,7 @@ class RandomBot(Bot):
                                   CardType.SHUFFLE, CardType.ATTACK]
         ]
         
-        if playable_cards and random.random() < 0.3:  # 30% chance to play a card
+        if playable_cards and random.random() < PLAY_CARD_PROBABILITY:
             return random.choice(playable_cards)
         
         return None
