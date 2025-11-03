@@ -11,7 +11,7 @@ exploding-kitten-bot-battle/
 ├── game/               # Core game engine (DO NOT MODIFY)
 │   ├── bot.py         # Base Bot class that all bots inherit from
 │   ├── cards.py       # Card types and Card class definitions
-│   ├── game_state.py  # GameState and CardCounts classes
+│   ├── game_state.py  # GameState class for game information
 │   ├── deck.py        # Deck management and operations
 │   ├── game_engine.py # Main game loop and mechanics
 │   ├── config.py      # Game configuration settings
