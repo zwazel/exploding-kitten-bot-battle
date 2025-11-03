@@ -12,6 +12,7 @@ This project is a simulation of the popular card game "Exploding Kittens" where 
 - [Creating Your Own Bot](#creating-your-own-bot)
 - [Running the Game](#running-the-game)
 - [Running Tests](#running-tests)
+- [Replay Viewer](#replay-viewer)
 - [Code Overview](#code-overview)
 
 ## Game Rules
@@ -88,12 +89,18 @@ exploding-kitten-bot-battle/
 │   ├── game_state.py  # GameState and CardCounts classes
 │   ├── bot.py         # Base Bot class (inherit from this!)
 │   ├── deck.py        # Deck management
-│   └── game_engine.py # Main game loop and logic
+│   ├── game_engine.py # Main game loop and logic
+│   └── replay_recorder.py # Replay recording system
 ├── bots/              # Bot implementations (add yours here!)
 │   ├── __init__.py
 │   ├── RandomBot.py   # Example: plays randomly
 │   ├── CautiousBot.py # Example: plays defensively
 │   └── AggressiveBot.py # Example: plays aggressively
+├── replay-viewer/     # TypeScript web app for viewing replays
+│   ├── src/           # TypeScript source files
+│   ├── public/        # Static assets
+│   ├── dist/          # Built files (generated)
+│   └── README.md      # Replay viewer documentation
 ├── tests/             # Automated tests
 │   ├── __init__.py
 │   └── test_game.py   # Unit tests for game components
@@ -407,6 +414,62 @@ The test suite includes:
 - Bot behavior and hand management
 - Game state management
 - Complete game simulation
+
+## Replay Viewer
+
+The replay viewer is a TypeScript-based web application for visualizing game replays with animations and interactive controls.
+
+### Features
+
+- 🎮 **Visual Replay**: Load and watch game replays with event-by-event visualization
+- ▶️ **Playback Controls**: Play, pause, step forward/backward through events
+- ⚡ **Speed Control**: Adjust playback speed from 0.1x to 5x
+- 📊 **Real-time Status**: See player card counts and game state updates
+- 📱 **Responsive Design**: Works on desktop and mobile browsers
+- 🚀 **No Server Required**: Runs entirely in your browser or on GitHub Pages
+
+### Quick Start
+
+1. **Generate a replay file** from a game simulation:
+   ```bash
+   python3 main.py --test --replay my_game.json
+   ```
+
+2. **Run the replay viewer locally**:
+   ```bash
+   cd replay-viewer
+   npm install
+   npm run dev
+   ```
+
+3. **Open the viewer** in your browser at `http://localhost:5173`
+
+4. **Load your replay file** using the "Load Replay File" button
+
+### Building for Deployment
+
+Build the replay viewer for production:
+
+```bash
+cd replay-viewer
+npm run build
+```
+
+The built files in `replay-viewer/dist/` can be:
+- Deployed to GitHub Pages (automatic via GitHub Actions)
+- Served by any static file server
+- Opened directly in a browser
+
+### GitHub Pages Deployment
+
+The replay viewer automatically deploys to GitHub Pages when changes are pushed to the main branch. The workflow is configured in `.github/workflows/deploy-pages.yml`.
+
+To enable GitHub Pages:
+1. Go to repository Settings → Pages
+2. Select "GitHub Actions" as the deployment source
+3. The replay viewer will be available at `https://<username>.github.io/<repository>/`
+
+See `replay-viewer/README.md` for detailed documentation.
 
 ## Code Overview
 

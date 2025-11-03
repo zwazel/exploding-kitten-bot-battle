@@ -45,5 +45,10 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
+# Frontend (Node.js / TypeScript)
+replay-viewer/node_modules/
+replay-viewer/dist/
+*.log
+package-lock.json
 
 game.json
