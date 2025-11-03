@@ -1,8 +1,8 @@
 """Base Bot class that all bots must inherit from."""
 
 from abc import ABC, abstractmethod
-from typing import Optional, List, Tuple
-from .cards import Card, CardType
+from typing import Optional, List, Tuple, Union
+from .cards import Card, CardType, TargetContext
 from .game_state import GameState
 
 
@@ -25,7 +25,7 @@ class Bot(ABC):
         self.alive = True
 
     @abstractmethod
-    def play(self, state: GameState) -> Optional[Card | List[Card]]:
+    def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:
         """
         Called when it's the bot's turn to play a card or combo.
         
@@ -63,14 +63,14 @@ class Bot(ABC):
         pass
     
     @abstractmethod
-    def choose_target(self, state: GameState, alive_players: List['Bot'], context: str) -> Optional['Bot']:
+    def choose_target(self, state: GameState, alive_players: List['Bot'], context: TargetContext) -> Optional['Bot']:
         """
         Called when bot needs to choose a target for Favor or combo.
         
         Args:
             state: The current game state
             alive_players: List of alive bots (excluding self)
-            context: Why target is being chosen ("favor", "2-of-a-kind", "3-of-a-kind")
+            context: Why target is being chosen (TargetContext enum value)
             
         Returns:
             The target bot, or None if no valid target
@@ -148,7 +148,7 @@ class Bot(ABC):
         """Check if the bot has a specific card in hand."""
         return card in self.hand
 
-    def has_card_type(self, card_type) -> bool:
+    def has_card_type(self, card_type: CardType) -> bool:
         """Check if the bot has any card of a specific type."""
         return any(card.card_type == card_type for card in self.hand)
 

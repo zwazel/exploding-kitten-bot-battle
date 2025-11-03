@@ -129,8 +129,8 @@ To create your own bot, follow these steps:
 
 2. **Import required classes**:
    ```python
-   from typing import Optional, List
-   from game import Bot, GameState, Card, CardType
+   from typing import Optional, List, Union
+   from game import Bot, GameState, Card, CardType, TargetContext
    ```
 
 3. **Inherit from the `Bot` class** and implement the required methods:
@@ -139,15 +139,15 @@ To create your own bot, follow these steps:
    class MyBot(Bot):
        """My custom bot implementation."""
 
-       def play(self, state: GameState) -> Optional[Card]:
+       def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:
            """
-           Called when it's your turn to play a card.
+           Called when it's your turn to play a card or combo.
            
            Args:
                state: Current game state (read-only)
                
            Returns:
-               The card you want to play, or None to end play phase
+               A single card to play, a list of cards for a combo, or None to end play phase
            """
            # Your logic here
            return None
@@ -175,6 +175,70 @@ To create your own bot, follow these steps:
            """
            # Use this information for strategy
            pass
+       
+       def choose_target(self, state: GameState, alive_players: List[Bot], context: TargetContext) -> Optional[Bot]:
+           """
+           Called when you need to choose a target for Favor or combo.
+           
+           Args:
+               state: Current game state
+               alive_players: List of alive bots (excluding yourself)
+               context: Why target is being chosen (TargetContext.FAVOR, TargetContext.TWO_OF_A_KIND, etc.)
+               
+           Returns:
+               The target bot, or None if no valid target
+           """
+           return alive_players[0] if alive_players else None
+       
+       def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
+           """
+           Called when you need to give a card (for Favor).
+           
+           Args:
+               state: Current game state
+               
+           Returns:
+               The card to give from your hand
+           """
+           return self.hand[0] if self.hand else None
+       
+       def choose_card_type(self, state: GameState) -> Optional[CardType]:
+           """
+           Called for 3-of-a-kind combo to request a specific card type.
+           
+           Args:
+               state: Current game state
+               
+           Returns:
+               The card type to request (e.g., CardType.DEFUSE)
+           """
+           return CardType.DEFUSE
+       
+       def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
+           """
+           Called for 5-unique combo to pick a card from discard pile.
+           
+           Args:
+               state: Current game state
+               discard_pile: Cards in the discard pile
+               
+           Returns:
+               The card to take from discard pile
+           """
+           return discard_pile[0] if discard_pile else None
+       
+       def should_play_nope(self, state: GameState, action_description: str) -> bool:
+           """
+           Called when an action can be noped.
+           
+           Args:
+               state: Current game state
+               action_description: Description of the action being played
+               
+           Returns:
+               True if you want to play Nope, False otherwise
+           """
+           return False
    ```
 
 4. **Use the Bot API**:
@@ -266,8 +330,8 @@ The `GameState` class contains all public information about the game:
 
 All bots must inherit from `Bot` and implement:
 
-1. `play(state: GameState) -> Optional[Card]`
-   - Return a card to play, or `None` to end your turn
+1. `play(state: GameState) -> Optional[Union[Card, List[Card]]]`
+   - Return a single card to play, a list of cards for a combo, or `None` to end your turn
    - You can play multiple cards by returning one at a time
    - Return `None` to proceed to the draw phase
 
@@ -280,8 +344,27 @@ All bots must inherit from `Bot` and implement:
    - Called when you play a "See the Future" card
    - Use this information to inform your strategy
 
-### Card Types (CardType Enum)
+4. `choose_target(state: GameState, alive_players: List[Bot], context: TargetContext) -> Optional[Bot]`
+   - Called when you need to choose a target for Favor or combo
+   - `context` is a `TargetContext` enum value (FAVOR, TWO_OF_A_KIND, THREE_OF_A_KIND)
 
+5. `choose_card_from_hand(state: GameState) -> Optional[Card]`
+   - Called when you need to give a card (for Favor)
+
+6. `choose_card_type(state: GameState) -> Optional[CardType]`
+   - Called for 3-of-a-kind combo to request a specific card type
+
+7. `choose_from_discard(state: GameState, discard_pile: List[Card]) -> Optional[Card]`
+   - Called for 5-unique combo to pick a card from discard pile
+
+8. `should_play_nope(state: GameState, action_description: str) -> bool`
+   - Called when an action can be noped
+
+### Type-Safe Enums
+
+The game uses enums for type safety and better IDE autocomplete:
+
+#### CardType Enum
 - `EXPLODING_KITTEN`
 - `DEFUSE`
 - `SKIP`
@@ -290,7 +373,31 @@ All bots must inherit from `Bot` and implement:
 - `ATTACK`
 - `FAVOR`
 - `NOPE`
-- `CAT`
+- Cat cards for combos:
+  - `TACOCAT`
+  - `CATTERMELON`
+  - `HAIRY_POTATO_CAT`
+  - `BEARD_CAT`
+  - `RAINBOW_RALPHING_CAT`
+
+#### ComboType Enum
+- `TWO_OF_A_KIND` - Play 2 cards of the same type to steal a random card
+- `THREE_OF_A_KIND` - Play 3 cards of the same type to request a specific card
+- `FIVE_UNIQUE` - Play 5 different cards to take from discard pile
+
+#### TargetContext Enum
+- `FAVOR` - Choosing target for Favor card
+- `TWO_OF_A_KIND` - Choosing target for 2-of-a-kind combo
+- `THREE_OF_A_KIND` - Choosing target for 3-of-a-kind combo
+
+### Game Constants
+
+The game provides constants for game rules (importable from `game`):
+
+- `INITIAL_HAND_SIZE = 7` - Cards each player starts with
+- `INITIAL_DEFUSE_PER_PLAYER = 1` - Guaranteed Defuse cards per player
+- `MAX_TURNS_PER_GAME = 1000` - Maximum turns before game ends
+- `CARDS_TO_SEE_IN_FUTURE = 3` - Cards shown by "See the Future"
 
 ## Rules for Students
 
