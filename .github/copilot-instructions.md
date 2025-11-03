@@ -32,7 +32,7 @@ exploding-kitten-bot-battle/
 
 ### Python Version
 - **Required:** Python 3.8 or higher
-- **Current:** Python 3.12.3 is being used
+- **Tested with:** Python 3.12.3
 - **Dependencies:** No external runtime dependencies (pure Python standard library)
 
 ### Testing
@@ -41,7 +41,7 @@ Always run tests before and after making changes:
 python3 -m unittest tests.test_game -v
 ```
 
-All 70 tests must pass. Do not break existing tests.
+All existing tests must pass. Do not break existing tests.
 
 ### Running the Game
 ```bash
@@ -265,12 +265,12 @@ python3 -m unittest tests.test_my_bot -v
 
 2. **Infinite loops in play()**
    ```python
-   # ❌ BAD
+   # ❌ BAD - Never returns None, will be called indefinitely
    def play(self, state: GameState) -> Optional[Card]:
-       while True:  # Never returns None!
-           return self.hand[0]
+       if self.hand:
+           return self.hand[0]  # Always returns a card!
    
-   # ✅ GOOD
+   # ✅ GOOD - Eventually returns None to end play phase
    def play(self, state: GameState) -> Optional[Card]:
        if self.has_card_type(CardType.SKIP):
            # Return skip card
