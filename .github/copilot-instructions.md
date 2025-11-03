@@ -90,7 +90,7 @@ from game import Bot, GameState, Card, CardType, TargetContext, GameAction
 ```
 
 ### Required Methods to Implement
-All bots MUST implement these 8 methods from the `Bot` base class:
+All bots MUST implement these 9 methods from the `Bot` base class:
 
 1. **`play(state: GameState) -> Optional[Union[Card, List[Card]]]`**
    - Called repeatedly during play phase
@@ -126,12 +126,11 @@ All bots MUST implement these 8 methods from the `Bot` base class:
    - `action` is a GameAction object containing action details
    - Return True to play Nope, False otherwise
 
-### Optional Override
-**`on_action_played(state: GameState, action: GameAction, actor: Bot) -> None`**
-- Called when ANY action occurs in the game
-- `action` is a GameAction object containing action details
-- Use to track game state, opponent behavior, etc.
-- Helps with strategy and decision-making
+9. **`on_action_played(state: GameState, action: GameAction, actor: Bot) -> None`**
+   - Called when ANY action occurs in the game (for all bots)
+   - `action` is a GameAction object containing action details
+   - Use to track game state, opponent behavior, and game history
+   - Can simply `pass` if you don't need to track actions
 
 ## Code Style Guidelines
 
