@@ -210,45 +210,54 @@ class GameEngine:
         max_turns = 1000  # Prevent infinite loops
         
         while self.game_state.alive_bots > 1 and turn_count < max_turns:
-            turn_count += 1
             current_bot = self.bots[self.current_bot_index]
             
             # Skip dead bots
             if not current_bot.alive:
                 self.current_bot_index = (self.current_bot_index + 1) % len(self.bots)
+                self.turns_to_take = 1
                 continue
             
-            self._log(f"\n{'=' * 60}")
-            self._log(f"Turn {turn_count}: {current_bot.name}'s turn")
-            self._log(f"Turns to take: {self.turns_to_take}")
-            self._log(f"Hand ({len(current_bot.hand)} cards): {', '.join(str(c) for c in current_bot.hand)}")
-            self._log(f"Cards left in deck: {self.deck.size()}")
-            
-            # Play phase: Bot can play cards before drawing
-            self._play_phase(current_bot)
-            
-            # Draw phase: Bot must draw a card (unless Skip or Attack was played)
-            if current_bot.alive and self.turns_to_take > 0:
-                self._draw_phase(current_bot)
-            
-            # Decrement turns for this player
-            self.turns_to_take -= 1
-            
-            # Log remaining turns
-            if self.turns_to_take > 0:
-                self._log(f"→ {current_bot.name} has {self.turns_to_take} turn(s) remaining")
-            else:
-                self._log(f"→ {current_bot.name}'s turns complete")
-            
-            # Move to next bot when current bot has no more turns
-            if self.turns_to_take <= 0:
-                self.current_bot_index = (self.current_bot_index + 1) % len(self.bots)
-                if self.turns_to_take == -1:
-                    # Attack was played, next player takes 2 turns
-                    self.turns_to_take = 2
+            # Process all turns for current bot
+            while self.turns_to_take > 0 and current_bot.alive:
+                turn_count += 1
+                
+                self._log(f"\n{'=' * 60}")
+                self._log(f"Turn {turn_count}: {current_bot.name}'s turn ({self.turns_to_take} turn(s) total)")
+                self._log(f"Hand ({len(current_bot.hand)} cards): {', '.join(str(c) for c in current_bot.hand)}")
+                self._log(f"Cards left in deck: {self.deck.size()}")
+                
+                # Play phase: Bot can play cards before drawing
+                turn_ended_by_card = self._play_phase(current_bot)
+                
+                if turn_ended_by_card:
+                    # Attack or Skip was played
+                    if self.turns_to_take < 0:
+                        # Attack was played - all turns ended
+                        self._log(f"→ Attack played - {current_bot.name}'s all turns end")
+                        break
+                    else:
+                        # Skip was played - one turn ended
+                        self._log(f"→ Skip played - one turn skipped")
+                        self.turns_to_take -= 1
+                        if self.turns_to_take > 0:
+                            self._log(f"→ {current_bot.name} has {self.turns_to_take} turn(s) remaining")
                 else:
-                    # Normal turn
-                    self.turns_to_take = 1
+                    # Must draw a card
+                    if current_bot.alive:
+                        self._draw_phase(current_bot)
+                        self.turns_to_take -= 1
+                        if self.turns_to_take > 0 and current_bot.alive:
+                            self._log(f"→ {current_bot.name} has {self.turns_to_take} turn(s) remaining")
+            
+            # Move to next bot
+            self.current_bot_index = (self.current_bot_index + 1) % len(self.bots)
+            if self.turns_to_take < 0:
+                # Attack was played, next player gets the absolute value
+                self.turns_to_take = abs(self.turns_to_take)
+            else:
+                # Normal turn
+                self.turns_to_take = 1
         
         # Find the winner
         alive_bots = [bot for bot in self.bots if bot.alive]
@@ -261,42 +270,59 @@ class GameEngine:
         
         return None
 
-    def _play_phase(self, bot: Bot) -> None:
+    def _play_phase(self, bot: Bot) -> bool:
         """
         Handle the play phase where a bot can play cards or combos.
         
         Args:
             bot: The bot whose turn it is
+            
+        Returns:
+            True if turn should end (Attack or Skip played), False otherwise
         """
-        while True:
+        max_attempts = 100  # Prevent infinite loops
+        attempts = 0
+        
+        while attempts < max_attempts:
+            attempts += 1
             try:
                 play_result = bot.play(self.game_state.copy())
                 
                 if play_result is None:
                     self._log(f"{bot.name} ends play phase")
-                    break
+                    return False  # Turn doesn't end, will draw
                 
                 # Check if it's a combo (list of cards) or single card
                 if isinstance(play_result, list):
                     # Playing a combo
                     self._handle_combo(bot, play_result)
+                    # Continue loop to allow playing more cards
                 else:
                     # Playing a single card
                     # Validate the bot has the card
                     if not bot.has_card(play_result):
                         self._log(f"WARNING: {bot.name} tried to play a card they don't have!")
-                        break
+                        return False
                     
                     # Play the card
-                    self._handle_card_play(bot, play_result)
+                    card_type = play_result.card_type
+                    card_executed = self._handle_card_play(bot, play_result)
                     
-                    # Some cards end the turn
-                    if play_result.card_type == CardType.SKIP:
-                        break
+                    # Attack ends ALL remaining turns (if not noped)
+                    if card_executed and card_type == CardType.ATTACK:
+                        return True
+                    
+                    # Skip ends ONE turn (if not noped)
+                    if card_executed and card_type == CardType.SKIP:
+                        return True
                     
             except Exception as e:
                 self._log(f"ERROR: {bot.name} raised exception during play phase: {e}")
-                break
+                return False
+        
+        # If max attempts reached, end play phase
+        self._log(f"WARNING: {bot.name} reached max play attempts, ending phase")
+        return False
     
     def _handle_combo(self, bot: Bot, cards: List[Card]) -> None:
         """
@@ -407,13 +433,16 @@ class GameEngine:
         except Exception as e:
             self._log(f"  ERROR: {bot.name} raised exception in choose_from_discard: {e}")
 
-    def _handle_card_play(self, bot: Bot, card: Card) -> None:
+    def _handle_card_play(self, bot: Bot, card: Card) -> bool:
         """
         Handle a single card being played.
         
         Args:
             bot: The bot playing the card
             card: The card being played
+            
+        Returns:
+            True if card effect was executed (not noped), False if noped
         """
         self._log(f"{bot.name} plays {card}")
         bot.remove_card(card)
@@ -423,36 +452,45 @@ class GameEngine:
         if card.card_type == CardType.SKIP:
             # Check for Nope
             if self._check_for_nope(f"{bot.name} playing Skip", bot):
-                return
-            self._log("  → Skip: Turn ends without drawing")
-            self.turns_to_take = 0
+                return False
+            self._log("  → Skip: Skips one turn without drawing")
+            # Skip is handled in _play_phase by returning True
+            return True
         elif card.card_type == CardType.SEE_THE_FUTURE:
             # Check for Nope
             if self._check_for_nope(f"{bot.name} playing See the Future", bot):
-                return
+                return False
             top_three = self.deck.peek(3)
             self._log(f"  → See the Future: {', '.join(str(c) for c in top_three)}")
             try:
                 bot.see_the_future(self.game_state.copy(), top_three)
             except Exception as e:
                 self._log(f"  ERROR: {bot.name} raised exception in see_the_future: {e}")
+            return True
         elif card.card_type == CardType.SHUFFLE:
             # Check for Nope
             if self._check_for_nope(f"{bot.name} playing Shuffle", bot):
-                return
+                return False
             self._log("  → Shuffle: Deck shuffled")
             self.deck.shuffle()
+            return True
         elif card.card_type == CardType.ATTACK:
             # Check for Nope
             if self._check_for_nope(f"{bot.name} playing Attack", bot):
-                return
-            self._log("  → Attack: Next player takes 2 turns")
-            self.turns_to_take = -1  # End turn without drawing, next player gets 2 turns
+                return False
+            # Attack: End current turn without drawing, give remaining turns + 2 to next player
+            # If player has N turns left, next player gets (N-1) + 2 = N+1 turns
+            self._log(f"  → Attack: Next player takes {self.turns_to_take + 1} turn(s)")
+            self.turns_to_take = -(self.turns_to_take + 1)  # Negative signals Attack was played
+            return True
         elif card.card_type == CardType.FAVOR:
             self._execute_favor(bot)
+            return True
         elif card.card_type == CardType.NOPE:
             self._log("  → Nope can only be played in response to actions")
+            return True
         # Cat cards have no effect when played alone
+        return True
     
     def _execute_favor(self, bot: Bot) -> None:
         """Execute Favor card: target chooses what card to give."""

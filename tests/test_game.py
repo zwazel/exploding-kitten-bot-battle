@@ -607,6 +607,119 @@ class TestGameEngine(unittest.TestCase):
         self.assertEqual(game.game_state.alive_bots, 2)
 
 
+class TestMultiTurnMechanics(unittest.TestCase):
+    """Test multi-turn mechanics with Attack and Skip cards."""
+    
+    def test_single_attack_gives_2_turns(self):
+        """Test that Attack card gives next player 2 turns."""
+        bot1 = SimpleBot("Bot1")
+        bot2 = SimpleBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Setup game state
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        game.turns_to_take = 1
+        game.current_bot_index = 0
+        
+        # Bot1 plays Attack
+        bot1.hand = [Card(CardType.ATTACK)]
+        game._handle_card_play(bot1, Card(CardType.ATTACK))
+        
+        # turns_to_take should be -2 (negative signals Attack)
+        self.assertEqual(game.turns_to_take, -2)
+    
+    def test_double_attack_stacks(self):
+        """Test that Attack → Attack gives next player 3 turns."""
+        bot1 = SimpleBot("Bot1")
+        bot2 = SimpleBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Setup
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        game.turns_to_take = 2  # Bot has 2 turns from previous Attack
+        
+        # Bot plays Attack while having 2 turns
+        bot1.hand = [Card(CardType.ATTACK)]
+        game._handle_card_play(bot1, Card(CardType.ATTACK))
+        
+        # Should be -(2 + 1) = -3
+        self.assertEqual(game.turns_to_take, -3)
+    
+    def test_triple_attack_stacks(self):
+        """Test that Attack → Attack → Attack gives 4 turns."""
+        bot1 = SimpleBot("Bot1")
+        game = GameEngine([bot1, SimpleBot("Bot2")], verbose=False)
+        
+        game.setup_game = lambda: None
+        game.turns_to_take = 3  # Has 3 turns
+        
+        bot1.hand = [Card(CardType.ATTACK)]
+        game._handle_card_play(bot1, Card(CardType.ATTACK))
+        
+        # Should be -(3 + 1) = -4
+        self.assertEqual(game.turns_to_take, -4)
+    
+    def test_skip_with_multiple_turns(self):
+        """Test that Skip only ends one turn when bot has multiple turns."""
+        bot1 = SimpleBot("Bot1")
+        game = GameEngine([bot1, SimpleBot("Bot2")], verbose=False)
+        
+        game.setup_game = lambda: None
+        game.turns_to_take = 3
+        
+        bot1.hand = [Card(CardType.SKIP)]
+        game._handle_card_play(bot1, Card(CardType.SKIP))
+        
+        # Skip doesn't modify turns_to_take directly anymore
+        # It's handled in the play phase
+        # Just verify the card effect doesn't set it to 0
+        self.assertEqual(game.turns_to_take, 3)
+    
+    def test_bot_with_no_cards_can_only_draw(self):
+        """Test that bot with empty hand can still draw and be notified."""
+        bot1 = SimpleBot("Bot1")
+        bot2 = SimpleBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Setup minimal game state
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        game.deck.draw_pile = [Card(CardType.SKIP), Card(CardType.ATTACK)]
+        game.game_state.cards_left_to_draw = 2
+        
+        # Bot1 has no cards
+        bot1.hand = []
+        bot1.alive = True
+        
+        # Bot should still be able to draw
+        game._draw_phase(bot1)
+        
+        # Bot should now have 1 card
+        self.assertEqual(len(bot1.hand), 1)
+    
+    def test_bot_with_no_cards_receives_notifications(self):
+        """Test that bot with no cards still gets Nope notifications."""
+        bot1 = SimpleBot("Bot1")
+        bot2 = NopeBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Bot2 has only Nope card
+        bot2.hand = [Card(CardType.NOPE)]
+        bot2.will_nope = True
+        
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        
+        # Bot1 plays action (bot1 has no cards but that's ok for this test)
+        was_noped = game._check_for_nope("Bot1 playing Attack", bot1)
+        
+        # Bot2 should have been able to Nope
+        self.assertTrue(was_noped)
+        self.assertEqual(len(bot2.hand), 0)
+
+
 if __name__ == '__main__':
     unittest.main()
 
