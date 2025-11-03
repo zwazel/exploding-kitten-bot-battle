@@ -26,6 +26,7 @@ export class GameBoard {
   private boardWidth = 1200;
   private boardHeight = 800;
   private cardElements: Map<string, CardElement> = new Map();
+  private discardPileStack: CardType[] = []; // Track discard pile cards
 
   // Board positions
   private deckPosition: Position = { x: 500, y: 350 };
@@ -57,6 +58,9 @@ export class GameBoard {
         
         <!-- Cards container for animations -->
         <div id="cards-container" style="position: absolute; width: 100%; height: 100%; pointer-events: auto;"></div>
+        
+        <!-- Center display for special cards (See Future, Exploding Kitten, etc) -->
+        <div id="center-display" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; z-index: 1000;"></div>
       </div>
     `;
   }
@@ -268,36 +272,86 @@ export class GameBoard {
   }
 
   /**
-   * Set the last discarded card (visible on discard pile)
+   * Add a card to the discard pile stack
    */
-  setLastDiscardedCard(cardType: CardType | null): void {
+  addToDiscardPile(cardType: CardType): void {
+    this.discardPileStack.push(cardType);
+    this.renderDiscardPile();
+  }
+
+  /**
+   * Remove a card from the discard pile (for 5-unique combo)
+   */
+  removeFromDiscardPile(cardType: CardType): void {
+    const index = this.discardPileStack.lastIndexOf(cardType);
+    if (index !== -1) {
+      this.discardPileStack.splice(index, 1);
+    }
+    this.renderDiscardPile();
+  }
+
+  /**
+   * Render the discard pile showing the top card and count
+   */
+  private renderDiscardPile(): void {
     const discardPile = this.container.querySelector("#discard-pile") as HTMLElement;
     if (!discardPile) return;
 
-    if (cardType) {
-      const color = this.getCardColor(cardType);
-      const cardName = cardType.replace(/_/g, " ");
-      
-      discardPile.innerHTML = `
-        <div style="
-          width: 90px;
-          height: 130px;
-          background: ${color};
-          border: 2px solid #333;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 9px;
-          font-weight: bold;
-          color: #000;
-          text-align: center;
-          padding: 4px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        ">${cardName}</div>
-      `;
-    } else {
+    if (this.discardPileStack.length === 0) {
       discardPile.innerHTML = `<span style="color: #888; font-size: 14px;">DISCARD</span>`;
+      return;
+    }
+
+    // Show the top card (last in stack)
+    const topCard = this.discardPileStack[this.discardPileStack.length - 1];
+    const color = this.getCardColor(topCard);
+    const cardName = topCard.replace(/_/g, " ");
+    
+    discardPile.innerHTML = `
+      <div style="
+        width: 90px;
+        height: 130px;
+        background: ${color};
+        border: 2px solid #333;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        font-weight: bold;
+        color: #000;
+        text-align: center;
+        padding: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        position: relative;
+      ">
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+          ${this.escapeHtml(cardName)}
+        </div>
+        <div style="
+          position: absolute;
+          bottom: 4px;
+          right: 4px;
+          background: rgba(0,0,0,0.7);
+          color: white;
+          padding: 2px 4px;
+          border-radius: 3px;
+          font-size: 8px;
+        ">${this.discardPileStack.length}</div>
+      </div>
+    `;
+  }
+
+  /**
+   * Set the last discarded card (visible on discard pile) - deprecated, use addToDiscardPile
+   */
+  setLastDiscardedCard(cardType: CardType | null): void {
+    if (cardType) {
+      this.addToDiscardPile(cardType);
+    } else {
+      this.discardPileStack = [];
+      this.renderDiscardPile();
     }
   }
 
@@ -341,11 +395,140 @@ export class GameBoard {
   }
 
   /**
+   * Show cards in center display (for See Future, Exploding Kitten, etc)
+   */
+  async showCenterDisplay(cards: CardType[], title: string, showExplosion = false): Promise<void> {
+    const centerDisplay = this.container.querySelector("#center-display") as HTMLElement;
+    if (!centerDisplay) return;
+
+    // Create card elements
+    const cardElements = cards.map((cardType, index) => {
+      const color = this.getCardColor(cardType);
+      const cardName = cardType.replace(/_/g, " ");
+      const offset = (index - (cards.length - 1) / 2) * 110; // Space cards horizontally
+      
+      return `
+        <div class="center-card" style="
+          position: absolute;
+          left: ${offset}px;
+          width: 90px;
+          height: 130px;
+          background: ${color};
+          border: 3px solid #fff;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+          font-weight: bold;
+          color: #000;
+          text-align: center;
+          padding: 4px;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+          animation: centerCardAppear 0.3s ease forwards;
+          animation-delay: ${index * 0.1}s;
+          opacity: 0;
+          transform: scale(0.8);
+        ">${this.escapeHtml(cardName)}</div>
+      `;
+    }).join('');
+
+    const explosionHTML = showExplosion ? `
+      <div class="explosion" style="
+        position: absolute;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba(255,100,0,0.8) 0%, rgba(255,0,0,0.4) 50%, transparent 70%);
+        border-radius: 50%;
+        animation: explode 0.8s ease-out forwards;
+        pointer-events: none;
+      "></div>
+    ` : '';
+
+    centerDisplay.innerHTML = `
+      <style>
+        @keyframes centerCardAppear {
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        @keyframes explode {
+          0% {
+            transform: scale(0);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(2);
+            opacity: 0.8;
+          }
+          100% {
+            transform: scale(4);
+            opacity: 0;
+          }
+        }
+      </style>
+      <div style="
+        position: relative;
+        background: rgba(0, 0, 0, 0.9);
+        padding: 30px;
+        border-radius: 16px;
+        border: 3px solid #646cff;
+        box-shadow: 0 0 40px rgba(100, 108, 255, 0.5);
+      ">
+        <h3 style="
+          color: #fff;
+          text-align: center;
+          margin: 0 0 20px 0;
+          font-size: 18px;
+          text-shadow: 0 0 10px rgba(100, 108, 255, 0.8);
+        ">${this.escapeHtml(title)}</h3>
+        <div style="position: relative; height: 140px; min-width: ${cards.length * 110}px;">
+          ${explosionHTML}
+          ${cardElements}
+        </div>
+      </div>
+    `;
+    
+    centerDisplay.style.display = 'block';
+    
+    // Wait for animation
+    await new Promise(resolve => setTimeout(resolve, 300 + cards.length * 100));
+  }
+
+  /**
+   * Hide center display
+   */
+  async hideCenterDisplay(): Promise<void> {
+    const centerDisplay = this.container.querySelector("#center-display") as HTMLElement;
+    if (!centerDisplay) return;
+
+    centerDisplay.style.opacity = '1';
+    centerDisplay.style.transition = 'opacity 0.3s ease';
+    centerDisplay.style.opacity = '0';
+    
+    await new Promise(resolve => setTimeout(resolve, 300));
+    centerDisplay.style.display = 'none';
+    centerDisplay.innerHTML = '';
+  }
+
+  /**
+   * Get center position for card animations
+   */
+  getCenterPosition(): Position {
+    return {
+      x: this.boardWidth / 2 - 40, // Center - half card width
+      y: this.boardHeight / 2 - 56  // Center - half card height
+    };
+  }
+
+  /**
    * Clear all cards
    */
   clearCards(): void {
     this.cardElements.forEach((card) => card.element.remove());
     this.cardElements.clear();
-    this.setLastDiscardedCard(null);
+    this.discardPileStack = [];
+    this.renderDiscardPile();
   }
 }
