@@ -5,7 +5,6 @@ import sys
 import importlib.util
 import argparse
 from typing import List
-from datetime import datetime
 from game import Bot, GameEngine, ReplayRecorder
 
 
