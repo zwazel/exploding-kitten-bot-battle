@@ -1,7 +1,7 @@
 """Example bot that plays cautiously."""
 
 from typing import Optional, List, Union
-from game import Bot, GameState, Card, CardType
+from game import Bot, GameState, Card, CardType, TargetContext
 
 
 class CautiousBot(Bot):
@@ -37,7 +37,7 @@ class CautiousBot(Bot):
         # In a real implementation, we might store this information
         pass
     
-    def choose_target(self, state: GameState, alive_players: List[Bot], context: str) -> Optional[Bot]:
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: TargetContext) -> Optional[Bot]:
         """Choose first available target."""
         return alive_players[0] if alive_players else None
     

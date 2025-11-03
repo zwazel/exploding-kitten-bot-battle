@@ -4,7 +4,7 @@ import random
 from typing import List, Optional, Tuple, Union, Dict
 from .bot import Bot
 from .deck import Deck
-from .cards import Card, CardType
+from .cards import Card, CardType, ComboType, TargetContext
 from .game_state import GameState
 
 
@@ -160,12 +160,12 @@ class GameEngine:
         
         return False
     
-    def _is_valid_combo(self, cards: List[Card]) -> Optional[str]:
+    def _is_valid_combo(self, cards: List[Card]) -> Optional[ComboType]:
         """
         Check if cards form a valid combo.
         
         Returns:
-            Combo type ("2-of-a-kind", "3-of-a-kind", "5-unique") or None if invalid
+            ComboType enum value if valid combo, None if invalid
         """
         # Exploding Kitten and Defuse cannot be used in combos
         for card in cards:
@@ -174,14 +174,14 @@ class GameEngine:
         
         if len(cards) == 2:
             if cards[0].card_type == cards[1].card_type:
-                return "2-of-a-kind"
+                return ComboType.TWO_OF_A_KIND
         elif len(cards) == 3:
             if cards[0].card_type == cards[1].card_type == cards[2].card_type:
-                return "3-of-a-kind"
+                return ComboType.THREE_OF_A_KIND
         elif len(cards) == 5:
             types = set(c.card_type for c in cards)
             if len(types) == 5:
-                return "5-unique"
+                return ComboType.FIVE_UNIQUE
         return None
 
     def setup_game(self) -> None:
@@ -376,7 +376,7 @@ class GameEngine:
             self._log(f"WARNING: {bot.name} tried to play invalid combo!")
             return
         
-        self._log(f"{bot.name} plays {combo_type} combo: {', '.join(str(c) for c in cards)}")
+        self._log(f"{bot.name} plays {combo_type.value} combo: {', '.join(str(c) for c in cards)}")
         
         # Remove cards from hand and add to discard
         for card in cards:
@@ -385,14 +385,16 @@ class GameEngine:
         
         # For combos that require a target, select target first before Nope check
         target = None
-        if combo_type in ["2-of-a-kind", "3-of-a-kind"]:
+        if combo_type in [ComboType.TWO_OF_A_KIND, ComboType.THREE_OF_A_KIND]:
             alive_others = self._get_alive_bots_except(bot)
             if not alive_others:
                 self._log(f"  → No targets available")
                 return
             
             try:
-                target = bot.choose_target(self.game_state.copy(), alive_others, combo_type)
+                # Map combo type to target context
+                context = TargetContext.TWO_OF_A_KIND if combo_type == ComboType.TWO_OF_A_KIND else TargetContext.THREE_OF_A_KIND
+                target = bot.choose_target(self.game_state.copy(), alive_others, context)
                 if not target:
                     self._log(f"  → No target selected")
                     return
@@ -402,20 +404,20 @@ class GameEngine:
                 return
         
         # Check for Nope with target information
-        if combo_type in ["2-of-a-kind", "3-of-a-kind"]:
-            action_desc = f"{bot.name} playing {combo_type} combo targeting {target.name}"
+        if combo_type in [ComboType.TWO_OF_A_KIND, ComboType.THREE_OF_A_KIND]:
+            action_desc = f"{bot.name} playing {combo_type.value} combo targeting {target.name}"
         else:
-            action_desc = f"{bot.name} playing {combo_type} combo"
+            action_desc = f"{bot.name} playing {combo_type.value} combo"
         
         if self._check_for_nope(action_desc, bot):
             return  # Combo was noped
         
         # Execute combo effect
-        if combo_type == "2-of-a-kind":
+        if combo_type == ComboType.TWO_OF_A_KIND:
             self._execute_2_of_a_kind_with_target(bot, target)
-        elif combo_type == "3-of-a-kind":
+        elif combo_type == ComboType.THREE_OF_A_KIND:
             self._execute_3_of_a_kind_with_target(bot, target)
-        elif combo_type == "5-unique":
+        elif combo_type == ComboType.FIVE_UNIQUE:
             self._execute_5_unique(bot)
     
     def _execute_2_of_a_kind_with_target(self, bot: Bot, target: Bot) -> None:
@@ -551,7 +553,7 @@ class GameEngine:
         
         try:
             # Select target first
-            target = bot.choose_target(self.game_state.copy(), alive_others, "favor")
+            target = bot.choose_target(self.game_state.copy(), alive_others, TargetContext.FAVOR)
             if not target:
                 self._log(f"  → No target selected")
                 return

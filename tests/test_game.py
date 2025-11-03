@@ -1,7 +1,7 @@
 """Tests for the Exploding Kittens game components."""
 
 import unittest
-from game import Card, CardType, GameState, Bot, Deck, GameEngine
+from game import Card, CardType, ComboType, TargetContext, GameState, Bot, Deck, GameEngine
 from typing import Optional, List, Union, Dict
 
 
@@ -172,7 +172,7 @@ class NopeBot(Bot):
     def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
         pass
     
-    def choose_target(self, state: GameState, alive_players: List[Bot], context: str) -> Optional[Bot]:
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: TargetContext) -> Optional[Bot]:
         return alive_players[0] if alive_players else None
     
     def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
@@ -208,7 +208,7 @@ class ComboBot(Bot):
     def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
         pass
     
-    def choose_target(self, state: GameState, alive_players: List[Bot], context: str) -> Optional[Bot]:
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: TargetContext) -> Optional[Bot]:
         return alive_players[0] if alive_players else None
     
     def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
@@ -236,14 +236,14 @@ class TestCombos(unittest.TestCase):
         game = GameEngine([SimpleBot("Bot1"), SimpleBot("Bot2")], verbose=False)
         cards = [Card(CardType.SKIP), Card(CardType.SKIP)]
         combo_type = game._is_valid_combo(cards)
-        self.assertEqual(combo_type, "2-of-a-kind")
+        self.assertEqual(combo_type, ComboType.TWO_OF_A_KIND)
     
     def test_valid_3_of_a_kind(self):
         """Test that 3-of-a-kind combo is recognized."""
         game = GameEngine([SimpleBot("Bot1"), SimpleBot("Bot2")], verbose=False)
         cards = [Card(CardType.ATTACK), Card(CardType.ATTACK), Card(CardType.ATTACK)]
         combo_type = game._is_valid_combo(cards)
-        self.assertEqual(combo_type, "3-of-a-kind")
+        self.assertEqual(combo_type, ComboType.THREE_OF_A_KIND)
     
     def test_valid_5_unique(self):
         """Test that 5-unique combo is recognized."""
@@ -256,7 +256,7 @@ class TestCombos(unittest.TestCase):
             Card(CardType.FAVOR)  # Changed from DEFUSE
         ]
         combo_type = game._is_valid_combo(cards)
-        self.assertEqual(combo_type, "5-unique")
+        self.assertEqual(combo_type, ComboType.FIVE_UNIQUE)
     
     def test_invalid_combo_wrong_count(self):
         """Test that invalid card counts are rejected."""
@@ -532,11 +532,11 @@ class TestCatCards(unittest.TestCase):
         
         # Test 2-of-a-kind with cat cards
         combo = [Card(CardType.TACOCAT), Card(CardType.TACOCAT)]
-        self.assertEqual(game._is_valid_combo(combo), "2-of-a-kind")
+        self.assertEqual(game._is_valid_combo(combo), ComboType.TWO_OF_A_KIND)
         
         # Test 3-of-a-kind with cat cards
         combo = [Card(CardType.BEARD_CAT), Card(CardType.BEARD_CAT), Card(CardType.BEARD_CAT)]
-        self.assertEqual(game._is_valid_combo(combo), "3-of-a-kind")
+        self.assertEqual(game._is_valid_combo(combo), ComboType.THREE_OF_A_KIND)
 
 
 class TestFavorCard(unittest.TestCase):
@@ -801,7 +801,7 @@ class TrackingBot(Bot):
     def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
         pass
     
-    def choose_target(self, state: GameState, alive_players: List[Bot], context: str) -> Optional[Bot]:
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: TargetContext) -> Optional[Bot]:
         return alive_players[0] if alive_players else None
     
     def choose_card_from_hand(self, state: GameState) -> Optional[Card]:

@@ -2,7 +2,7 @@
 
 import random
 from typing import Optional, List, Union
-from game import Bot, GameState, Card, CardType
+from game import Bot, GameState, Card, CardType, TargetContext
 
 
 # Probability of playing a card when available
@@ -74,7 +74,7 @@ class RandomBot(Bot):
         """Just observe the cards (random bot doesn't use this info)."""
         pass
     
-    def choose_target(self, state: GameState, alive_players: List[Bot], context: str) -> Optional[Bot]:
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: TargetContext) -> Optional[Bot]:
         """Randomly choose a target."""
         return random.choice(alive_players) if alive_players else None
     
