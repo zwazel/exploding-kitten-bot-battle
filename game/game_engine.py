@@ -71,12 +71,14 @@ class GameEngine:
     
     def _notify_all_bots(self, action_description: str, actor: Bot) -> None:
         """
-        Notify all alive bots about an action in play order.
+        Notify all alive bots about an action.
         
         Args:
             action_description: Description of the action
             actor: The bot who performed the action
         """
+        # Notify ALL bots in play order (including the actor)
+        # Start from the bot after the actor
         bots_in_order = self._get_bots_in_play_order_after(actor)
         
         for bot in bots_in_order:
@@ -88,6 +90,14 @@ class GameEngine:
                 bot.on_action_played(self.game_state.copy(), action_description, actor)
             except Exception as e:
                 self._log(f"  ERROR: {bot.name} raised exception in on_action_played: {e}")
+        
+        # Also notify the actor themselves
+        if actor.alive:
+            self._log(f"  → Notifying {actor.name} about: {action_description}")
+            try:
+                actor.on_action_played(self.game_state.copy(), action_description, actor)
+            except Exception as e:
+                self._log(f"  ERROR: {actor.name} raised exception in on_action_played: {e}")
     
     def _check_for_nope(self, action_description: str, initiator: Bot) -> bool:
         """
