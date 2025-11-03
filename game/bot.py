@@ -118,6 +118,7 @@ class Bot(ABC):
         """
         pass
 
+    @abstractmethod
     def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
         """
         Called whenever ANY action happens in the game to notify the bot.
@@ -128,7 +129,6 @@ class Bot(ABC):
             action: The action being played (GameAction object)
             actor: The bot who performed the action
         """
-        # Default implementation does nothing. Bots can override to track game state.
         pass
 
     @abstractmethod
