@@ -1161,6 +1161,127 @@ class TestReplayRecorder(unittest.TestCase):
         self.assertEqual(recorder.events[0]["player"], "Bot1")
 
 
+class TestBotDefuseComboValidation(unittest.TestCase):
+    """Test that bots don't try to play DEFUSE cards in combos."""
+    
+    def test_aggressive_bot_does_not_play_defuse_in_3_of_a_kind(self):
+        """Test that AggressiveBot doesn't try to play 3 DEFUSE cards as a combo."""
+        from bots.AggressiveBot import AggressiveBot
+        
+        bot = AggressiveBot("AggressiveBot")
+        # Give bot 3 Defuse cards
+        bot.hand = [Card(CardType.DEFUSE), Card(CardType.DEFUSE), Card(CardType.DEFUSE)]
+        
+        state = GameState(
+            initial_card_counts={},
+            cards_left_to_draw=10,
+            was_last_card_exploding_kitten=False,
+            alive_bots=2
+        )
+        
+        # Bot should not try to play the Defuse combo
+        result = bot.play(state)
+        self.assertIsNone(result, "AggressiveBot should not play DEFUSE cards in combos")
+    
+    def test_aggressive_bot_does_not_play_exploding_kitten_in_3_of_a_kind(self):
+        """Test that AggressiveBot doesn't try to play 3 EXPLODING_KITTEN cards as a combo."""
+        from bots.AggressiveBot import AggressiveBot
+        
+        bot = AggressiveBot("AggressiveBot")
+        # Give bot 3 Exploding Kitten cards (hypothetical scenario)
+        bot.hand = [
+            Card(CardType.EXPLODING_KITTEN), 
+            Card(CardType.EXPLODING_KITTEN), 
+            Card(CardType.EXPLODING_KITTEN)
+        ]
+        
+        state = GameState(
+            initial_card_counts={},
+            cards_left_to_draw=10,
+            was_last_card_exploding_kitten=False,
+            alive_bots=2
+        )
+        
+        # Bot should not try to play the Exploding Kitten combo
+        result = bot.play(state)
+        self.assertIsNone(result, "AggressiveBot should not play EXPLODING_KITTEN cards in combos")
+    
+    def test_aggressive_bot_plays_valid_3_of_a_kind(self):
+        """Test that AggressiveBot still plays valid 3-of-a-kind combos."""
+        from bots.AggressiveBot import AggressiveBot
+        
+        bot = AggressiveBot("AggressiveBot")
+        # Give bot 3 cat cards (valid combo)
+        bot.hand = [
+            Card(CardType.TACOCAT), 
+            Card(CardType.TACOCAT), 
+            Card(CardType.TACOCAT)
+        ]
+        
+        state = GameState(
+            initial_card_counts={},
+            cards_left_to_draw=10,
+            was_last_card_exploding_kitten=False,
+            alive_bots=2
+        )
+        
+        # Bot should play the valid combo
+        result = bot.play(state)
+        self.assertIsNotNone(result, "AggressiveBot should play valid combos")
+        self.assertIsInstance(result, list, "Result should be a list for combos")
+        self.assertEqual(len(result), 3, "Combo should have 3 cards")
+        self.assertTrue(all(c.card_type == CardType.TACOCAT for c in result), 
+                       "All cards should be TACOCAT")
+    
+    def test_aggressive_bot_prefers_valid_combo_over_defuse_combo(self):
+        """Test that AggressiveBot plays valid combos when both valid and invalid options exist."""
+        from bots.AggressiveBot import AggressiveBot
+        
+        bot = AggressiveBot("AggressiveBot")
+        # Give bot 3 Defuse cards and 3 Attack cards
+        bot.hand = [
+            Card(CardType.DEFUSE), Card(CardType.DEFUSE), Card(CardType.DEFUSE),
+            Card(CardType.ATTACK), Card(CardType.ATTACK), Card(CardType.ATTACK)
+        ]
+        
+        state = GameState(
+            initial_card_counts={},
+            cards_left_to_draw=10,
+            was_last_card_exploding_kitten=False,
+            alive_bots=2
+        )
+        
+        # Bot should play the valid Attack combo, not the Defuse combo
+        result = bot.play(state)
+        self.assertIsNotNone(result, "AggressiveBot should play a valid combo")
+        self.assertIsInstance(result, list, "Result should be a list for combos")
+        self.assertEqual(len(result), 3, "Combo should have 3 cards")
+        # Should be Attack cards, not Defuse cards
+        card_type = result[0].card_type
+        self.assertNotEqual(card_type, CardType.DEFUSE, 
+                           "Should not play DEFUSE combo when valid combo exists")
+    
+    def test_cautious_bot_never_plays_combos(self):
+        """Test that CautiousBot doesn't play any combos (including with DEFUSE)."""
+        from bots.CautiousBot import CautiousBot
+        
+        bot = CautiousBot("CautiousBot")
+        # Give bot 3 Defuse cards
+        bot.hand = [Card(CardType.DEFUSE), Card(CardType.DEFUSE), Card(CardType.DEFUSE)]
+        
+        state = GameState(
+            initial_card_counts={},
+            cards_left_to_draw=10,
+            was_last_card_exploding_kitten=False,
+            alive_bots=2
+        )
+        
+        # CautiousBot should not play any combo
+        result = bot.play(state)
+        # CautiousBot returns None when it doesn't want to play
+        self.assertIsNone(result, "CautiousBot should not play combos")
+
+
 if __name__ == '__main__':
     unittest.main()
 
