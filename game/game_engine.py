@@ -435,13 +435,15 @@ class GameEngine:
         # Validate bot has all cards
         for card in cards:
             if not bot.has_card(card):
-                self._log(f"WARNING: {bot.name} tried to play a combo with cards they don't have!")
+                cards_str = ', '.join(str(c) for c in cards)
+                self._log(f"WARNING: {bot.name} tried to play a combo with cards they don't have: [{cards_str}]")
                 return
         
         # Check if valid combo
         combo_type = self._is_valid_combo(cards)
         if not combo_type:
-            self._log(f"WARNING: {bot.name} tried to play invalid combo!")
+            cards_str = ', '.join(str(c) for c in cards)
+            self._log(f"WARNING: {bot.name} tried to play invalid combo: [{cards_str}]")
             return
         
         self._log(f"{bot.name} plays {combo_type.value} combo: {', '.join(str(c) for c in cards)}")
