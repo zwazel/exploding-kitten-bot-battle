@@ -55,11 +55,17 @@ class AggressiveBot(Bot):
         """Use this information to decide strategy."""
         pass
     
-    def choose_target(self, state: GameState, alive_players: List[Bot]) -> Optional[Bot]:
-        """Choose target with most cards."""
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: str) -> Optional[Bot]:
+        """Choose target with most cards, or strategically based on context."""
         if not alive_players:
             return None
-        return max(alive_players, key=lambda b: len(b.hand))
+        
+        # For combos, target player with most cards
+        if context in ["2-of-a-kind", "3-of-a-kind"]:
+            return max(alive_players, key=lambda b: len(b.hand))
+        
+        # For favor, target anyone (they choose what to give anyway)
+        return alive_players[0]
     
     def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
         """Give away cat cards preferably."""

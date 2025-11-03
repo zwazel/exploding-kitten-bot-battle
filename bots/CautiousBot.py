@@ -37,7 +37,7 @@ class CautiousBot(Bot):
         # In a real implementation, we might store this information
         pass
     
-    def choose_target(self, state: GameState, alive_players: List[Bot]) -> Optional[Bot]:
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: str) -> Optional[Bot]:
         """Choose first available target."""
         return alive_players[0] if alive_players else None
     

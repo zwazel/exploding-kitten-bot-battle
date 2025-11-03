@@ -63,13 +63,14 @@ class Bot(ABC):
         pass
     
     @abstractmethod
-    def choose_target(self, state: GameState, alive_players: List['Bot']) -> Optional['Bot']:
+    def choose_target(self, state: GameState, alive_players: List['Bot'], context: str) -> Optional['Bot']:
         """
         Called when bot needs to choose a target for Favor or combo.
         
         Args:
             state: The current game state
             alive_players: List of alive bots (excluding self)
+            context: Why target is being chosen ("favor", "2-of-a-kind", "3-of-a-kind")
             
         Returns:
             The target bot, or None if no valid target

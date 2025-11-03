@@ -29,15 +29,54 @@ This project is a simulation of the popular card game "Exploding Kittens" where 
 
 ### Card Types
 
+#### Action Cards
 - **Exploding Kitten**: Eliminates you unless you have a Defuse card
 - **Defuse**: Saves you from an Exploding Kitten (1 per player initially)
 - **Skip**: End your turn without drawing a card
 - **See the Future**: Look at the top 3 cards of the deck
 - **Shuffle**: Shuffle the deck
 - **Attack**: End your turn without drawing; next player takes 2 turns
-- **Favor**: Ask another player for a card (not fully implemented in base game)
-- **Nope**: Cancel an action card (not fully implemented in base game)
-- **Cat**: Basic card (can be used for combos in extended rules)
+- **Favor**: Target player chooses which card to give you
+- **Nope**: Cancel any action (except defusing). Can be chained!
+
+#### Cat Cards (for Combos)
+- **Tacocat**: No effect alone, use for combos
+- **Cattermelon**: No effect alone, use for combos
+- **Hairy Potato Cat**: No effect alone, use for combos
+- **Beard Cat**: No effect alone, use for combos
+- **Rainbow-Ralphing Cat**: No effect alone, use for combos
+
+### Combo System
+
+You can play multiple cards of the same type (or 5 unique cards) to perform special actions:
+
+#### 2-of-a-Kind Combo
+- Play 2 cards of the exact same type
+- **Effect**: Randomly steal a card from any target player
+- Can use any card type (2 Attacks, 2 Skips, 2 Tacocats, etc.)
+- Card effects do NOT trigger when played as combo
+
+#### 3-of-a-Kind Combo
+- Play 3 cards of the exact same type
+- **Effect**: Request a specific card type from a target player
+- If target has that card type, they must give you one
+- If target doesn't have it, nothing happens
+
+#### 5-Unique Cards Combo
+- Play 5 cards of different types
+- **Effect**: Take any card from the discard pile
+- Example: 1 Attack, 1 Skip, 1 Shuffle, 1 Tacocat, 1 Favor
+
+**Note**: All combos can be Noped by other players!
+
+### Nope Card Mechanics
+
+- **Nope** cards can cancel any action except defusing an Exploding Kitten
+- Nope cards can be played at any time when another player plays an action
+- **Nope chains**: A Nope can be Noped, which can be Noped again, endlessly (as long as players have Nope cards)
+- Players are notified of actions in play order and can respond
+- Odd number of Nopes = action canceled
+- Even number of Nopes = action proceeds
 
 ## Project Structure
 

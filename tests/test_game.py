@@ -17,7 +17,7 @@ class SimpleBot(Bot):
     def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
         pass
     
-    def choose_target(self, state: GameState, alive_players: List[Bot]) -> Optional[Bot]:
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: str) -> Optional[Bot]:
         return alive_players[0] if alive_players else None
     
     def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
@@ -148,6 +148,396 @@ class TestGameState(unittest.TestCase):
         copy = state.copy()
         self.assertEqual(copy.cards_left_to_draw, state.cards_left_to_draw)
         self.assertEqual(copy.alive_bots, state.alive_bots)
+
+
+class NopeBot(Bot):
+    """Bot that always plays Nope when possible."""
+    
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.will_nope = True
+    
+    def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:
+        return None
+    
+    def handle_exploding_kitten(self, state: GameState) -> int:
+        return 0
+    
+    def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
+        pass
+    
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: str) -> Optional[Bot]:
+        return alive_players[0] if alive_players else None
+    
+    def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
+        return self.hand[0] if self.hand else None
+    
+    def choose_card_type(self, state: GameState) -> Optional[CardType]:
+        return CardType.DEFUSE
+    
+    def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
+        return discard_pile[0] if discard_pile else None
+    
+    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+        return self.will_nope
+
+
+class ComboBot(Bot):
+    """Bot that plays combos when instructed."""
+    
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.combo_to_play = None
+    
+    def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:
+        if self.combo_to_play:
+            combo = self.combo_to_play
+            self.combo_to_play = None
+            return combo
+        return None
+    
+    def handle_exploding_kitten(self, state: GameState) -> int:
+        return 0
+    
+    def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
+        pass
+    
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: str) -> Optional[Bot]:
+        return alive_players[0] if alive_players else None
+    
+    def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
+        # Give away first non-Defuse card
+        for card in self.hand:
+            if card.card_type != CardType.DEFUSE:
+                return card
+        return self.hand[0] if self.hand else None
+    
+    def choose_card_type(self, state: GameState) -> Optional[CardType]:
+        return CardType.SKIP
+    
+    def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
+        return discard_pile[0] if discard_pile else None
+    
+    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+        return False
+
+
+class TestCombos(unittest.TestCase):
+    """Test combo mechanics."""
+    
+    def test_valid_2_of_a_kind(self):
+        """Test that 2-of-a-kind combo is recognized."""
+        game = GameEngine([SimpleBot("Bot1"), SimpleBot("Bot2")], verbose=False)
+        cards = [Card(CardType.SKIP), Card(CardType.SKIP)]
+        combo_type = game._is_valid_combo(cards)
+        self.assertEqual(combo_type, "2-of-a-kind")
+    
+    def test_valid_3_of_a_kind(self):
+        """Test that 3-of-a-kind combo is recognized."""
+        game = GameEngine([SimpleBot("Bot1"), SimpleBot("Bot2")], verbose=False)
+        cards = [Card(CardType.ATTACK), Card(CardType.ATTACK), Card(CardType.ATTACK)]
+        combo_type = game._is_valid_combo(cards)
+        self.assertEqual(combo_type, "3-of-a-kind")
+    
+    def test_valid_5_unique(self):
+        """Test that 5-unique combo is recognized."""
+        game = GameEngine([SimpleBot("Bot1"), SimpleBot("Bot2")], verbose=False)
+        cards = [
+            Card(CardType.SKIP),
+            Card(CardType.ATTACK),
+            Card(CardType.SHUFFLE),
+            Card(CardType.TACOCAT),
+            Card(CardType.DEFUSE)
+        ]
+        combo_type = game._is_valid_combo(cards)
+        self.assertEqual(combo_type, "5-unique")
+    
+    def test_invalid_combo_wrong_count(self):
+        """Test that invalid card counts are rejected."""
+        game = GameEngine([SimpleBot("Bot1"), SimpleBot("Bot2")], verbose=False)
+        cards = [Card(CardType.SKIP)]
+        combo_type = game._is_valid_combo(cards)
+        self.assertIsNone(combo_type)
+    
+    def test_invalid_2_of_a_kind_different_types(self):
+        """Test that 2 different cards are not a valid combo."""
+        game = GameEngine([SimpleBot("Bot1"), SimpleBot("Bot2")], verbose=False)
+        cards = [Card(CardType.SKIP), Card(CardType.ATTACK)]
+        combo_type = game._is_valid_combo(cards)
+        self.assertIsNone(combo_type)
+    
+    def test_invalid_5_unique_duplicates(self):
+        """Test that 5 cards with duplicates is not valid."""
+        game = GameEngine([SimpleBot("Bot1"), SimpleBot("Bot2")], verbose=False)
+        cards = [
+            Card(CardType.SKIP),
+            Card(CardType.SKIP),
+            Card(CardType.ATTACK),
+            Card(CardType.SHUFFLE),
+            Card(CardType.DEFUSE)
+        ]
+        combo_type = game._is_valid_combo(cards)
+        self.assertIsNone(combo_type)
+    
+    def test_2_of_a_kind_steals_card(self):
+        """Test that 2-of-a-kind combo steals a random card."""
+        bot1 = ComboBot("Bot1")
+        bot2 = SimpleBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Give bot1 a 2-of-a-kind combo
+        bot1.hand = [Card(CardType.TACOCAT), Card(CardType.TACOCAT)]
+        bot2.hand = [Card(CardType.SKIP)]
+        
+        # Execute combo
+        bot1.combo_to_play = bot1.hand.copy()
+        game.setup_game = lambda: None  # Skip setup
+        game.bots = [bot1, bot2]
+        game._handle_combo(bot1, bot1.hand.copy())
+        
+        # Bot1 should have stolen the card
+        self.assertEqual(len(bot1.hand), 1)
+        self.assertEqual(len(bot2.hand), 0)
+    
+    def test_3_of_a_kind_requests_specific_card(self):
+        """Test that 3-of-a-kind combo can request specific card."""
+        bot1 = ComboBot("Bot1")
+        bot2 = SimpleBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Give bot1 a 3-of-a-kind combo
+        bot1.hand = [Card(CardType.TACOCAT), Card(CardType.TACOCAT), Card(CardType.TACOCAT)]
+        bot2.hand = [Card(CardType.SKIP), Card(CardType.ATTACK)]
+        
+        # Execute combo
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        game._handle_combo(bot1, bot1.hand.copy())
+        
+        # Bot1 should have requested and received a card
+        self.assertEqual(len(bot1.hand), 1)  # Lost 3, gained 1
+        self.assertEqual(len(bot2.hand), 1)  # Lost 1
+    
+    def test_5_unique_takes_from_discard(self):
+        """Test that 5-unique combo takes card from discard."""
+        bot1 = ComboBot("Bot1")
+        bot2 = SimpleBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Give bot1 5 unique cards
+        bot1.hand = [
+            Card(CardType.TACOCAT),
+            Card(CardType.SKIP),
+            Card(CardType.ATTACK),
+            Card(CardType.SHUFFLE),
+            Card(CardType.SEE_THE_FUTURE)
+        ]
+        game.deck.discard_pile = [Card(CardType.DEFUSE)]
+        
+        # Execute combo
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        game._handle_combo(bot1, bot1.hand.copy())
+        
+        # Bot1 should have taken from discard
+        self.assertEqual(len(bot1.hand), 1)  # Lost 5, gained 1
+        self.assertEqual(len(game.deck.discard_pile), 5)  # 5 from combo
+
+
+class TestNopeCard(unittest.TestCase):
+    """Test Nope card mechanics."""
+    
+    def test_single_nope_cancels_action(self):
+        """Test that a single Nope cancels an action."""
+        bot1 = SimpleBot("Bot1")
+        bot2 = NopeBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Give bot2 a Nope card
+        bot2.hand = [Card(CardType.NOPE)]
+        
+        # Check if action gets noped
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        was_noped = game._check_for_nope("Bot1 playing Skip", bot1)
+        
+        self.assertTrue(was_noped)
+        self.assertEqual(len(bot2.hand), 0)  # Nope was used
+    
+    def test_double_nope_allows_action(self):
+        """Test that two Nopes allow the action (nope the nope)."""
+        bot1 = SimpleBot("Bot1")
+        bot2 = NopeBot("Bot2")
+        bot3 = NopeBot("Bot3")
+        game = GameEngine([bot1, bot2, bot3], verbose=False)
+        
+        # Give both bots Nope cards
+        bot2.hand = [Card(CardType.NOPE)]
+        bot3.hand = [Card(CardType.NOPE)]
+        
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2, bot3]
+        was_noped = game._check_for_nope("Bot1 playing Skip", bot1)
+        
+        # Even number of nopes = action proceeds
+        self.assertFalse(was_noped)
+        self.assertEqual(len(bot2.hand), 0)
+        self.assertEqual(len(bot3.hand), 0)
+    
+    def test_triple_nope_cancels_action(self):
+        """Test that three Nopes cancel the action."""
+        bot1 = NopeBot("Bot1")
+        bot2 = NopeBot("Bot2")
+        bot3 = NopeBot("Bot3")
+        bot4 = SimpleBot("Bot4")
+        game = GameEngine([bot4, bot1, bot2, bot3], verbose=False)
+        
+        # Give bots Nope cards
+        bot1.hand = [Card(CardType.NOPE)]
+        bot2.hand = [Card(CardType.NOPE)]
+        bot3.hand = [Card(CardType.NOPE)]
+        
+        game.setup_game = lambda: None
+        game.bots = [bot4, bot1, bot2, bot3]
+        was_noped = game._check_for_nope("Bot4 playing Attack", bot4)
+        
+        # Odd number of nopes = action canceled
+        self.assertTrue(was_noped)
+    
+    def test_nope_order_follows_play_order(self):
+        """Test that bots are asked to nope in play order."""
+        bot1 = SimpleBot("Bot1")
+        bot2 = NopeBot("Bot2")
+        bot3 = SimpleBot("Bot3")
+        game = GameEngine([bot1, bot2, bot3], verbose=False)
+        
+        bot2.hand = [Card(CardType.NOPE)]
+        bot2.will_nope = True
+        
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2, bot3]
+        
+        # Bot1 plays action, bot2 should be asked first (next in order)
+        was_noped = game._check_for_nope("Bot1 playing Attack", bot1)
+        
+        self.assertTrue(was_noped)
+        self.assertEqual(len(bot2.hand), 0)
+    
+    def test_no_nope_without_nope_card(self):
+        """Test that bots without Nope cards can't nope."""
+        bot1 = SimpleBot("Bot1")
+        bot2 = NopeBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        # Bot2 wants to nope but has no Nope card
+        bot2.hand = [Card(CardType.SKIP)]
+        bot2.will_nope = True
+        
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        was_noped = game._check_for_nope("Bot1 playing Attack", bot1)
+        
+        self.assertFalse(was_noped)
+    
+    def test_dead_bots_cannot_nope(self):
+        """Test that dead bots are not asked to nope."""
+        bot1 = SimpleBot("Bot1")
+        bot2 = NopeBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        bot2.hand = [Card(CardType.NOPE)]
+        bot2.alive = False  # Bot is dead
+        
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        was_noped = game._check_for_nope("Bot1 playing Attack", bot1)
+        
+        self.assertFalse(was_noped)
+        self.assertEqual(len(bot2.hand), 1)  # Nope not used
+
+
+class TestCatCards(unittest.TestCase):
+    """Test the 5 different cat card types."""
+    
+    def test_all_cat_types_exist(self):
+        """Test that all 5 cat types are defined."""
+        cat_types = [
+            CardType.TACOCAT,
+            CardType.CATTERMELON,
+            CardType.HAIRY_POTATO_CAT,
+            CardType.BEARD_CAT,
+            CardType.RAINBOW_RALPHING_CAT
+        ]
+        for cat_type in cat_types:
+            card = Card(cat_type)
+            self.assertIsNotNone(card)
+    
+    def test_deck_contains_cat_cards(self):
+        """Test that deck is initialized with cat cards."""
+        deck = Deck(3)
+        cat_types = [
+            CardType.TACOCAT,
+            CardType.CATTERMELON,
+            CardType.HAIRY_POTATO_CAT,
+            CardType.BEARD_CAT,
+            CardType.RAINBOW_RALPHING_CAT
+        ]
+        
+        # Count cat cards in deck
+        all_cards = deck.draw_pile + deck.discard_pile
+        cat_counts = {ct: sum(1 for c in all_cards if c.card_type == ct) for ct in cat_types}
+        
+        # Each cat type should have 4 cards
+        for cat_type, count in cat_counts.items():
+            self.assertEqual(count, 4, f"{cat_type} should have 4 cards")
+    
+    def test_cat_cards_can_form_combos(self):
+        """Test that cat cards can be used in combos."""
+        game = GameEngine([SimpleBot("Bot1"), SimpleBot("Bot2")], verbose=False)
+        
+        # Test 2-of-a-kind with cat cards
+        combo = [Card(CardType.TACOCAT), Card(CardType.TACOCAT)]
+        self.assertEqual(game._is_valid_combo(combo), "2-of-a-kind")
+        
+        # Test 3-of-a-kind with cat cards
+        combo = [Card(CardType.BEARD_CAT), Card(CardType.BEARD_CAT), Card(CardType.BEARD_CAT)]
+        self.assertEqual(game._is_valid_combo(combo), "3-of-a-kind")
+
+
+class TestFavorCard(unittest.TestCase):
+    """Test Favor card mechanics."""
+    
+    def test_favor_asks_target_for_card(self):
+        """Test that Favor card asks target to choose which card to give."""
+        bot1 = SimpleBot("Bot1")
+        bot2 = SimpleBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        bot1.hand = []
+        bot2.hand = [Card(CardType.SKIP), Card(CardType.ATTACK)]
+        
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        game._execute_favor(bot1)
+        
+        # Bot1 should have received a card from bot2
+        self.assertEqual(len(bot1.hand), 1)
+        self.assertEqual(len(bot2.hand), 1)
+    
+    def test_favor_no_target_available(self):
+        """Test Favor when no targets are available."""
+        bot1 = SimpleBot("Bot1")
+        bot2 = SimpleBot("Bot2")
+        game = GameEngine([bot1, bot2], verbose=False)
+        
+        bot2.alive = False  # No alive targets
+        
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2]
+        game._execute_favor(bot1)
+        
+        # Nothing should happen
+        self.assertEqual(len(bot1.hand), 0)
 
 
 class TestGameEngine(unittest.TestCase):

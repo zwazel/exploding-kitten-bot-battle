@@ -334,7 +334,7 @@ class GameEngine:
             return
         
         try:
-            target = bot.choose_target(self.game_state.copy(), alive_others)
+            target = bot.choose_target(self.game_state.copy(), alive_others, "2-of-a-kind")
             if target and target.hand:
                 stolen_card = random.choice(target.hand)
                 target.remove_card(stolen_card)
@@ -353,7 +353,7 @@ class GameEngine:
             return
         
         try:
-            target = bot.choose_target(self.game_state.copy(), alive_others)
+            target = bot.choose_target(self.game_state.copy(), alive_others, "3-of-a-kind")
             if not target:
                 return
             
@@ -448,7 +448,7 @@ class GameEngine:
             return
         
         try:
-            target = bot.choose_target(self.game_state.copy(), alive_others)
+            target = bot.choose_target(self.game_state.copy(), alive_others, "favor")
             if not target or not target.hand:
                 self._log(f"  → Target has no cards")
                 return
