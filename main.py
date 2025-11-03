@@ -5,7 +5,8 @@ import sys
 import importlib.util
 import argparse
 from typing import List
-from game import Bot, GameEngine
+from datetime import datetime
+from game import Bot, GameEngine, ReplayRecorder
 
 
 def load_bots_from_directory(directory: str = "bots") -> List[Bot]:
@@ -65,6 +66,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Exploding Kittens Bot Battle')
     parser.add_argument('--test', action='store_true', 
                        help='Run in test mode (auto-play without user input)')
+    parser.add_argument('--replay', type=str, metavar='FILENAME',
+                       help='Enable replay recording and save to specified file (e.g., replay.json)')
     args = parser.parse_args()
     
     # Load bots
@@ -88,11 +91,27 @@ def main() -> None:
         print("Error: Need at least 2 bots to play. Load more bots or use --test flag.")
         sys.exit(1)
     
+    # Create replay recorder if requested
+    replay_recorder = None
+    replay_filename = None
+    if args.replay:
+        replay_filename = args.replay
+        replay_recorder = ReplayRecorder([bot.name for bot in bots], enabled=True)
+        print(f"Replay recording enabled. Will save to: {replay_filename}")
+    
     # Create and run the game
-    game = GameEngine(bots, verbose=True)
+    game = GameEngine(bots, verbose=True, replay_recorder=replay_recorder)
     
     # Run the game (both modes run automatically for now)
     winner = game.play_game()
+    
+    # Save replay if recording was enabled
+    if replay_recorder and replay_filename:
+        try:
+            replay_recorder.save_to_file(replay_filename)
+            print(f"\n✅ Replay saved to: {replay_filename}")
+        except Exception as e:
+            print(f"\n❌ Error saving replay: {e}")
     
     if winner:
         print(f"\n🏆 Victory goes to: {winner.name}! 🏆")
