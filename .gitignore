@@ -54,3 +54,5 @@ yarn-error.log*
 pnpm-debug.log*
 
 game.json
+
+my_game.json
