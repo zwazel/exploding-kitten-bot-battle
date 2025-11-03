@@ -30,7 +30,14 @@ class ComboType(Enum):
 
 
 class TargetContext(Enum):
-    """Contexts for choosing a target player."""
+    """
+    Contexts for choosing a target player.
+    
+    Note: These enum values are intentionally separate from ComboType even though
+    they share similar values. TargetContext represents WHY a target is being chosen
+    (the context/reason), while ComboType represents WHAT type of combo is being played.
+    This separation provides better type safety and clarity at the call sites.
+    """
     FAVOR = "favor"
     TWO_OF_A_KIND = "2-of-a-kind"
     THREE_OF_A_KIND = "3-of-a-kind"

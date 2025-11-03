@@ -373,7 +373,12 @@ The game uses enums for type safety and better IDE autocomplete:
 - `ATTACK`
 - `FAVOR`
 - `NOPE`
-- `TACOCAT`, `CATTERMELON`, `HAIRY_POTATO_CAT`, `BEARD_CAT`, `RAINBOW_RALPHING_CAT` (Cat cards)
+- Cat cards for combos:
+  - `TACOCAT`
+  - `CATTERMELON`
+  - `HAIRY_POTATO_CAT`
+  - `BEARD_CAT`
+  - `RAINBOW_RALPHING_CAT`
 
 #### ComboType Enum
 - `TWO_OF_A_KIND` - Play 2 cards of the same type to steal a random card
