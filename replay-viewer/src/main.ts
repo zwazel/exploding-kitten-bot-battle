@@ -5,18 +5,19 @@
 
 import "./style.css";
 import { ReplayPlayer } from "./replayPlayer";
-import { ReplayRenderer } from "./renderer";
+import { VisualRenderer } from "./visualRenderer";
 import type { ReplayData } from "./types";
 
 class ReplayApp {
   private player: ReplayPlayer;
-  private renderer!: ReplayRenderer;
+  private renderer!: VisualRenderer;
   private fileInput: HTMLInputElement | null = null;
+  private isProcessingEvent = false;
 
   constructor() {
     this.player = new ReplayPlayer();
     this.initializeUI();
-    this.renderer = new ReplayRenderer(
+    this.renderer = new VisualRenderer(
       document.querySelector<HTMLDivElement>("#game-display")!
     );
     this.setupEventListeners();
@@ -45,7 +46,7 @@ class ReplayApp {
             
             <div class="speed-control">
               <label for="speed-slider">Speed:</label>
-              <input type="range" id="speed-slider" min="0.1" max="5" step="0.1" value="1" />
+              <input type="range" id="speed-slider" min="0.5" max="3" step="0.5" value="1" />
               <span id="speed-display">1.0x</span>
             </div>
             
@@ -60,7 +61,7 @@ class ReplayApp {
           <div class="welcome-message">
             <h2>Welcome to Exploding Kittens Replay Viewer</h2>
             <p>Load a replay JSON file to start viewing the game.</p>
-            <p>Use the playback controls to play, pause, and navigate through the game events.</p>
+            <p>Watch cards move between players, deck, and discard pile with animated gameplay!</p>
           </div>
         </div>
       </div>
@@ -94,8 +95,8 @@ class ReplayApp {
     });
 
     // Player callbacks
-    this.player.onEventChange((_event, index) => {
-      this.updateDisplay(index);
+    this.player.onEventChange(async (_event, index) => {
+      await this.updateDisplay(index);
     });
 
     this.player.onStateChange((state) => {
@@ -113,7 +114,7 @@ class ReplayApp {
       const data: ReplayData = JSON.parse(text);
       
       this.player.loadReplay(data);
-      this.renderer.renderGameSetup(data);
+      await this.renderer.renderGameSetup(data);
 
       // Show controls and update UI
       document.querySelector<HTMLDivElement>("#playback-controls")!.style.display = "flex";
@@ -145,28 +146,64 @@ class ReplayApp {
 
   private stop(): void {
     this.player.stop();
+    this.renderer.reset();
+    const replayData = this.player.getReplayData();
+    if (replayData) {
+      this.renderer.renderGameSetup(replayData);
+    }
   }
 
-  private stepForward(): void {
+  private async stepForward(): Promise<void> {
+    if (this.isProcessingEvent || this.renderer.getIsAnimating()) {
+      return; // Don't step if animation is in progress
+    }
     this.player.stepForward();
   }
 
-  private stepBackward(): void {
+  private async stepBackward(): Promise<void> {
+    if (this.isProcessingEvent || this.renderer.getIsAnimating()) {
+      return; // Don't step if animation is in progress
+    }
     this.player.stepBackward();
   }
 
-  private updateDisplay(eventIndex: number): void {
-    const events = this.player.getEventsUpToCurrent();
-    this.renderer.updateDisplay(events);
+  private async updateDisplay(eventIndex: number): Promise<void> {
+    if (this.isProcessingEvent) return;
     
-    // Update event slider
-    const eventSlider = document.querySelector<HTMLInputElement>("#event-slider")!;
-    eventSlider.value = eventIndex.toString();
-    
-    // Update event counter
-    const replayData = this.player.getReplayData();
-    if (replayData) {
+    this.isProcessingEvent = true;
+    try {
+      const replayData = this.player.getReplayData();
+      if (!replayData) return;
+
+      const event = replayData.events[eventIndex];
+      if (!event) return;
+
+      // Calculate deck size at this point
+      let deckSize = 33; // Default starting size
+      const setupEvent = replayData.events.find(e => e.type === "game_setup");
+      if (setupEvent && setupEvent.type === "game_setup") {
+        deckSize = setupEvent.deck_size;
+      }
+
+      // Count draws and adjust deck size
+      for (let i = 0; i <= eventIndex; i++) {
+        const e = replayData.events[i];
+        if (e.type === "card_draw") {
+          deckSize--;
+        }
+      }
+
+      // Render the event with animation
+      await this.renderer.renderEvent(event, deckSize);
+      
+      // Update event slider
+      const eventSlider = document.querySelector<HTMLInputElement>("#event-slider")!;
+      eventSlider.value = eventIndex.toString();
+      
+      // Update event counter
       this.updateEventCounter(eventIndex, replayData.events.length);
+    } finally {
+      this.isProcessingEvent = false;
     }
   }
 
