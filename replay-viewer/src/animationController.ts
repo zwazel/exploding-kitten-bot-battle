@@ -12,6 +12,7 @@ export class AnimationController {
   private gameBoard: GameBoard;
   private playerHands: Map<string, string[]> = new Map(); // player -> card IDs
   private currentPlayer: string | null = null;
+  private explodingKittenCardId: string | null = null; // Track exploding kitten card for defuse
 
   constructor(gameBoard: GameBoard) {
     this.gameBoard = gameBoard;
@@ -100,7 +101,7 @@ export class AnimationController {
     await this.delay(200);
 
     // Update discard pile to show this card
-    this.gameBoard.setLastDiscardedCard(cardType);
+    this.gameBoard.addToDiscardPile(cardType);
 
     // Remove from board after updating discard pile
     this.gameBoard.removeCard(cardId);
@@ -263,13 +264,13 @@ export class AnimationController {
     const deckPos = this.gameBoard.getDeckPosition();
     const centerPos = this.gameBoard.getCenterPosition();
 
-    // Create exploding kitten card
-    const cardId = `exploding-kitten-${Date.now()}`;
-    this.gameBoard.createCard("EXPLODING_KITTEN", deckPos, cardId);
+    // Create exploding kitten card and track it
+    this.explodingKittenCardId = `exploding-kitten-${Date.now()}`;
+    this.gameBoard.createCard("EXPLODING_KITTEN", deckPos, this.explodingKittenCardId);
 
     // Animate to center
     await this.delay(100);
-    await this.gameBoard.moveCard(cardId, {
+    await this.gameBoard.moveCard(this.explodingKittenCardId, {
       ...centerPos,
       rotation: 0,
       zIndex: 1000
@@ -284,7 +285,8 @@ export class AnimationController {
       );
       await this.delay(2500);
       await this.gameBoard.hideCenterDisplay();
-      this.gameBoard.removeCard(cardId);
+      this.gameBoard.removeCard(this.explodingKittenCardId);
+      this.explodingKittenCardId = null;
     } else {
       // Show that they have a defuse
       await this.gameBoard.showCenterDisplay(
@@ -328,8 +330,10 @@ export class AnimationController {
     await this.gameBoard.hideCenterDisplay();
 
     // Remove exploding kitten card (it goes back to deck)
-    const kittenCardId = `exploding-kitten-${this.findRecentCardId("EXPLODING_KITTEN")}`;
-    this.gameBoard.removeCard(kittenCardId);
+    if (this.explodingKittenCardId) {
+      this.gameBoard.removeCard(this.explodingKittenCardId);
+      this.explodingKittenCardId = null;
+    }
 
     // Move defuse to discard pile
     if (defuseCardId) {
@@ -344,14 +348,6 @@ export class AnimationController {
 
     // Reorganize hand
     await this.reorganizePlayerHand(playerName);
-  }
-
-  /**
-   * Helper to find recent card by type (for cleanup)
-   */
-  private findRecentCardId(_cardType: string): string {
-    // This is a simple timestamp-based approach
-    return Date.now().toString();
   }
 
   /**
@@ -395,6 +391,7 @@ export class AnimationController {
   reset(): void {
     this.playerHands.clear();
     this.currentPlayer = null;
+    this.explodingKittenCardId = null;
     this.gameBoard.clearCards();
   }
 }

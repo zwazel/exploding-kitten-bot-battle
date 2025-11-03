@@ -344,7 +344,7 @@ export class GameBoard {
   }
 
   /**
-   * Set the last discarded card (visible on discard pile) - deprecated, use addToDiscardPile
+   * Set the last discarded card (visible on discard pile) - convenience wrapper for addToDiscardPile
    */
   setLastDiscardedCard(cardType: CardType | null): void {
     if (cardType) {
