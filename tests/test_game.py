@@ -2,13 +2,13 @@
 
 import unittest
 from game import Card, CardType, GameState, CardCounts, Bot, Deck, GameEngine
-from typing import Optional, List
+from typing import Optional, List, Union
 
 
 class SimpleBot(Bot):
     """A simple test bot for testing purposes."""
     
-    def play(self, state: GameState) -> Optional[Card]:
+    def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:
         return None
     
     def handle_exploding_kitten(self, state: GameState) -> int:
@@ -16,6 +16,21 @@ class SimpleBot(Bot):
     
     def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
         pass
+    
+    def choose_target(self, state: GameState, alive_players: List[Bot]) -> Optional[Bot]:
+        return alive_players[0] if alive_players else None
+    
+    def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
+        return self.hand[0] if self.hand else None
+    
+    def choose_card_type(self, state: GameState) -> Optional[CardType]:
+        return CardType.DEFUSE
+    
+    def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
+        return discard_pile[0] if discard_pile else None
+    
+    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+        return False
 
 
 class TestCard(unittest.TestCase):

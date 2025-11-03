@@ -14,7 +14,12 @@ class CardType(Enum):
     FAVOR = "Favor"
     ATTACK = "Attack"
     NOPE = "Nope"
-    CAT = "Cat"
+    # Cat cards for combos
+    TACOCAT = "Tacocat"
+    CATTERMELON = "Cattermelon"
+    HAIRY_POTATO_CAT = "Hairy Potato Cat"
+    BEARD_CAT = "Beard Cat"
+    RAINBOW_RALPHING_CAT = "Rainbow-Ralphing Cat"
 
 
 @dataclass

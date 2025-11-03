@@ -16,7 +16,11 @@ class CardCounts:
     favor: int = 0
     attack: int = 0
     nope: int = 0
-    cat: int = 0
+    tacocat: int = 0
+    cattermelon: int = 0
+    hairy_potato_cat: int = 0
+    beard_cat: int = 0
+    rainbow_ralphing_cat: int = 0
 
     def to_dict(self) -> Dict[CardType, int]:
         """Convert to dictionary mapping CardType to count."""
@@ -29,7 +33,11 @@ class CardCounts:
             CardType.FAVOR: self.favor,
             CardType.ATTACK: self.attack,
             CardType.NOPE: self.nope,
-            CardType.CAT: self.cat,
+            CardType.TACOCAT: self.tacocat,
+            CardType.CATTERMELON: self.cattermelon,
+            CardType.HAIRY_POTATO_CAT: self.hairy_potato_cat,
+            CardType.BEARD_CAT: self.beard_cat,
+            CardType.RAINBOW_RALPHING_CAT: self.rainbow_ralphing_cat,
         }
 
 

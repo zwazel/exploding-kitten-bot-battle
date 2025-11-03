@@ -24,7 +24,7 @@ class Deck:
         """
         Create and shuffle the initial deck.
         
-        Standard Exploding Kittens deck composition (simplified):
+        Standard Exploding Kittens deck composition:
         - Exploding Kittens: num_players - 1 (inserted after initial deal)
         - Defuse cards: 6 total (1 dealt to each player, rest in deck)
         - Skip: 4
@@ -33,7 +33,7 @@ class Deck:
         - Favor: 4
         - Attack: 4
         - Nope: 5
-        - Cat: 4
+        - Cat cards: 4 of each type (Tacocat, Cattermelon, Hairy Potato Cat, Beard Cat, Rainbow-Ralphing Cat)
         """
         cards = []
         
@@ -54,8 +54,18 @@ class Deck:
             cards.append(Card(CardType.ATTACK))
         for _ in range(5):
             cards.append(Card(CardType.NOPE))
+        
+        # Add cat cards (4 of each type)
         for _ in range(4):
-            cards.append(Card(CardType.CAT))
+            cards.append(Card(CardType.TACOCAT))
+        for _ in range(4):
+            cards.append(Card(CardType.CATTERMELON))
+        for _ in range(4):
+            cards.append(Card(CardType.HAIRY_POTATO_CAT))
+        for _ in range(4):
+            cards.append(Card(CardType.BEARD_CAT))
+        for _ in range(4):
+            cards.append(Card(CardType.RAINBOW_RALPHING_CAT))
 
         # Shuffle the deck
         random.shuffle(cards)
@@ -144,7 +154,15 @@ class Deck:
                 counts.attack += 1
             elif card.card_type == CardType.NOPE:
                 counts.nope += 1
-            elif card.card_type == CardType.CAT:
-                counts.cat += 1
+            elif card.card_type == CardType.TACOCAT:
+                counts.tacocat += 1
+            elif card.card_type == CardType.CATTERMELON:
+                counts.cattermelon += 1
+            elif card.card_type == CardType.HAIRY_POTATO_CAT:
+                counts.hairy_potato_cat += 1
+            elif card.card_type == CardType.BEARD_CAT:
+                counts.beard_cat += 1
+            elif card.card_type == CardType.RAINBOW_RALPHING_CAT:
+                counts.rainbow_ralphing_cat += 1
         
         return counts

@@ -1,8 +1,8 @@
 """Base Bot class that all bots must inherit from."""
 
 from abc import ABC, abstractmethod
-from typing import Optional, List
-from .cards import Card
+from typing import Optional, List, Tuple
+from .cards import Card, CardType
 from .game_state import GameState
 
 
@@ -25,15 +25,15 @@ class Bot(ABC):
         self.alive = True
 
     @abstractmethod
-    def play(self, state: GameState) -> Optional[Card]:
+    def play(self, state: GameState) -> Optional[Card | List[Card]]:
         """
-        Called when it's the bot's turn to play a card.
+        Called when it's the bot's turn to play a card or combo.
         
         Args:
             state: The current game state
             
         Returns:
-            The card to play, or None to end the turn without playing a card
+            A single card to play, a list of cards for a combo, or None to end the turn
         """
         pass
 
@@ -59,6 +59,74 @@ class Bot(ABC):
         Args:
             state: The current game state
             top_three: The top three cards of the draw pile (index 0 is the top card)
+        """
+        pass
+    
+    @abstractmethod
+    def choose_target(self, state: GameState, alive_players: List['Bot']) -> Optional['Bot']:
+        """
+        Called when bot needs to choose a target for Favor or combo.
+        
+        Args:
+            state: The current game state
+            alive_players: List of alive bots (excluding self)
+            
+        Returns:
+            The target bot, or None if no valid target
+        """
+        pass
+    
+    @abstractmethod
+    def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
+        """
+        Called when bot needs to give a card (for Favor).
+        
+        Args:
+            state: The current game state
+            
+        Returns:
+            The card to give from hand
+        """
+        pass
+    
+    @abstractmethod
+    def choose_card_type(self, state: GameState) -> Optional[CardType]:
+        """
+        Called for 3-of-a-kind combo to request a specific card type.
+        
+        Args:
+            state: The current game state
+            
+        Returns:
+            The card type to request
+        """
+        pass
+    
+    @abstractmethod
+    def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
+        """
+        Called for 5-unique combo to pick a card from discard pile.
+        
+        Args:
+            state: The current game state
+            discard_pile: Cards in the discard pile
+            
+        Returns:
+            The card to take from discard pile
+        """
+        pass
+    
+    @abstractmethod
+    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+        """
+        Called when an action can be noped. Bot decides whether to play a Nope card.
+        
+        Args:
+            state: The current game state
+            action_description: Description of the action being played
+            
+        Returns:
+            True if bot wants to play Nope, False otherwise
         """
         pass
 
