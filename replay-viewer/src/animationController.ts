@@ -29,9 +29,9 @@ export class AnimationController {
       this.playerHands.set(playerName, []);
       const hand = initialHands[playerName] || [];
       
-      // Create initial cards in hands
+      // Create initial cards in hands with fan layout
       hand.forEach((cardType, index) => {
-        const position = this.gameBoard.getPlayerHandPosition(playerName, index);
+        const position = this.gameBoard.getPlayerHandPosition(playerName, index, hand.length);
         const cardId = `${playerName}-card-${index}`;
         this.gameBoard.createCard(cardType, position, cardId);
         this.playerHands.get(playerName)!.push(cardId);
@@ -63,7 +63,7 @@ export class AnimationController {
     const deckPos = this.gameBoard.getDeckPosition();
     const playerHand = this.playerHands.get(playerName) || [];
     const handIndex = playerHand.length;
-    const handPos = this.gameBoard.getPlayerHandPosition(playerName, handIndex);
+    const handPos = this.gameBoard.getPlayerHandPosition(playerName, handIndex, handIndex + 1);
 
     // Create card at deck position
     const cardId = `${playerName}-draw-${Date.now()}`;
@@ -73,15 +73,18 @@ export class AnimationController {
     await this.delay(100);
     await this.gameBoard.moveCard(cardId, handPos, 500);
 
-    // Add to player's hand
+    // Add to player's hand and reorganize
     playerHand.push(cardId);
     this.playerHands.set(playerName, playerHand);
+    
+    // Reorganize hand with new card count
+    await this.reorganizePlayerHand(playerName);
   }
 
   /**
    * Animate card play
    */
-  async animateCardPlay(playerName: string, _cardType: CardType): Promise<void> {
+  async animateCardPlay(playerName: string, cardType: CardType): Promise<void> {
     const playerHand = this.playerHands.get(playerName) || [];
     
     // Find a card of this type in the player's hand (or use the first card)
@@ -93,10 +96,13 @@ export class AnimationController {
     const discardPos = this.gameBoard.getDiscardPosition();
     
     // Animate to discard pile
-    await this.gameBoard.moveCard(cardId, discardPos, 500);
+    await this.gameBoard.moveCard(cardId, { ...discardPos, rotation: 0, zIndex: 10 }, 500);
     await this.delay(200);
 
-    // Remove from board after a brief pause
+    // Update discard pile to show this card
+    this.gameBoard.setLastDiscardedCard(cardType);
+
+    // Remove from board after updating discard pile
     this.gameBoard.removeCard(cardId);
 
     // Reorganize remaining cards in hand
@@ -149,14 +155,15 @@ export class AnimationController {
   }
 
   /**
-   * Reorganize cards in a player's hand to fill gaps
+   * Reorganize cards in a player's hand to fill gaps with fan layout
    */
   private async reorganizePlayerHand(playerName: string): Promise<void> {
     const playerHand = this.playerHands.get(playerName) || [];
     const moves: Promise<void>[] = [];
+    const totalCards = playerHand.length;
 
     playerHand.forEach((cardId, index) => {
-      const newPos = this.gameBoard.getPlayerHandPosition(playerName, index);
+      const newPos = this.gameBoard.getPlayerHandPosition(playerName, index, totalCards);
       moves.push(this.gameBoard.moveCard(cardId, newPos, 300));
     });
 
@@ -179,7 +186,7 @@ export class AnimationController {
       // If hand is larger, add placeholder cards (shouldn't happen in normal replay)
       while (currentHand.length < size) {
         const index = currentHand.length;
-        const position = this.gameBoard.getPlayerHandPosition(playerName, index);
+        const position = this.gameBoard.getPlayerHandPosition(playerName, index, size);
         const cardId = `${playerName}-placeholder-${index}`;
         this.gameBoard.createCard("NOPE", position, cardId); // Use NOPE as placeholder
         currentHand.push(cardId);

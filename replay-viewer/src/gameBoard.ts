@@ -7,6 +7,8 @@ import type { CardType } from "./types";
 export interface Position {
   x: number;
   y: number;
+  rotation?: number;
+  zIndex?: number;
 }
 
 export interface CardElement {
@@ -38,7 +40,7 @@ export class GameBoard {
    */
   private initializeBoard(): void {
     this.container.innerHTML = `
-      <div class="game-board" style="position: relative; width: ${this.boardWidth}px; height: ${this.boardHeight}px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; overflow: hidden;">
+      <div class="game-board" style="position: relative; width: ${this.boardWidth}px; height: ${this.boardHeight}px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; overflow: visible;">
         <!-- Deck and discard pile area -->
         <div class="center-area" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
           <div id="deck-pile" class="card-pile" style="position: absolute; left: -150px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
@@ -53,7 +55,7 @@ export class GameBoard {
         <div id="player-areas" style="position: absolute; width: 100%; height: 100%;"></div>
         
         <!-- Cards container for animations -->
-        <div id="cards-container" style="position: absolute; width: 100%; height: 100%; pointer-events: none;"></div>
+        <div id="cards-container" style="position: absolute; width: 100%; height: 100%; pointer-events: auto;"></div>
       </div>
     `;
   }
@@ -109,11 +111,25 @@ export class GameBoard {
       text-align: center;
       padding: 4px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      transition: all 0.3s ease;
+      transition: all 0.3s ease, transform 0.2s ease;
       cursor: pointer;
       word-wrap: break-word;
+      transform-origin: center center;
+      transform: rotate(${position.rotation || 0}deg);
+      z-index: ${position.zIndex || 1};
     `;
     card.textContent = cardName;
+
+    // Add hover effects
+    card.addEventListener('mouseenter', () => {
+      card.style.transform = `rotate(${position.rotation || 0}deg) scale(1.2) translateY(-10px)`;
+      card.style.zIndex = '1000';
+    });
+
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = `rotate(${position.rotation || 0}deg) scale(1)`;
+      card.style.zIndex = (position.zIndex || 1).toString();
+    });
 
     const container = this.container.querySelector("#cards-container") as HTMLElement;
     container.appendChild(card);
@@ -139,6 +155,12 @@ export class GameBoard {
       cardElement.element.style.transition = `all ${duration}ms ease`;
       cardElement.element.style.left = `${newPosition.x}px`;
       cardElement.element.style.top = `${newPosition.y}px`;
+      if (newPosition.rotation !== undefined) {
+        cardElement.element.style.transform = `rotate(${newPosition.rotation}deg)`;
+      }
+      if (newPosition.zIndex !== undefined) {
+        cardElement.element.style.zIndex = newPosition.zIndex.toString();
+      }
       cardElement.position = { ...newPosition };
 
       setTimeout(resolve, duration);
@@ -177,12 +199,16 @@ export class GameBoard {
       const playerArea = document.createElement("div");
       playerArea.id = `player-${name}`;
       playerArea.className = "player-area";
+      
+      // Calculate rotation so cards face the center
+      const rotationDeg = (angle * 180 / Math.PI) + 90;
+      
       playerArea.style.cssText = `
         position: absolute;
         left: ${x - 100}px;
-        top: ${y - 60}px;
+        top: ${y - 100}px;
         width: 200px;
-        height: 120px;
+        height: 200px;
         border: 2px solid #44ff44;
         border-radius: 8px;
         background: rgba(0, 255, 0, 0.1);
@@ -191,7 +217,7 @@ export class GameBoard {
 
       playerArea.innerHTML = `
         <div style="color: #44ff44; font-weight: bold; margin-bottom: 4px; text-align: center;">${this.escapeHtml(name)}</div>
-        <div id="hand-${name}" class="player-hand" style="display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 80px;"></div>
+        <div id="hand-${name}" class="player-hand" data-rotation="${rotationDeg}" style="position: relative; min-height: 150px;"></div>
       `;
 
       playerAreas.appendChild(playerArea);
@@ -199,22 +225,39 @@ export class GameBoard {
   }
 
   /**
-   * Get player hand area position
+   * Get player hand area position with fan layout
    */
-  getPlayerHandPosition(playerName: string, cardIndex: number): Position {
+  getPlayerHandPosition(playerName: string, cardIndex: number, totalCards: number): Position {
     const handArea = this.container.querySelector(`#hand-${playerName}`) as HTMLElement;
     if (!handArea) return { x: 0, y: 0 };
 
     const rect = handArea.getBoundingClientRect();
     const containerRect = this.container.querySelector(".game-board")!.getBoundingClientRect();
+    
+    // Get rotation from data attribute
+    const baseRotation = parseFloat(handArea.getAttribute('data-rotation') || '0');
 
-    // Position cards in a row within the hand area
-    const cardWidth = 60;
-    const gap = 4;
-    const x = rect.left - containerRect.left + cardIndex * (cardWidth + gap) + 10;
-    const y = rect.top - containerRect.top + 10;
-
-    return { x, y };
+    // Fan layout calculations
+    const maxSpread = 30; // Maximum angle spread for the fan
+    const cardOverlap = 40; // How much cards overlap (smaller = more overlap)
+    
+    // Calculate angle for this card in the fan
+    const fanAngle = totalCards > 1 
+      ? (cardIndex - (totalCards - 1) / 2) * (maxSpread / Math.max(totalCards - 1, 1))
+      : 0;
+    
+    const centerX = rect.left - containerRect.left + rect.width / 2;
+    const centerY = rect.top - containerRect.top + rect.height / 2;
+    
+    const x = centerX + cardIndex * cardOverlap - ((totalCards - 1) * cardOverlap) / 2;
+    const y = centerY + Math.abs(fanAngle) * 0.5; // Slight arc effect
+    
+    return {
+      x: x - 40, // Center the card (80px width / 2)
+      y: y - 20,
+      rotation: baseRotation + fanAngle,
+      zIndex: cardIndex + 1
+    };
   }
 
   /**
@@ -238,6 +281,40 @@ export class GameBoard {
     const deck = this.container.querySelector("#deck-pile") as HTMLElement;
     if (deck) {
       deck.innerHTML = `<span style="color: #888; font-size: 14px;">DECK<br/>${count}</span>`;
+    }
+  }
+
+  /**
+   * Set the last discarded card (visible on discard pile)
+   */
+  setLastDiscardedCard(cardType: CardType | null): void {
+    const discardPile = this.container.querySelector("#discard-pile") as HTMLElement;
+    if (!discardPile) return;
+
+    if (cardType) {
+      const color = this.getCardColor(cardType);
+      const cardName = cardType.replace(/_/g, " ");
+      
+      discardPile.innerHTML = `
+        <div style="
+          width: 90px;
+          height: 130px;
+          background: ${color};
+          border: 2px solid #333;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 9px;
+          font-weight: bold;
+          color: #000;
+          text-align: center;
+          padding: 4px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        ">${cardName}</div>
+      `;
+    } else {
+      discardPile.innerHTML = `<span style="color: #888; font-size: 14px;">DISCARD</span>`;
     }
   }
 
@@ -286,5 +363,6 @@ export class GameBoard {
   clearCards(): void {
     this.cardElements.forEach((card) => card.element.remove());
     this.cardElements.clear();
+    this.setLastDiscardedCard(null);
   }
 }
