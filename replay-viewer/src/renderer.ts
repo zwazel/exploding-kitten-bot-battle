@@ -12,30 +12,43 @@ export class ReplayRenderer {
   }
 
   /**
+   * Escape HTML to prevent XSS
+   */
+  private escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  /**
    * Render the initial game setup
    */
   renderGameSetup(replayData: ReplayData): void {
     const metadata = replayData.metadata;
     const setupEvent = replayData.events.find((e) => e.type === "game_setup");
 
+    const escapedPlayers = metadata.players.map(p => this.escapeHtml(p)).join(", ");
+    const escapedTimestamp = this.escapeHtml(new Date(metadata.timestamp).toLocaleString());
+
     let html = `
       <div class="game-info">
         <h2>Game Replay</h2>
         <div class="metadata">
-          <div><strong>Players:</strong> ${metadata.players.join(", ")}</div>
-          <div><strong>Timestamp:</strong> ${new Date(metadata.timestamp).toLocaleString()}</div>
+          <div><strong>Players:</strong> ${escapedPlayers}</div>
+          <div><strong>Timestamp:</strong> ${escapedTimestamp}</div>
         </div>
       </div>
     `;
 
     if (setupEvent && setupEvent.type === "game_setup") {
+      const escapedPlayOrder = setupEvent.play_order.map(p => this.escapeHtml(p)).join(" → ");
       html += `
         <div class="game-setup">
           <h3>Initial Setup</h3>
           <div class="setup-info">
             <div><strong>Deck Size:</strong> ${setupEvent.deck_size}</div>
             <div><strong>Initial Hand Size:</strong> ${setupEvent.initial_hand_size}</div>
-            <div><strong>Play Order:</strong> ${setupEvent.play_order.join(" → ")}</div>
+            <div><strong>Play Order:</strong> ${escapedPlayOrder}</div>
           </div>
         </div>
       `;
@@ -117,10 +130,11 @@ export class ReplayRenderer {
 
         const statusClass = player.alive ? "alive" : "eliminated";
         const statusEmoji = player.alive ? "✅" : "💀";
+        const escapedName = this.escapeHtml(playerName);
 
         return `
           <div class="player-card ${statusClass}">
-            <div class="player-name">${statusEmoji} ${playerName}</div>
+            <div class="player-name">${statusEmoji} ${escapedName}</div>
             <div class="player-hand">Cards: ${player.handSize}</div>
           </div>
         `;
@@ -168,50 +182,50 @@ export class ReplayRenderer {
         return `🎮 Game started with ${event.play_order.length} players`;
       
       case "turn_start":
-        return `🔄 Turn ${event.turn_number}: ${event.player}'s turn (${event.cards_in_deck} cards in deck)`;
+        return `🔄 Turn ${event.turn_number}: ${this.escapeHtml(event.player)}'s turn (${event.cards_in_deck} cards in deck)`;
       
       case "card_play":
-        return `🃏 ${event.player} played ${this.formatCardName(event.card)}`;
+        return `🃏 ${this.escapeHtml(event.player)} played ${this.formatCardName(event.card)}`;
       
       case "combo_play":
         const cards = event.cards.map((c) => this.formatCardName(c)).join(", ");
-        return `🎲 ${event.player} played ${event.combo_type} combo: [${cards}]${event.target ? ` targeting ${event.target}` : ""}`;
+        return `🎲 ${this.escapeHtml(event.player)} played ${event.combo_type} combo: [${cards}]${event.target ? ` targeting ${this.escapeHtml(event.target)}` : ""}`;
       
       case "nope":
-        return `🚫 ${event.player} played NOPE on: ${event.action}`;
+        return `🚫 ${this.escapeHtml(event.player)} played NOPE on: ${this.escapeHtml(event.action)}`;
       
       case "card_draw":
-        return `📥 ${event.player} drew ${this.formatCardName(event.card)}`;
+        return `📥 ${this.escapeHtml(event.player)} drew ${this.formatCardName(event.card)}`;
       
       case "exploding_kitten_draw":
-        return `💣 ${event.player} drew an EXPLODING KITTEN! ${event.had_defuse ? "(has Defuse)" : "(NO DEFUSE!)"}`;
+        return `💣 ${this.escapeHtml(event.player)} drew an EXPLODING KITTEN! ${event.had_defuse ? "(has Defuse)" : "(NO DEFUSE!)"}`;
       
       case "defuse":
-        return `🛡️ ${event.player} defused and inserted kitten at position ${event.insert_position}`;
+        return `🛡️ ${this.escapeHtml(event.player)} defused and inserted kitten at position ${event.insert_position}`;
       
       case "player_elimination":
-        return `💀 ${event.player} was eliminated!`;
+        return `💀 ${this.escapeHtml(event.player)} was eliminated!`;
       
       case "see_future":
-        return `🔮 ${event.player} used See the Future (saw ${event.cards_seen} cards)`;
+        return `🔮 ${this.escapeHtml(event.player)} used See the Future (saw ${event.cards_seen} cards)`;
       
       case "shuffle":
-        return `🔀 ${event.player} shuffled the deck`;
+        return `🔀 ${this.escapeHtml(event.player)} shuffled the deck`;
       
       case "favor":
-        return `🤝 ${event.player} played Favor on ${event.target}`;
+        return `🤝 ${this.escapeHtml(event.player)} played Favor on ${this.escapeHtml(event.target)}`;
       
       case "card_steal":
-        return `🎯 ${event.thief} stole a card from ${event.victim} (${event.context})`;
+        return `🎯 ${this.escapeHtml(event.thief)} stole a card from ${this.escapeHtml(event.victim)} (${this.escapeHtml(event.context)})`;
       
       case "card_request":
-        return `📢 ${event.requester} requested ${this.formatCardName(event.requested_card)} from ${event.target}: ${event.success ? "✅ Success" : "❌ Failed"}`;
+        return `📢 ${this.escapeHtml(event.requester)} requested ${this.formatCardName(event.requested_card)} from ${this.escapeHtml(event.target)}: ${event.success ? "✅ Success" : "❌ Failed"}`;
       
       case "discard_take":
-        return `♻️ ${event.player} took ${this.formatCardName(event.card)} from discard`;
+        return `♻️ ${this.escapeHtml(event.player)} took ${this.formatCardName(event.card)} from discard`;
       
       case "game_end":
-        return `🏆 Game Over! Winner: ${event.winner || "None"}`;
+        return `🏆 Game Over! Winner: ${event.winner ? this.escapeHtml(event.winner) : "None"}`;
       
       default:
         return `Unknown event: ${(event as any).type}`;
