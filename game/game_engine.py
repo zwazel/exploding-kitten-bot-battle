@@ -157,14 +157,14 @@ class GameEngine:
                                 # Build description string for replay recorder
                                 if current_action.action_type == ActionType.CARD_PLAY:
                                     if current_action.target:
-                                        desc = f"{current_action.player} playing {current_action.card.value} on {current_action.target}"
+                                        desc = f"{current_action.player} playing {current_action.card.name} on {current_action.target}"
                                     else:
-                                        desc = f"{current_action.player} playing {current_action.card.value}"
+                                        desc = f"{current_action.player} playing {current_action.card.name}"
                                 elif current_action.action_type == ActionType.COMBO_PLAY:
                                     if current_action.target:
-                                        desc = f"{current_action.player} playing {current_action.combo_type.value} combo targeting {current_action.target}"
+                                        desc = f"{current_action.player} playing {current_action.combo_type.name} combo targeting {current_action.target}"
                                     else:
-                                        desc = f"{current_action.player} playing {current_action.combo_type.value} combo"
+                                        desc = f"{current_action.player} playing {current_action.combo_type.name} combo"
                                 elif current_action.action_type == ActionType.NOPE:
                                     desc = f"{current_action.player} playing NOPE"
                                 else:
@@ -267,7 +267,7 @@ class GameEngine:
         if self.replay_recorder:
             # Collect initial hands for each bot
             initial_hands = {
-                bot.name: [card.card_type.value for card in bot.hand]
+                bot.name: [card.card_type.name for card in bot.hand]
                 for bot in self.bots
             }
             
