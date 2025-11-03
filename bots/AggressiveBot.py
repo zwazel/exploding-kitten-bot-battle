@@ -93,6 +93,10 @@ class AggressiveBot(Bot):
                     return card
         return discard_pile[0] if discard_pile else None
     
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
+        """Track actions for strategic decisions."""
+        pass
+    
     def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         """Aggressively nope actions that benefit others."""
         # Nope combos and see the future

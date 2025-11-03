@@ -91,6 +91,10 @@ class RandomBot(Bot):
         """Randomly choose from discard pile."""
         return random.choice(discard_pile) if discard_pile else None
     
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
+        """Random bot doesn't track actions."""
+        pass
+    
     def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         """Randomly decide to nope with 20% probability."""
         return random.random() < 0.2

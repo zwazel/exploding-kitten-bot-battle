@@ -70,6 +70,10 @@ class CautiousBot(Bot):
                 return card
         return discard_pile[0] if discard_pile else None
     
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
+        """Track actions for cautious decision-making."""
+        pass
+    
     def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         """Only nope attacks and favors against us."""
         # Cautious bot rarely nopes
