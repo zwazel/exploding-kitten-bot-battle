@@ -1,7 +1,8 @@
 """Base Bot class that all bots must inherit from."""
 
 from abc import ABC, abstractmethod
-from typing import Optional, List, Tuple, Union
+from typing import Optional, List, Union
+
 from .cards import Card, CardType, TargetContext, GameAction
 from .game_state import GameState
 
@@ -61,7 +62,7 @@ class Bot(ABC):
             top_three: The top three cards of the draw pile (index 0 is the top card)
         """
         pass
-    
+
     @abstractmethod
     def choose_target(self, state: GameState, alive_players: List['Bot'], context: TargetContext) -> Optional['Bot']:
         """
@@ -76,7 +77,7 @@ class Bot(ABC):
             The target bot, or None if no valid target
         """
         pass
-    
+
     @abstractmethod
     def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
         """
@@ -89,7 +90,7 @@ class Bot(ABC):
             The card to give from hand
         """
         pass
-    
+
     @abstractmethod
     def choose_card_type(self, state: GameState) -> Optional[CardType]:
         """
@@ -102,7 +103,7 @@ class Bot(ABC):
             The card type to request
         """
         pass
-    
+
     @abstractmethod
     def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
         """
@@ -116,7 +117,8 @@ class Bot(ABC):
             The card to take from discard pile
         """
         pass
-    
+
+    @abstractmethod
     def on_action_played(self, state: GameState, action_description: str, actor: 'Bot') -> None:
         """
         Called whenever ANY action happens in the game to notify the bot.
@@ -129,7 +131,7 @@ class Bot(ABC):
         """
         # Default implementation does nothing. Bots can override to track game state.
         pass
-    
+
     @abstractmethod
     def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         """
