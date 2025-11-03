@@ -150,7 +150,7 @@ class YourBot(Bot):
         self.last_seen_cards = []
         self.known_threats = []
     
-    def play(self, state: GameState) -> Optional[Card]:
+    def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:
         """Choose which card to play based on game state."""
         # Always check if you have the card before returning it
         if self.has_card_type(CardType.SKIP):
@@ -266,12 +266,12 @@ python3 -m unittest tests.test_my_bot -v
 2. **Infinite loops in play()**
    ```python
    # ❌ BAD - Never returns None, will be called indefinitely
-   def play(self, state: GameState) -> Optional[Card]:
+   def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:
        if self.hand:
            return self.hand[0]  # Always returns a card!
    
    # ✅ GOOD - Eventually returns None to end play phase
-   def play(self, state: GameState) -> Optional[Card]:
+   def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:
        if self.has_card_type(CardType.SKIP):
            # Return skip card
            pass
