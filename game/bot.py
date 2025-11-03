@@ -1,8 +1,9 @@
 """Base Bot class that all bots must inherit from."""
 
 from abc import ABC, abstractmethod
-from typing import Optional, List, Tuple, Union
-from .cards import Card, CardType, TargetContext
+from typing import Optional, List, Union
+
+from .cards import Card, CardType, TargetContext, GameAction
 from .game_state import GameState
 
 
@@ -61,7 +62,7 @@ class Bot(ABC):
             top_three: The top three cards of the draw pile (index 0 is the top card)
         """
         pass
-    
+
     @abstractmethod
     def choose_target(self, state: GameState, alive_players: List['Bot'], context: TargetContext) -> Optional['Bot']:
         """
@@ -76,7 +77,7 @@ class Bot(ABC):
             The target bot, or None if no valid target
         """
         pass
-    
+
     @abstractmethod
     def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
         """
@@ -89,7 +90,7 @@ class Bot(ABC):
             The card to give from hand
         """
         pass
-    
+
     @abstractmethod
     def choose_card_type(self, state: GameState) -> Optional[CardType]:
         """
@@ -102,7 +103,7 @@ class Bot(ABC):
             The card type to request
         """
         pass
-    
+
     @abstractmethod
     def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
         """
@@ -116,28 +117,28 @@ class Bot(ABC):
             The card to take from discard pile
         """
         pass
-    
-    def on_action_played(self, state: GameState, action_description: str, actor: 'Bot') -> None:
+
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
         """
         Called whenever ANY action happens in the game to notify the bot.
         This is for information tracking, not for response.
         
         Args:
             state: The current game state
-            action_description: Description of the action being played
+            action: The action being played (GameAction object)
             actor: The bot who performed the action
         """
         # Default implementation does nothing. Bots can override to track game state.
         pass
-    
+
     @abstractmethod
-    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+    def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         """
         Called when an action can be noped. Bot decides whether to play a Nope card.
         
         Args:
             state: The current game state
-            action_description: Description of the action being played
+            action: The action being played that can be noped
             
         Returns:
             True if bot wants to play Nope, False otherwise

@@ -1,7 +1,7 @@
 """Example bot that plays cautiously."""
 
 from typing import Optional, List, Union
-from game import Bot, GameState, Card, CardType, TargetContext
+from game import Bot, GameState, Card, CardType, TargetContext, GameAction, ActionType
 
 
 class CautiousBot(Bot):
@@ -70,9 +70,13 @@ class CautiousBot(Bot):
                 return card
         return discard_pile[0] if discard_pile else None
     
-    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
+        """Track actions for cautious decision-making."""
+        pass
+    
+    def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         """Only nope attacks and favors against us."""
         # Cautious bot rarely nopes
-        if "Attack" in action_description and "playing Attack" in action_description:
+        if action.action_type == ActionType.CARD_PLAY and action.card == CardType.ATTACK:
             return True  # Always nope attacks
         return False

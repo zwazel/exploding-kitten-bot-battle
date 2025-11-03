@@ -1,7 +1,7 @@
 """Example bot that plays aggressively."""
 
 from typing import Optional, List, Union
-from game import Bot, GameState, Card, CardType, TargetContext
+from game import Bot, GameState, Card, CardType, TargetContext, GameAction, ActionType
 
 
 class AggressiveBot(Bot):
@@ -93,9 +93,15 @@ class AggressiveBot(Bot):
                     return card
         return discard_pile[0] if discard_pile else None
     
-    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
+        """Track actions for strategic decisions."""
+        pass
+    
+    def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         """Aggressively nope actions that benefit others."""
         # Nope combos and see the future
-        if "combo" in action_description.lower() or "See the Future" in action_description:
+        if action.action_type == ActionType.COMBO_PLAY:
+            return True
+        if action.action_type == ActionType.CARD_PLAY and action.card == CardType.SEE_THE_FUTURE:
             return True
         return False

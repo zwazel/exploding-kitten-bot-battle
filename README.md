@@ -279,6 +279,100 @@ Test mode features:
 - If only 1 bot is found, it duplicates it to play against itself
 - Requires at least 2 bots to run
 
+### Replay Recording
+
+Record games to JSON files for later replay or analysis:
+
+```bash
+python3 main.py --test --replay game_replay.json
+```
+
+The replay file will contain:
+- **Game metadata**: timestamp, player list, version
+- **Game setup**: deck size, initial hand size, play order, and initial hands for each player
+- **All game events**: turn starts, card plays, draws, combos, nopes, eliminations
+- **Game result**: winner information
+
+#### Replay File Structure
+
+The replay JSON contains the following event types:
+- `game_setup` - Initial game configuration with each player's starting hand
+- `turn_start` - Beginning of each player's turn
+- `card_play` - Single card plays (Skip, Attack, Shuffle, etc.)
+- `card_draw` - Cards drawn from the deck
+- `combo_play` - Combo plays (2-of-a-kind, 3-of-a-kind, 5-unique)
+- `nope` - Nope cards played in response to actions
+- `exploding_kitten_draw` - When a player draws an Exploding Kitten
+- `defuse` - When a player defuses an Exploding Kitten
+- `player_elimination` - When a player is eliminated
+- `card_steal` - When cards are stolen (combos or Favor)
+- `card_request` - When specific cards are requested (3-of-a-kind)
+- `favor` - When Favor cards are played
+- `shuffle` - When the deck is shuffled
+- `see_future` - When See the Future is played
+- `discard_take` - When cards are taken from discard (5-unique)
+- `game_end` - End of game with winner
+
+**Example replay file:**
+```json
+{
+  "metadata": {
+    "timestamp": "2025-11-03T12:39:15.013346",
+    "players": ["Bot1", "Bot2", "Bot3"],
+    "version": "1.0"
+  },
+  "events": [
+    {
+      "type": "game_setup",
+      "deck_size": 33,
+      "initial_hand_size": 7,
+      "play_order": ["Bot1", "Bot2", "Bot3"],
+      "initial_hands": {
+        "Bot1": ["Defuse", "Skip", "Attack", "Tacocat", "Shuffle", "Nope", "Favor"],
+        "Bot2": ["Defuse", "Attack", "See the Future", "Beard Cat", "Nope", "Skip", "Cattermelon"],
+        "Bot3": ["Defuse", "Shuffle", "Tacocat", "Rainbow-Ralphing Cat", "Attack", "Favor", "Skip"]
+      }
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 1,
+      "player": "Bot1",
+      "turns_remaining": 1,
+      "hand_size": 7,
+      "cards_in_deck": 33
+    },
+    {
+      "type": "card_play",
+      "turn_number": 1,
+      "player": "Bot1",
+      "card": "See the Future"
+    },
+    {
+      "type": "nope",
+      "turn_number": 1,
+      "player": "Bot2",
+      "action": "Bot1 playing See the Future"
+    },
+    {
+      "type": "nope",
+      "turn_number": 1,
+      "player": "Bot3",
+      "action": "Bot2 playing NOPE on: Bot1 playing See the Future"
+    }
+  ],
+  "winner": "Bot1"
+}
+```
+
+**Event Ordering:**
+Events are recorded in chronological order as they happen during the game:
+1. When a card is played, a `card_play` event is recorded
+2. If someone plays a Nope, a `nope` event is recorded immediately after
+3. Multiple Nopes can be chained (Nope the Nope)
+4. The final outcome (whether the action succeeds or is noped) is determined by the sequence of events
+
+This ordering makes it easy to replay the game visually, showing each action as it happens.
+
 ### Game Logging
 
 The game provides detailed console output showing all game actions:

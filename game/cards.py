@@ -2,6 +2,7 @@
 
 from enum import Enum
 from dataclasses import dataclass
+from typing import Optional, List
 
 
 class CardType(Enum):
@@ -41,6 +42,34 @@ class TargetContext(Enum):
     FAVOR = "favor"
     TWO_OF_A_KIND = "2-of-a-kind"
     THREE_OF_A_KIND = "3-of-a-kind"
+
+
+class ActionType(Enum):
+    """Types of actions that can occur in the game."""
+    CARD_PLAY = "card_play"
+    COMBO_PLAY = "combo_play"
+    CARD_DRAW = "card_draw"
+    CARD_STEAL = "card_steal"
+    CARD_REQUEST = "card_request"
+    EXPLODING_KITTEN_DRAW = "exploding_kitten_draw"
+    DEFUSE = "defuse"
+    ELIMINATION = "elimination"
+    NOPE = "nope"
+
+
+@dataclass
+class GameAction:
+    """
+    Represents a game action for notification purposes.
+    Provides type-safe action descriptions instead of free-form strings.
+    """
+    action_type: ActionType
+    player: str
+    card: Optional[CardType] = None
+    combo_type: Optional[ComboType] = None
+    target: Optional[str] = None
+    cards: Optional[List[CardType]] = None
+    success: Optional[bool] = None
 
 
 @dataclass
