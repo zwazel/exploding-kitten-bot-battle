@@ -247,7 +247,7 @@ class TestCombos(unittest.TestCase):
             Card(CardType.ATTACK),
             Card(CardType.SHUFFLE),
             Card(CardType.TACOCAT),
-            Card(CardType.DEFUSE)
+            Card(CardType.FAVOR)  # Changed from DEFUSE
         ]
         combo_type = game._is_valid_combo(cards)
         self.assertEqual(combo_type, "5-unique")
@@ -275,6 +275,35 @@ class TestCombos(unittest.TestCase):
             Card(CardType.ATTACK),
             Card(CardType.SHUFFLE),
             Card(CardType.DEFUSE)
+        ]
+        combo_type = game._is_valid_combo(cards)
+        self.assertIsNone(combo_type)
+    
+    def test_invalid_combo_with_exploding_kitten(self):
+        """Test that Exploding Kitten cards cannot be used in combos."""
+        game = GameEngine([SimpleBot("Bot1"), SimpleBot("Bot2")], verbose=False)
+        # Try 2-of-a-kind with Exploding Kittens
+        cards = [Card(CardType.EXPLODING_KITTEN), Card(CardType.EXPLODING_KITTEN)]
+        combo_type = game._is_valid_combo(cards)
+        self.assertIsNone(combo_type)
+    
+    def test_invalid_combo_with_defuse(self):
+        """Test that Defuse cards cannot be used in combos."""
+        game = GameEngine([SimpleBot("Bot1"), SimpleBot("Bot2")], verbose=False)
+        # Try 2-of-a-kind with Defuse cards
+        cards = [Card(CardType.DEFUSE), Card(CardType.DEFUSE)]
+        combo_type = game._is_valid_combo(cards)
+        self.assertIsNone(combo_type)
+    
+    def test_invalid_5_unique_with_defuse(self):
+        """Test that 5-unique with Defuse is invalid."""
+        game = GameEngine([SimpleBot("Bot1"), SimpleBot("Bot2")], verbose=False)
+        cards = [
+            Card(CardType.SKIP),
+            Card(CardType.ATTACK),
+            Card(CardType.SHUFFLE),
+            Card(CardType.TACOCAT),
+            Card(CardType.DEFUSE)  # Defuse not allowed
         ]
         combo_type = game._is_valid_combo(cards)
         self.assertIsNone(combo_type)

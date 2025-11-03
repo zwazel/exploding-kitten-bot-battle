@@ -135,6 +135,11 @@ class GameEngine:
         Returns:
             Combo type ("2-of-a-kind", "3-of-a-kind", "5-unique") or None if invalid
         """
+        # Exploding Kitten and Defuse cannot be used in combos
+        for card in cards:
+            if card.card_type in [CardType.EXPLODING_KITTEN, CardType.DEFUSE]:
+                return None
+        
         if len(cards) == 2:
             if cards[0].card_type == cards[1].card_type:
                 return "2-of-a-kind"
@@ -215,6 +220,7 @@ class GameEngine:
             
             self._log(f"\n{'=' * 60}")
             self._log(f"Turn {turn_count}: {current_bot.name}'s turn")
+            self._log(f"Turns to take: {self.turns_to_take}")
             self._log(f"Hand ({len(current_bot.hand)} cards): {', '.join(str(c) for c in current_bot.hand)}")
             self._log(f"Cards left in deck: {self.deck.size()}")
             
@@ -227,6 +233,12 @@ class GameEngine:
             
             # Decrement turns for this player
             self.turns_to_take -= 1
+            
+            # Log remaining turns
+            if self.turns_to_take > 0:
+                self._log(f"→ {current_bot.name} has {self.turns_to_take} turn(s) remaining")
+            else:
+                self._log(f"→ {current_bot.name}'s turns complete")
             
             # Move to next bot when current bot has no more turns
             if self.turns_to_take <= 0:
@@ -313,50 +325,55 @@ class GameEngine:
             bot.remove_card(card)
             self.deck.discard_pile.append(card)
         
-        # Check for Nope
-        action_desc = f"{bot.name} playing {combo_type} combo"
+        # For combos that require a target, select target first before Nope check
+        target = None
+        if combo_type in ["2-of-a-kind", "3-of-a-kind"]:
+            alive_others = self._get_alive_bots_except(bot)
+            if not alive_others:
+                self._log(f"  → No targets available")
+                return
+            
+            try:
+                target = bot.choose_target(self.game_state.copy(), alive_others, combo_type)
+                if not target:
+                    self._log(f"  → No target selected")
+                    return
+                self._log(f"  → {bot.name} targets {target.name}")
+            except Exception as e:
+                self._log(f"  ERROR: {bot.name} raised exception in choose_target: {e}")
+                return
+        
+        # Check for Nope with target information
+        if combo_type in ["2-of-a-kind", "3-of-a-kind"]:
+            action_desc = f"{bot.name} playing {combo_type} combo targeting {target.name}"
+        else:
+            action_desc = f"{bot.name} playing {combo_type} combo"
+        
         if self._check_for_nope(action_desc, bot):
             return  # Combo was noped
         
         # Execute combo effect
         if combo_type == "2-of-a-kind":
-            self._execute_2_of_a_kind(bot)
+            self._execute_2_of_a_kind_with_target(bot, target)
         elif combo_type == "3-of-a-kind":
-            self._execute_3_of_a_kind(bot)
+            self._execute_3_of_a_kind_with_target(bot, target)
         elif combo_type == "5-unique":
             self._execute_5_unique(bot)
     
-    def _execute_2_of_a_kind(self, bot: Bot) -> None:
-        """Execute 2-of-a-kind combo: randomly steal a card from target."""
-        alive_others = self._get_alive_bots_except(bot)
-        if not alive_others:
-            self._log(f"  → No targets available")
+    def _execute_2_of_a_kind_with_target(self, bot: Bot, target: Bot) -> None:
+        """Execute 2-of-a-kind combo with pre-selected target: randomly steal a card."""
+        if not target.hand:
+            self._log(f"  → {target.name} has no cards")
             return
         
-        try:
-            target = bot.choose_target(self.game_state.copy(), alive_others, "2-of-a-kind")
-            if target and target.hand:
-                stolen_card = random.choice(target.hand)
-                target.remove_card(stolen_card)
-                bot.add_card(stolen_card)
-                self._log(f"  → {bot.name} randomly steals {stolen_card} from {target.name}")
-            else:
-                self._log(f"  → Target has no cards")
-        except Exception as e:
-            self._log(f"  ERROR: {bot.name} raised exception in choose_target: {e}")
+        stolen_card = random.choice(target.hand)
+        target.remove_card(stolen_card)
+        bot.add_card(stolen_card)
+        self._log(f"  → {bot.name} randomly steals {stolen_card} from {target.name}")
     
-    def _execute_3_of_a_kind(self, bot: Bot) -> None:
-        """Execute 3-of-a-kind combo: request specific card type from target."""
-        alive_others = self._get_alive_bots_except(bot)
-        if not alive_others:
-            self._log(f"  → No targets available")
-            return
-        
+    def _execute_3_of_a_kind_with_target(self, bot: Bot, target: Bot) -> None:
+        """Execute 3-of-a-kind combo with pre-selected target: request specific card type."""
         try:
-            target = bot.choose_target(self.game_state.copy(), alive_others, "3-of-a-kind")
-            if not target:
-                return
-            
             requested_type = bot.choose_card_type(self.game_state.copy())
             if not requested_type:
                 return
@@ -432,9 +449,6 @@ class GameEngine:
             self._log("  → Attack: Next player takes 2 turns")
             self.turns_to_take = -1  # End turn without drawing, next player gets 2 turns
         elif card.card_type == CardType.FAVOR:
-            # Check for Nope
-            if self._check_for_nope(f"{bot.name} playing Favor", bot):
-                return
             self._execute_favor(bot)
         elif card.card_type == CardType.NOPE:
             self._log("  → Nope can only be played in response to actions")
@@ -448,9 +462,20 @@ class GameEngine:
             return
         
         try:
+            # Select target first
             target = bot.choose_target(self.game_state.copy(), alive_others, "favor")
-            if not target or not target.hand:
-                self._log(f"  → Target has no cards")
+            if not target:
+                self._log(f"  → No target selected")
+                return
+            
+            self._log(f"  → {bot.name} targets {target.name}")
+            
+            # Check for Nope with target information
+            if self._check_for_nope(f"{bot.name} playing Favor on {target.name}", bot):
+                return
+            
+            if not target.hand:
+                self._log(f"  → {target.name} has no cards")
                 return
             
             # Target chooses which card to give
