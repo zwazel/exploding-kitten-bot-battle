@@ -16,10 +16,11 @@ class AggressiveBot(Bot):
         - Use combos to steal cards
         """
         # Try 3-of-a-kind combos to steal specific cards
+        # Note: DEFUSE and EXPLODING_KITTEN cards cannot be used in combos
         from collections import Counter
         card_counts = Counter(c.card_type for c in self.hand)
         for card_type, count in card_counts.items():
-            if count >= 3:
+            if count >= 3 and card_type not in [CardType.DEFUSE, CardType.EXPLODING_KITTEN]:
                 cards = [c for c in self.hand if c.card_type == card_type][:3]
                 return cards
         
