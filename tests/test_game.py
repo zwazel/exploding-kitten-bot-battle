@@ -29,6 +29,9 @@ class SimpleBot(Bot):
     def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
         return discard_pile[0] if discard_pile else None
     
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
+        pass
+    
     def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         return False
 
@@ -184,6 +187,9 @@ class NopeBot(Bot):
     def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
         return discard_pile[0] if discard_pile else None
     
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
+        pass
+    
     def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         return self.will_nope
 
@@ -223,6 +229,9 @@ class ComboBot(Bot):
     
     def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
         return discard_pile[0] if discard_pile else None
+    
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
+        pass
     
     def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         return False
