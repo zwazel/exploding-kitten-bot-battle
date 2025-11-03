@@ -396,8 +396,8 @@ class GameEngine:
         stolen_card = random.choice(target.hand)
         target.remove_card(stolen_card)
         bot.add_card(stolen_card)
-        # Only the two players involved know which specific card was stolen
-        self._log(f"  → {bot.name} randomly steals a card from {target.name}")
+        # Show full details in user-facing logs (bots don't get this info in GameState)
+        self._log(f"  → {bot.name} randomly steals {stolen_card} from {target.name}")
     
     def _execute_3_of_a_kind_with_target(self, bot: Bot, target: Bot) -> None:
         """Execute 3-of-a-kind combo with pre-selected target: request specific card type."""
@@ -467,8 +467,9 @@ class GameEngine:
             if self._check_for_nope(f"{bot.name} playing See the Future", bot):
                 return False
             top_three = self.deck.peek(3)
-            # Only the player knows what cards they saw - don't log publicly
-            self._log(f"  → See the Future: {bot.name} looks at the top 3 cards")
+            # Show full details in user-facing logs (bots don't get this info in GameState)
+            cards_str = ', '.join(str(c) for c in top_three) if top_three else 'none'
+            self._log(f"  → See the Future: {bot.name} sees [{cards_str}]")
             try:
                 bot.see_the_future(self.game_state.copy(), top_three)
             except Exception as e:
@@ -528,8 +529,8 @@ class GameEngine:
             if card_to_give and target.has_card(card_to_give):
                 target.remove_card(card_to_give)
                 bot.add_card(card_to_give)
-                # Only the two players involved know which specific card was transferred
-                self._log(f"  → {target.name} gives a card to {bot.name}")
+                # Show full details in user-facing logs (bots don't get this info in GameState)
+                self._log(f"  → {target.name} gives {card_to_give} to {bot.name}")
             else:
                 self._log(f"  ERROR: {target.name} tried to give invalid card")
         except Exception as e:

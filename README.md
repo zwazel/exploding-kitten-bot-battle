@@ -215,6 +215,22 @@ Test mode features:
 - If only 1 bot is found, it duplicates it to play against itself
 - Requires at least 2 bots to run
 
+### Game Logging
+
+The game provides detailed console output showing all game actions:
+
+**User-Facing Logs (Console Output):**
+- Shows complete details of all transactions (which specific cards are stolen, given, seen, etc.)
+- Displays card movements: "RandomBot randomly steals Defuse from CautiousBot"
+- Shows See the Future results: "AggressiveBot sees [Skip, Nope, Exploding Kitten]"
+- Includes all Nope chains and turn tracking
+
+**Bot Information (GameState):**
+- Bots receive limited information matching real gameplay
+- Can't see specific cards in private transactions (Favor, 2-of-a-kind, See the Future)
+- Can see public announcements (3-of-a-kind requests, 5-unique selections)
+- Must infer hidden information from public game history
+
 ## Running Tests
 
 Run the automated test suite:
