@@ -1,6 +1,6 @@
 """Exploding Kittens game engine and core components."""
 
-from .cards import Card, CardType, ComboType, TargetContext
+from .cards import Card, CardType, ComboType, TargetContext, ActionType, GameAction
 from .game_state import GameState
 from .bot import Bot
 from .deck import Deck
@@ -20,6 +20,8 @@ __all__ = [
     'CardType',
     'ComboType',
     'TargetContext',
+    'ActionType',
+    'GameAction',
     'GameState',
     'Bot',
     'Deck',

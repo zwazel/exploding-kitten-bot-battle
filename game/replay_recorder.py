@@ -77,7 +77,7 @@ class ReplayRecorder:
             "type": "card_play",
             "turn_number": self.turn_number,
             "player": player_name,
-            "card": card_type.value
+            "card": card_type.name
         })
     
     def record_combo_play(self, player_name: str, combo_type: str, 
@@ -91,7 +91,7 @@ class ReplayRecorder:
             "turn_number": self.turn_number,
             "player": player_name,
             "combo_type": combo_type,
-            "cards": [card.value for card in cards]
+            "cards": [card.name for card in cards]
         }
         
         if target:
@@ -120,7 +120,7 @@ class ReplayRecorder:
             "type": "card_draw",
             "turn_number": self.turn_number,
             "player": player_name,
-            "card": card_type.value
+            "card": card_type.name
         })
     
     def record_exploding_kitten_draw(self, player_name: str, 
@@ -218,7 +218,7 @@ class ReplayRecorder:
             "turn_number": self.turn_number,
             "requester": requester,
             "target": target,
-            "requested_card": card_type.value,
+            "requested_card": card_type.name,
             "success": success
         })
     
@@ -231,7 +231,7 @@ class ReplayRecorder:
             "type": "discard_take",
             "turn_number": self.turn_number,
             "player": player_name,
-            "card": card_type.value
+            "card": card_type.name
         })
     
     def record_game_end(self, winner: Optional[str]) -> None:

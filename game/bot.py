@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple, Union
-from .cards import Card, CardType, TargetContext
+from .cards import Card, CardType, TargetContext, GameAction
 from .game_state import GameState
 
 
@@ -131,13 +131,13 @@ class Bot(ABC):
         pass
     
     @abstractmethod
-    def should_play_nope(self, state: GameState, action_description: str) -> bool:
+    def should_play_nope(self, state: GameState, action: GameAction) -> bool:
         """
         Called when an action can be noped. Bot decides whether to play a Nope card.
         
         Args:
             state: The current game state
-            action_description: Description of the action being played
+            action: The action being played that can be noped
             
         Returns:
             True if bot wants to play Nope, False otherwise

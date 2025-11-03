@@ -1042,15 +1042,15 @@ class TestReplayRecorder(unittest.TestCase):
         from game import ReplayRecorder
         recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
         initial_hands = {
-            "Bot1": ["Defuse", "Skip", "Attack"],
-            "Bot2": ["Defuse", "Nope", "Shuffle"]
+            "Bot1": ["DEFUSE", "SKIP", "ATTACK"],
+            "Bot2": ["DEFUSE", "NOPE", "SHUFFLE"]
         }
         recorder.record_game_setup(20, 7, ["Bot1", "Bot2"], initial_hands=initial_hands)
         self.assertEqual(len(recorder.events), 1)
         self.assertEqual(recorder.events[0]["type"], "game_setup")
         self.assertEqual(recorder.events[0]["deck_size"], 20)
         self.assertIn("initial_hands", recorder.events[0])
-        self.assertEqual(recorder.events[0]["initial_hands"]["Bot1"], ["Defuse", "Skip", "Attack"])
+        self.assertEqual(recorder.events[0]["initial_hands"]["Bot1"], ["DEFUSE", "SKIP", "ATTACK"])
     
     def test_replay_recorder_card_play(self):
         """Test recording card plays."""
@@ -1060,18 +1060,18 @@ class TestReplayRecorder(unittest.TestCase):
         self.assertEqual(len(recorder.events), 1)
         self.assertEqual(recorder.events[0]["type"], "card_play")
         self.assertEqual(recorder.events[0]["player"], "Bot1")
-        self.assertEqual(recorder.events[0]["card"], "Skip")
+        self.assertEqual(recorder.events[0]["card"], "SKIP")
     
     def test_replay_recorder_combo_play(self):
         """Test recording combo plays."""
         from game import ReplayRecorder
         recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
-        recorder.record_combo_play("Bot1", "2-of-a-kind", 
+        recorder.record_combo_play("Bot1", "TWO_OF_A_KIND", 
                                    [CardType.TACOCAT, CardType.TACOCAT],
                                    target="Bot2")
         self.assertEqual(len(recorder.events), 1)
         self.assertEqual(recorder.events[0]["type"], "combo_play")
-        self.assertEqual(recorder.events[0]["combo_type"], "2-of-a-kind")
+        self.assertEqual(recorder.events[0]["combo_type"], "TWO_OF_A_KIND")
         self.assertEqual(recorder.events[0]["target"], "Bot2")
     
     def test_replay_recorder_to_json(self):

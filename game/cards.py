@@ -2,6 +2,7 @@
 
 from enum import Enum
 from dataclasses import dataclass
+from typing import Optional, List
 
 
 class CardType(Enum):
@@ -41,6 +42,61 @@ class TargetContext(Enum):
     FAVOR = "favor"
     TWO_OF_A_KIND = "2-of-a-kind"
     THREE_OF_A_KIND = "3-of-a-kind"
+
+
+class ActionType(Enum):
+    """Types of actions that can occur in the game."""
+    CARD_PLAY = "card_play"
+    COMBO_PLAY = "combo_play"
+    CARD_DRAW = "card_draw"
+    CARD_STEAL = "card_steal"
+    CARD_REQUEST = "card_request"
+    EXPLODING_KITTEN_DRAW = "exploding_kitten_draw"
+    DEFUSE = "defuse"
+    ELIMINATION = "elimination"
+    NOPE = "nope"
+
+
+@dataclass
+class GameAction:
+    """
+    Represents a game action for notification purposes.
+    Provides type-safe action descriptions instead of free-form strings.
+    """
+    action_type: ActionType
+    player: str
+    card: Optional[CardType] = None
+    combo_type: Optional[ComboType] = None
+    target: Optional[str] = None
+    cards: Optional[List[CardType]] = None
+    success: Optional[bool] = None
+    
+    def to_description(self) -> str:
+        """Convert action to human-readable description (for backward compatibility)."""
+        if self.action_type == ActionType.CARD_PLAY:
+            if self.target:
+                return f"{self.player} playing {self.card.value} on {self.target}"
+            return f"{self.player} playing {self.card.value}"
+        elif self.action_type == ActionType.COMBO_PLAY:
+            if self.target:
+                return f"{self.player} playing {self.combo_type.value} combo targeting {self.target}"
+            return f"{self.player} playing {self.combo_type.value} combo"
+        elif self.action_type == ActionType.CARD_DRAW:
+            return f"{self.player} draws a card"
+        elif self.action_type == ActionType.CARD_STEAL:
+            return f"{self.player} steals a card from {self.target}"
+        elif self.action_type == ActionType.CARD_REQUEST:
+            status = "gives" if self.success else "doesn't have"
+            return f"{self.target} {status} {self.card.value} to {self.player}"
+        elif self.action_type == ActionType.EXPLODING_KITTEN_DRAW:
+            return f"{self.player} drew an Exploding Kitten"
+        elif self.action_type == ActionType.DEFUSE:
+            return f"{self.player} defused an Exploding Kitten"
+        elif self.action_type == ActionType.ELIMINATION:
+            return f"{self.player} exploded and is eliminated"
+        elif self.action_type == ActionType.NOPE:
+            return f"{self.player} playing NOPE"
+        return f"{self.player} performed an action"
 
 
 @dataclass
