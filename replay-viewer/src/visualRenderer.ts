@@ -125,7 +125,7 @@ export class VisualRenderer {
     try {
       switch (event.type) {
         case "turn_start":
-          await this.animationController.animateTurnStart(event.player, deckSize);
+          await this.animationController.animateTurnStart(event.player, deckSize, event.turns_remaining);
           break;
 
         case "card_draw":

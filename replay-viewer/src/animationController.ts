@@ -48,7 +48,7 @@ export class AnimationController {
   /**
    * Animate turn start
    */
-  async animateTurnStart(playerName: string, deckSize: number): Promise<void> {
+  async animateTurnStart(playerName: string, deckSize: number, turnsRemaining: number): Promise<void> {
     // Unhighlight previous player
     if (this.currentPlayer) {
       this.gameBoard.highlightPlayer(this.currentPlayer, false);
@@ -58,6 +58,7 @@ export class AnimationController {
     this.currentPlayer = playerName;
     this.gameBoard.highlightPlayer(playerName, true);
     this.gameBoard.updateDeckCount(deckSize);
+    this.gameBoard.updatePlayerTurns(playerName, turnsRemaining);
 
     await this.delay(300);
   }
