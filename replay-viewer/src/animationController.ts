@@ -487,7 +487,7 @@ export class AnimationController {
       case "card_draw":
         // Add card to player's hand state
         const playerHand = this.playerHands.get(event.player) || [];
-        const cardId = `${event.player}-silent-${Date.now()}-${eventIndex}`;
+        const cardId = `${event.player}-silent-${eventIndex}-${playerHand.length}`;
         const handPos = this.gameBoard.getPlayerHandPosition(event.player, playerHand.length, playerHand.length + 1);
         this.gameBoard.createCard(event.card, handPos, cardId);
         playerHand.push(cardId);
