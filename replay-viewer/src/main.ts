@@ -219,18 +219,28 @@ class ReplayApp {
       await this.delay(50);
     }
 
-    // Process all events from current+1 to target (inclusive) silently
-    // This includes the target event to save time by not animating it
-    const startIndex = currentState.currentEventIndex + 1;
-    const eventsToProcess = replayData.events.slice(startIndex, targetEventIndex + 1); // slice end is exclusive, so +1 to include targetEventIndex
-    
-    if (eventsToProcess.length > 0) {
-      this.renderer.processEventsSilently(eventsToProcess);
-    }
+    // Set flag to prevent event callback from rendering during jump
+    this.isProcessingEvent = true;
 
-    // Now jump to the target event using the player's method
-    // The event has already been processed silently, so this just updates the index
-    this.player.jumpToEvent(targetEventIndex);
+    try {
+      // Process all events from current+1 to target (inclusive) silently
+      // This includes the target event to save time by not animating it
+      const startIndex = currentState.currentEventIndex + 1;
+      const eventsToProcess = replayData.events.slice(startIndex, targetEventIndex + 1); // slice end is exclusive, so +1 to include targetEventIndex
+      
+      if (eventsToProcess.length > 0) {
+        this.renderer.processEventsSilently(eventsToProcess);
+      }
+
+      // Now jump to the target event using the player's method
+      // The event has already been processed silently, so this just updates the index
+      this.player.jumpToEvent(targetEventIndex);
+      
+      // Manually update the event counter since we prevented the render callback
+      this.updateEventCounter(targetEventIndex, replayData.events.length);
+    } finally {
+      this.isProcessingEvent = false;
+    }
   }
 
   private async updateDisplay(eventIndex: number): Promise<void> {
