@@ -89,6 +89,11 @@ class ReplayApp {
 
     // Hidden agent jump control - only listens to input event (not MutationObserver)
     // MutationObserver won't detect programmatic value property changes, only attribute changes
+    // IMPORTANT: When setting the value of this input programmatically (e.g., in tests),
+    // you must also dispatch an input event:
+    // agentJumpInput.value = "42";
+    // agentJumpInput.dispatchEvent(new Event('input', { bubbles: true }));
+    // This ensures the application responds to the change as expected.
     const agentJumpInput = document.querySelector<HTMLInputElement>("#agent-jump-to-event")!;
     agentJumpInput.addEventListener("input", () => this.handleAgentJump());
 
