@@ -568,7 +568,13 @@ export class AnimationController {
             // Find a card of the stolen type in victim's hand
             const cardIndex = victimHand.findIndex(cardId => {
               const cardEl = this.gameBoard.getCardElement(cardId);
-              return cardEl && cardEl.cardType === event.stolen_card;
+              if (!cardEl) {
+                console.warn(
+                  `[AnimationController] getCardElement(${cardId}) returned null/undefined during card_steal. Victim: ${event.victim}, Thief: ${event.thief}, Looking for card type: ${event.stolen_card}, Event index: ${eventIndex}`
+                );
+                return false;
+              }
+              return cardEl.cardType === event.stolen_card;
             });
             
             if (cardIndex !== -1) {
