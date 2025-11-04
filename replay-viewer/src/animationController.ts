@@ -550,7 +550,7 @@ export class AnimationController {
       case "discard_take":
         // Add card from discard to player's hand
         const dtHand = this.playerHands.get(event.player) || [];
-        const dtCardId = `${event.player}-discard-${Date.now()}-${eventIndex}`;
+        const dtCardId = `${event.player}-discard-${eventIndex}`;
         const dtHandPos = this.gameBoard.getPlayerHandPosition(event.player, dtHand.length, dtHand.length + 1);
         this.gameBoard.createCard(event.card, dtHandPos, dtCardId);
         dtHand.push(dtCardId);
