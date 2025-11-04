@@ -282,6 +282,16 @@ export class VisualRenderer {
   }
 
   /**
+   * Process events silently without animations
+   * Used for fast-forwarding during jumps
+   */
+  processEventsSilently(events: ReplayEvent[]): void {
+    for (const event of events) {
+      this.animationController.processEventSilently(event);
+    }
+  }
+
+  /**
    * Helper delay function
    */
   private delay(ms: number): Promise<void> {

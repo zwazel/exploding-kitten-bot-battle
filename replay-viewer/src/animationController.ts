@@ -426,4 +426,123 @@ export class AnimationController {
     this.explodingKittenCardId = null;
     this.gameBoard.clearCards();
   }
+
+  /**
+   * Process event state updates without animations
+   * Used for fast-forwarding through events during jump
+   */
+  processEventSilently(event: any): void {
+    switch (event.type) {
+      case "turn_start":
+        // Update current player state
+        if (this.currentPlayer) {
+          this.gameBoard.highlightPlayer(this.currentPlayer, false);
+        }
+        this.currentPlayer = event.player;
+        this.gameBoard.highlightPlayer(event.player, true);
+        this.gameBoard.updateDeckCount(event.cards_in_deck);
+        break;
+
+      case "card_draw":
+        // Add card to player's hand state
+        const playerHand = this.playerHands.get(event.player) || [];
+        const cardId = `${event.player}-silent-${Date.now()}-${Math.random()}`;
+        const handPos = this.gameBoard.getPlayerHandPosition(event.player, playerHand.length, playerHand.length + 1);
+        this.gameBoard.createCard(event.card, handPos, cardId);
+        playerHand.push(cardId);
+        this.playerHands.set(event.player, playerHand);
+        break;
+
+      case "card_play":
+        // Remove card from player's hand state
+        this.removeCardFromHand(event.player, event.card);
+        this.gameBoard.addToDiscardPile(event.card);
+        break;
+
+      case "combo_play":
+        // Remove multiple cards from player's hand
+        if (event.cards) {
+          event.cards.forEach((cardType: CardType) => {
+            this.removeCardFromHand(event.player, cardType);
+            this.gameBoard.addToDiscardPile(cardType);
+          });
+        }
+        break;
+
+      case "player_elimination":
+        // Mark player as eliminated
+        this.gameBoard.eliminatePlayer(event.player);
+        const eliminatedHand = this.playerHands.get(event.player) || [];
+        eliminatedHand.forEach(id => this.gameBoard.removeCard(id));
+        this.playerHands.set(event.player, []);
+        break;
+
+      case "exploding_kitten_draw":
+        // Track exploding kitten if player has defuse
+        if (event.had_defuse) {
+          const hand = this.playerHands.get(event.player) || [];
+          const ektCardId = `${event.player}-ekt-${Date.now()}`;
+          const handPos = this.gameBoard.getPlayerHandPosition(event.player, hand.length, hand.length + 1);
+          this.gameBoard.createCard("EXPLODING_KITTEN", handPos, ektCardId);
+          hand.push(ektCardId);
+          this.playerHands.set(event.player, hand);
+          this.explodingKittenCardId = ektCardId;
+        }
+        break;
+
+      case "defuse":
+        // Remove exploding kitten from hand
+        if (this.explodingKittenCardId) {
+          const hand = this.playerHands.get(event.player) || [];
+          const index = hand.indexOf(this.explodingKittenCardId);
+          if (index !== -1) {
+            hand.splice(index, 1);
+            this.playerHands.set(event.player, hand);
+            this.gameBoard.removeCard(this.explodingKittenCardId);
+          }
+          this.explodingKittenCardId = null;
+        }
+        // Also remove defuse card
+        this.removeCardFromHand(event.player, "DEFUSE");
+        break;
+
+      case "discard_take":
+        // Add card from discard to player's hand
+        const dtHand = this.playerHands.get(event.player) || [];
+        const dtCardId = `${event.player}-discard-${Date.now()}`;
+        const dtHandPos = this.gameBoard.getPlayerHandPosition(event.player, dtHand.length, dtHand.length + 1);
+        this.gameBoard.createCard(event.card, dtHandPos, dtCardId);
+        dtHand.push(dtCardId);
+        this.playerHands.set(event.player, dtHand);
+        break;
+
+      case "game_end":
+        this.clearHighlight();
+        break;
+
+      // Other events don't affect visual state
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Helper to remove a card of specific type from player's hand
+   */
+  private removeCardFromHand(playerName: string, cardType: CardType): void {
+    const playerHand = this.playerHands.get(playerName) || [];
+    const cardIndex = this.findCardIndexByType(playerHand, cardType);
+    
+    if (cardIndex !== -1) {
+      const cardId = playerHand[cardIndex];
+      playerHand.splice(cardIndex, 1);
+      this.playerHands.set(playerName, playerHand);
+      this.gameBoard.removeCard(cardId);
+    } else if (playerHand.length > 0) {
+      // Fallback: remove first card
+      const cardId = playerHand.shift()!;
+      this.playerHands.set(playerName, playerHand);
+      this.gameBoard.removeCard(cardId);
+    }
+  }
 }

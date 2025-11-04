@@ -177,7 +177,7 @@ class ReplayApp {
 
   /**
    * Handle agent jump to event (hidden feature for automated testing)
-   * Validation is done in ReplayPlayer.jumpToEvent()
+   * Processes all intermediate events silently to maintain state consistency
    */
   private async handleAgentJump(): Promise<void> {
     const agentJumpInput = document.querySelector<HTMLInputElement>("#agent-jump-to-event")!;
@@ -186,8 +186,22 @@ class ReplayApp {
     if (isNaN(targetEventIndex)) return;
 
     const currentState = this.player.getPlaybackState();
+    const replayData = this.player.getReplayData();
     
-    if (!this.player.getReplayData()) return;
+    if (!replayData) return;
+
+    // Validate forward-only jump
+    if (targetEventIndex <= currentState.currentEventIndex) {
+      console.warn(`Agent jump: Cannot jump backward. Current: ${currentState.currentEventIndex}, Target: ${targetEventIndex}`);
+      return;
+    }
+
+    // Validate bounds
+    const maxIndex = replayData.events.length - 1;
+    if (targetEventIndex > maxIndex) {
+      console.warn(`Agent jump: Target ${targetEventIndex} exceeds max ${maxIndex}`);
+      return;
+    }
 
     // Pause playback if playing
     if (currentState.isPlaying) {
@@ -199,7 +213,15 @@ class ReplayApp {
       await this.delay(50);
     }
 
-    // Jump using the player's method (which enforces forward-only and bounds checking)
+    // Process all intermediate events silently to update state
+    const startIndex = currentState.currentEventIndex + 1;
+    const intermediateEvents = replayData.events.slice(startIndex, targetEventIndex);
+    
+    if (intermediateEvents.length > 0) {
+      this.renderer.processEventsSilently(intermediateEvents);
+    }
+
+    // Now jump to the target event using the player's method
     this.player.jumpToEvent(targetEventIndex);
   }
 
