@@ -97,6 +97,48 @@ python3 main.py --test --replay my_game.json
 # Use this file to test the replay viewer
 ```
 
+**Creating Custom Test Replay Files (For Agents):**
+Agents can manually create minimal test replay files to test specific scenarios without waiting for full game simulations. This saves significant time during testing. Example minimal replay file:
+
+```json
+{
+  "metadata": {
+    "timestamp": "2025-11-04T12:00:00",
+    "players": ["TestBot1", "TestBot2"],
+    "version": "1.0"
+  },
+  "events": [
+    {
+      "type": "game_setup",
+      "deck_size": 10,
+      "initial_hand_size": 3,
+      "play_order": ["TestBot1", "TestBot2"],
+      "initial_hands": {
+        "TestBot1": ["SKIP", "NOPE", "ATTACK"],
+        "TestBot2": ["SKIP", "FAVOR", "DEFUSE"]
+      }
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 1,
+      "player": "TestBot1",
+      "turns_remaining": 1,
+      "hand_size": 3,
+      "cards_in_deck": 10
+    },
+    {
+      "type": "card_play",
+      "turn_number": 1,
+      "player": "TestBot1",
+      "card": "SKIP"
+    }
+  ],
+  "winner": null
+}
+```
+
+Save this to a `.json` file and load it in the replay viewer to test specific UI behaviors quickly.
+
 ### Linting (Optional)
 Optional development tools are listed in `requirements.txt`:
 - `black` for code formatting
@@ -117,6 +159,32 @@ npm run preview      # Preview production build
 1. Generate a replay file: `python3 main.py --test --replay test_replay.json`
 2. Start the replay viewer: `cd replay-viewer && npm run dev`
 3. Load the replay file in the browser at http://localhost:5173
+
+**Agent Jump-to-Step Feature (For Automated Testing):**
+The replay viewer includes a hidden jump-to-step feature for agents and automated testing. This allows jumping forward to a specific event without waiting for animations, significantly speeding up testing.
+
+To use with Playwright:
+```typescript
+// Access the hidden input field
+const jumpInput = page.getByTestId('agent-jump-to-event');
+
+// Jump to event index 50 (0-indexed)
+await jumpInput.evaluate((el: HTMLInputElement) => {
+  el.value = '50';
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+// Wait for the jump to complete
+await page.waitForTimeout(500);
+```
+
+**Important constraints:**
+- Jump only works forward, not backward (prevents state inconsistencies)
+- Target index must be within valid bounds (0 to events.length - 1)
+- Jumps will pause playback if currently playing
+- All events are processed, just without animations
+
+This feature is NOT visible in the UI and is only accessible via the `agent-jump-to-event` input field using Playwright or similar automation tools.
 
 **GitHub Pages Deployment:**
 - The replay viewer automatically deploys to GitHub Pages when pushed to main branch
