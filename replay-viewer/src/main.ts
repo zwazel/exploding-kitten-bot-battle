@@ -6,6 +6,7 @@
 import "./style.css";
 import { ReplayPlayer } from "./replayPlayer";
 import { VisualRenderer } from "./visualRenderer";
+import { formatEvent } from "./eventFormatter";
 import type { ReplayData } from "./types";
 
 class ReplayApp {
@@ -62,6 +63,11 @@ class ReplayApp {
             <p>Watch cards move between players, deck, and discard pile with animated gameplay!</p>
           </div>
         </div>
+
+        <div class="event-history" id="event-history" style="display: none;">
+          <h3>📜 Event History</h3>
+          <div class="history-list" id="history-list"></div>
+        </div>
       </div>
     `;
   }
@@ -87,6 +93,7 @@ class ReplayApp {
     // Player callbacks
     this.player.onEventChange(async (_event, index) => {
       await this.updateDisplay(index);
+      this.updateHistory(index);
     });
 
     this.player.onStateChange((state) => {
@@ -108,6 +115,7 @@ class ReplayApp {
 
       // Show controls and update UI
       document.querySelector<HTMLDivElement>("#playback-controls")!.style.display = "flex";
+      document.querySelector<HTMLDivElement>("#event-history")!.style.display = "block";
       document.querySelector<HTMLSpanElement>("#file-name")!.textContent = file.name;
 
       // Update event counter
@@ -117,6 +125,7 @@ class ReplayApp {
       const firstEvent = data.events[0];
       if (firstEvent) {
         await this.updateDisplay(0);
+        this.updateHistory(0);
       }
     } catch (error) {
       alert(`Error loading replay file: ${error}`);
@@ -150,6 +159,7 @@ class ReplayApp {
       await this.renderer.renderGameSetup(replayData);
       // Show first event
       await this.updateDisplay(0);
+      this.updateHistory(0);
     }
   }
 
@@ -211,6 +221,29 @@ class ReplayApp {
 
   private updateEventCounter(current: number, total: number): void {
     document.querySelector("#event-counter")!.textContent = `Event: ${current + 1} / ${total}`;
+  }
+
+  private updateHistory(eventIndex: number): void {
+    const replayData = this.player.getReplayData();
+    if (!replayData) return;
+
+    const historyList = document.querySelector("#history-list");
+    if (!historyList) return;
+
+    // Clear existing history
+    historyList.innerHTML = "";
+
+    // Get all events up to the current index
+    const eventsToShow = replayData.events.slice(0, eventIndex + 1);
+
+    // Render events in reverse order (latest at top)
+    for (let i = eventsToShow.length - 1; i >= 0; i--) {
+      const event = eventsToShow[i];
+      const historyItem = document.createElement("div");
+      historyItem.className = "history-item";
+      historyItem.innerHTML = formatEvent(event, i);
+      historyList.appendChild(historyItem);
+    }
   }
 
   private delay(ms: number): Promise<void> {

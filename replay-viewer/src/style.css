@@ -342,3 +342,68 @@ input[type="range"]::-moz-range-thumb:hover {
   background: #535bf2;
   transform: scale(1.2);
 }
+
+/* Event History */
+.event-history {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  border: 1px solid #333;
+}
+
+.event-history h3 {
+  color: #646cff;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+}
+
+.history-list {
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.history-item {
+  background: #0f0f0f;
+  padding: 0.8rem 1rem;
+  border-radius: 6px;
+  border-left: 3px solid #646cff;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  transition: background 0.2s;
+}
+
+.history-item:hover {
+  background: #1a1a1a;
+}
+
+.history-item strong {
+  color: #646cff;
+}
+
+.history-item em {
+  color: #888;
+  font-style: normal;
+}
+
+/* Scrollbar styling for history list */
+.history-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.history-list::-webkit-scrollbar-track {
+  background: #0f0f0f;
+  border-radius: 4px;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+.history-list::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
