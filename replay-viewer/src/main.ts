@@ -87,14 +87,9 @@ class ReplayApp {
       document.querySelector("#speed-display")!.textContent = `${speed.toFixed(1)}x`;
     });
 
-    // Hidden agent jump control - monitors value changes
+    // Hidden agent jump control - only listens to input event (not MutationObserver)
+    // MutationObserver won't detect programmatic value property changes, only attribute changes
     const agentJumpInput = document.querySelector<HTMLInputElement>("#agent-jump-to-event")!;
-    const observer = new MutationObserver(() => {
-      this.handleAgentJump();
-    });
-    observer.observe(agentJumpInput, { attributes: true, attributeFilter: ['value'] });
-    
-    // Also listen for input event (when value is set programmatically and input event is dispatched)
     agentJumpInput.addEventListener("input", () => this.handleAgentJump());
 
     // Player callbacks
@@ -182,7 +177,7 @@ class ReplayApp {
 
   /**
    * Handle agent jump to event (hidden feature for automated testing)
-   * Only allows jumping forward, not backward
+   * Validation is done in ReplayPlayer.jumpToEvent()
    */
   private async handleAgentJump(): Promise<void> {
     const agentJumpInput = document.querySelector<HTMLInputElement>("#agent-jump-to-event")!;
@@ -191,22 +186,8 @@ class ReplayApp {
     if (isNaN(targetEventIndex)) return;
 
     const currentState = this.player.getPlaybackState();
-    const replayData = this.player.getReplayData();
     
-    if (!replayData) return;
-
-    // Only allow jumping forward, not backward
-    if (targetEventIndex <= currentState.currentEventIndex) {
-      console.warn(`Agent jump: Cannot jump backward. Current: ${currentState.currentEventIndex}, Target: ${targetEventIndex}`);
-      return;
-    }
-
-    // Validate target is within bounds
-    const maxIndex = replayData.events.length - 1;
-    if (targetEventIndex > maxIndex) {
-      console.warn(`Agent jump: Target ${targetEventIndex} exceeds max ${maxIndex}`);
-      return;
-    }
+    if (!this.player.getReplayData()) return;
 
     // Pause playback if playing
     if (currentState.isPlaying) {
@@ -218,25 +199,8 @@ class ReplayApp {
       await this.delay(50);
     }
 
-    // Jump without animations - process events silently
-    await this.jumpToEventFast(targetEventIndex);
-  }
-
-  /**
-   * Fast jump to event without animations
-   * Processes all events between current and target silently
-   */
-  private async jumpToEventFast(targetIndex: number): Promise<void> {
-    const replayData = this.player.getReplayData();
-    if (!replayData) return;
-    
-    // Use the player's jump method to update the index
-    this.player.jumpToEvent(targetIndex);
-    
-    // Update the display to reflect the new state
-    // The updateDisplay will be called via the event callback
-    // but we ensure the UI is in sync
-    this.updateEventCounter(targetIndex, replayData.events.length);
+    // Jump using the player's method (which enforces forward-only and bounds checking)
+    this.player.jumpToEvent(targetEventIndex);
   }
 
   private async updateDisplay(eventIndex: number): Promise<void> {

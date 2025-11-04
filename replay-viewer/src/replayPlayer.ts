@@ -162,15 +162,25 @@ export class ReplayPlayer {
   /**
    * Jump to a specific event index
    * This is used for quick navigation without animations
+   * Only allows jumping forward to prevent state inconsistencies
    */
   jumpToEvent(targetIndex: number): void {
     if (!this.replayData) return;
 
-    // Validate target index
-    const maxIndex = this.replayData.events.length - 1;
-    const validIndex = Math.max(0, Math.min(targetIndex, maxIndex));
+    // Enforce forward-only jumping
+    if (targetIndex <= this.playbackState.currentEventIndex) {
+      console.warn(`Jump to event: Cannot jump backward. Current: ${this.playbackState.currentEventIndex}, Target: ${targetIndex}`);
+      return;
+    }
 
-    this.playbackState.currentEventIndex = validIndex;
+    // Validate target index is within bounds
+    const maxIndex = this.replayData.events.length - 1;
+    if (targetIndex > maxIndex) {
+      console.warn(`Jump to event: Target ${targetIndex} exceeds max ${maxIndex}`);
+      return;
+    }
+
+    this.playbackState.currentEventIndex = targetIndex;
     // Fire and forget - main.ts will handle the update
     this.notifyCurrentEvent();
     this.notifyStateChange();
