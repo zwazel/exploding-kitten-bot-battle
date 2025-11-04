@@ -158,6 +158,13 @@ export class GameBoard {
   }
 
   /**
+   * Get a card element by ID
+   */
+  getCardElement(cardId: string): CardElement | undefined {
+    return this.cardElements.get(cardId);
+  }
+
+  /**
    * Remove a card from the board
    */
   removeCard(cardId: string): void {
