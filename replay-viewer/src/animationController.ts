@@ -485,7 +485,7 @@ export class AnimationController {
       case "card_draw":
         // Add card to player's hand state
         const playerHand = this.playerHands.get(event.player) || [];
-        const cardId = `${event.player}-silent-${Date.now()}-${Math.random()}`;
+        const cardId = `${event.player}-silent-${Date.now()}`;
         const handPos = this.gameBoard.getPlayerHandPosition(event.player, playerHand.length, playerHand.length + 1);
         this.gameBoard.createCard(event.card, handPos, cardId);
         playerHand.push(cardId);
@@ -520,7 +520,7 @@ export class AnimationController {
         // Track exploding kitten if player has defuse
         if (event.had_defuse) {
           const hand = this.playerHands.get(event.player) || [];
-          const ektCardId = `${event.player}-ekt-${Date.now()}-${Math.random()}`;
+          const ektCardId = `${event.player}-ekt-${Date.now()}`;
           const handPos = this.gameBoard.getPlayerHandPosition(event.player, hand.length, hand.length + 1);
           this.gameBoard.createCard("EXPLODING_KITTEN", handPos, ektCardId);
           hand.push(ektCardId);
@@ -548,7 +548,7 @@ export class AnimationController {
       case "discard_take":
         // Add card from discard to player's hand
         const dtHand = this.playerHands.get(event.player) || [];
-        const dtCardId = `${event.player}-discard-${Date.now()}-${Math.random()}`;
+        const dtCardId = `${event.player}-discard-${Date.now()}`;
         const dtHandPos = this.gameBoard.getPlayerHandPosition(event.player, dtHand.length, dtHand.length + 1);
         this.gameBoard.createCard(event.card, dtHandPos, dtCardId);
         dtHand.push(dtCardId);

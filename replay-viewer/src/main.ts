@@ -182,7 +182,8 @@ class ReplayApp {
 
   /**
    * Handle agent jump to event (hidden feature for automated testing)
-   * Processes all intermediate events silently to maintain state consistency
+   * Processes all intermediate events AND target event silently to maintain state consistency
+   * This saves time by skipping all animations including the target event
    */
   private async handleAgentJump(): Promise<void> {
     const agentJumpInput = document.querySelector<HTMLInputElement>("#agent-jump-to-event")!;
@@ -218,15 +219,17 @@ class ReplayApp {
       await this.delay(50);
     }
 
-    // Process all intermediate events silently to update state
+    // Process all events from current+1 to target (inclusive) silently
+    // This includes the target event to save time by not animating it
     const startIndex = currentState.currentEventIndex + 1;
-    const intermediateEvents = replayData.events.slice(startIndex, targetEventIndex);
+    const eventsToProcess = replayData.events.slice(startIndex, targetEventIndex + 1);
     
-    if (intermediateEvents.length > 0) {
-      this.renderer.processEventsSilently(intermediateEvents);
+    if (eventsToProcess.length > 0) {
+      this.renderer.processEventsSilently(eventsToProcess);
     }
 
     // Now jump to the target event using the player's method
+    // The event has already been processed silently, so this just updates the index
     this.player.jumpToEvent(targetEventIndex);
   }
 
