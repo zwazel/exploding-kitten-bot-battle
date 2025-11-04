@@ -61,6 +61,8 @@ export interface NopeEvent {
   turn_number: number;
   player: string;
   action: string;
+  original_action?: string;  // Track the original action being noped (for chain visualization)
+  target_player?: string;     // The player whose action is being noped
 }
 
 export interface CardDrawEvent {
@@ -94,7 +96,7 @@ export interface SeeFutureEvent {
   type: "see_future";
   turn_number: number;
   player: string;
-  cards_seen: number;
+  cards_seen: CardType[];  // Changed from number to array of card types
 }
 
 export interface ShuffleEvent {

@@ -523,6 +523,158 @@ export class GameBoard {
   }
 
   /**
+   * Show nope animation with two cards side by side
+   */
+  async showNopeAnimation(nopingPlayer: string, targetPlayer: string, originalAction: string): Promise<void> {
+    const centerDisplay = this.container.querySelector("#center-display") as HTMLElement;
+    if (!centerDisplay) return;
+
+    const actionCardName = originalAction.replace(/_/g, " ");
+    
+    centerDisplay.innerHTML = `
+      <style>
+        @keyframes slideInLeft {
+          from {
+            transform: translateX(-100px);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100px);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        @keyframes bang {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.2);
+          }
+        }
+      </style>
+      <div style="
+        position: relative;
+        background: rgba(0, 0, 0, 0.95);
+        padding: 40px;
+        border-radius: 20px;
+        border: 4px solid #ff4444;
+        box-shadow: 0 0 60px rgba(255, 68, 68, 0.8);
+        min-width: 500px;
+      ">
+        <h2 style="
+          color: #ff4444;
+          text-align: center;
+          margin: 0 0 30px 0;
+          font-size: 28px;
+          text-shadow: 0 0 15px rgba(255, 68, 68, 0.9);
+          animation: bang 0.5s ease infinite;
+        ">🚫 NOPE! 🚫</h2>
+        
+        <div style="display: flex; gap: 60px; align-items: center; justify-content: center;">
+          <!-- Original Action Card -->
+          <div style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: slideInLeft 0.4s ease forwards;
+          ">
+            <div style="
+              width: 120px;
+              height: 168px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              border: 3px solid #fff;
+              border-radius: 10px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 12px;
+              font-weight: bold;
+              color: #fff;
+              text-align: center;
+              padding: 8px;
+              box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+              position: relative;
+            ">
+              <div style="position: absolute; top: 5px; right: 5px; font-size: 20px;">❌</div>
+              <div>${this.escapeHtml(actionCardName)}</div>
+            </div>
+            <div style="color: #888; margin-top: 10px; font-size: 14px;">
+              ${this.escapeHtml(targetPlayer)}'s action
+            </div>
+          </div>
+          
+          <!-- VS Text -->
+          <div style="
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff4444;
+            text-shadow: 0 0 10px rgba(255, 68, 68, 0.8);
+          ">VS</div>
+          
+          <!-- Nope Card -->
+          <div style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: slideInRight 0.4s ease forwards;
+          ">
+            <div style="
+              width: 120px;
+              height: 168px;
+              background: ${this.getCardColor("NOPE")};
+              border: 3px solid #fff;
+              border-radius: 10px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 18px;
+              font-weight: bold;
+              color: #000;
+              text-align: center;
+              padding: 8px;
+              box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 30px rgba(255, 68, 68, 0.6);
+            ">NOPE</div>
+            <div style="color: #888; margin-top: 10px; font-size: 14px;">
+              ${this.escapeHtml(nopingPlayer)}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    centerDisplay.style.display = 'block';
+    
+    // Wait for animation
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  /**
+   * Hide nope animation
+   */
+  async hideNopeAnimation(): Promise<void> {
+    const centerDisplay = this.container.querySelector("#center-display") as HTMLElement;
+    if (!centerDisplay) return;
+
+    centerDisplay.style.opacity = '1';
+    centerDisplay.style.transition = 'opacity 0.3s ease';
+    centerDisplay.style.opacity = '0';
+    
+    await new Promise(resolve => setTimeout(resolve, 300));
+    centerDisplay.style.display = 'none';
+    centerDisplay.innerHTML = '';
+  }
+
+  /**
    * Clear all cards
    */
   clearCards(): void {

@@ -141,9 +141,13 @@ export class VisualRenderer {
           break;
 
         case "see_future":
-          // Show generic "See the Future" cards since we don't know what was actually seen
-          const genericCards = Array(event.cards_seen).fill("SEE_THE_FUTURE");
-          await this.animationController.animateSeeFuture(event.player, genericCards);
+          // Show actual cards that were seen
+          await this.animationController.animateSeeFuture(event.player, event.cards_seen);
+          break;
+
+        case "nope":
+          // Show nope chain animation
+          await this.animationController.animateNope(event);
           break;
 
         case "exploding_kitten_draw":
@@ -209,7 +213,9 @@ export class VisualRenderer {
         return `🎲 ${this.escapeHtml(event.player)} played ${event.combo_type} combo: [${cards}]${event.target ? ` targeting ${this.escapeHtml(event.target)}` : ""}`;
       
       case "nope":
-        return `🚫 ${this.escapeHtml(event.player)} played NOPE on: ${this.escapeHtml(event.action)}`;
+        const nopeTarget = event.target_player ? ` ${this.escapeHtml(event.target_player)}'s` : '';
+        const origAction = event.original_action ? ` ${this.formatCardName(event.original_action)}` : '';
+        return `🚫 ${this.escapeHtml(event.player)} played NOPE on${nopeTarget}${origAction}`;
       
       case "card_draw":
         return `📥 ${this.escapeHtml(event.player)} drew ${this.formatCardName(event.card)}`;
@@ -224,7 +230,10 @@ export class VisualRenderer {
         return `💀 ${this.escapeHtml(event.player)} was eliminated!`;
       
       case "see_future":
-        return `🔮 ${this.escapeHtml(event.player)} used See the Future (saw ${event.cards_seen} cards)`;
+        const seenCards = Array.isArray(event.cards_seen) 
+          ? event.cards_seen.map((c) => this.formatCardName(c)).join(", ")
+          : `${event.cards_seen} cards`;
+        return `🔮 ${this.escapeHtml(event.player)} used See the Future: [${seenCards}]`;
       
       case "shuffle":
         return `🔀 ${this.escapeHtml(event.player)} shuffled the deck`;

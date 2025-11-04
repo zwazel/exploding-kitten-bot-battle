@@ -124,6 +124,7 @@ class GameEngine:
         """
         nope_count = 0
         current_action = action
+        original_action = action  # Keep track of the very first action for recording
         
         while True:
             # FIRST: Notify all bots about the current action
@@ -154,7 +155,7 @@ class GameEngine:
                             
                             # Record Nope - use original action description for replay
                             if self.replay_recorder:
-                                # Build description string for replay recorder
+                                # Build description string for the action being noped
                                 if current_action.action_type == ActionType.CARD_PLAY:
                                     if current_action.target:
                                         desc = f"{current_action.player} playing {current_action.card.name} on {current_action.target}"
@@ -169,7 +170,21 @@ class GameEngine:
                                     desc = f"{current_action.player} playing NOPE"
                                 else:
                                     desc = f"{current_action.player} action"
-                                self.replay_recorder.record_nope(bot.name, desc)
+                                
+                                # Build original action description for chain tracking
+                                if original_action.action_type == ActionType.CARD_PLAY:
+                                    original_desc = original_action.card.name if original_action.card else "card"
+                                elif original_action.action_type == ActionType.COMBO_PLAY:
+                                    original_desc = f"{original_action.combo_type.name} combo" if original_action.combo_type else "combo"
+                                else:
+                                    original_desc = "action"
+                                
+                                self.replay_recorder.record_nope(
+                                    bot.name, 
+                                    desc, 
+                                    original_desc,
+                                    current_action.player
+                                )
                             
                             # Create new nope action for next round
                             current_action = GameAction(
@@ -610,7 +625,7 @@ class GameEngine:
             cards_str = ', '.join(str(c) for c in top_three) if top_three else 'none'
             self._log(f"  → See the Future: {bot.name} sees [{cards_str}]")
             if self.replay_recorder:
-                self.replay_recorder.record_see_future(bot.name, len(top_three))
+                self.replay_recorder.record_see_future(bot.name, top_three)
             try:
                 bot.see_the_future(self.game_state.copy(), top_three)
             except Exception as e:

@@ -258,6 +258,24 @@ export class AnimationController {
   }
 
   /**
+   * Animate nope card play with showoff effect for chains
+   */
+  async animateNope(event: any): Promise<void> {
+    // Show nope animation with the original action and the noping player
+    const originalAction = event.original_action || "an action";
+    const targetPlayer = event.target_player || "someone";
+    
+    await this.gameBoard.showNopeAnimation(
+      event.player,
+      targetPlayer,
+      originalAction
+    );
+    
+    await this.delay(1500);
+    await this.gameBoard.hideNopeAnimation();
+  }
+
+  /**
    * Animate exploding kitten draw with explosion effect
    */
   async animateExplodingKittenDraw(playerName: string, hadDefuse: boolean): Promise<void> {
