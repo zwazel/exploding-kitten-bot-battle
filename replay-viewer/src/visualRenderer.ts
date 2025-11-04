@@ -121,6 +121,10 @@ export class VisualRenderer {
     // Update event display
     this.updateEventDisplay(event);
 
+    // Show event notification in center
+    const eventMessage = this.formatEvent(event);
+    await this.gameBoard.showEventNotification(eventMessage);
+
     // Animate based on event type
     try {
       switch (event.type) {

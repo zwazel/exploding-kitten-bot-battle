@@ -61,6 +61,9 @@ export class GameBoard {
         
         <!-- Center display for special cards (See Future, Exploding Kitten, etc) -->
         <div id="center-display" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; z-index: 1000;"></div>
+        
+        <!-- Event notification overlay -->
+        <div id="event-notification" style="position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%); display: none; z-index: 2000; pointer-events: none;"></div>
       </div>
     `;
   }
@@ -672,6 +675,70 @@ export class GameBoard {
     await new Promise(resolve => setTimeout(resolve, 300));
     centerDisplay.style.display = 'none';
     centerDisplay.innerHTML = '';
+  }
+
+  /**
+   * Show a temporary event notification in the center
+   */
+  async showEventNotification(message: string, duration = 1500): Promise<void> {
+    const notification = this.container.querySelector("#event-notification") as HTMLElement;
+    if (!notification) return;
+
+    // Create notification content with animation
+    notification.innerHTML = `
+      <style>
+        @keyframes eventNotificationIn {
+          0% {
+            opacity: 0;
+            transform: scale(0.8) translateY(-20px);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+        @keyframes eventNotificationOut {
+          0% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0.9) translateY(20px);
+          }
+        }
+      </style>
+      <div class="event-notification-content" style="
+        background: linear-gradient(135deg, rgba(100, 108, 255, 0.95) 0%, rgba(83, 91, 242, 0.95) 100%);
+        padding: 20px 40px;
+        border-radius: 12px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 60px rgba(100, 108, 255, 0.4);
+        color: #fff;
+        font-size: 20px;
+        font-weight: 600;
+        text-align: center;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        animation: eventNotificationIn 0.3s ease forwards;
+        max-width: 600px;
+        word-wrap: break-word;
+      ">${this.escapeHtml(message)}</div>
+    `;
+
+    notification.style.display = 'block';
+
+    // Wait for display duration
+    await new Promise(resolve => setTimeout(resolve, duration - 300));
+
+    // Animate out
+    const content = notification.querySelector('.event-notification-content') as HTMLElement;
+    if (content) {
+      content.style.animation = 'eventNotificationOut 0.3s ease forwards';
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+    notification.style.display = 'none';
+    notification.innerHTML = '';
   }
 
   /**
