@@ -339,21 +339,12 @@ export class AnimationController {
       });
       this.gameBoard.removeCard(this.explodingKittenCardId);
       this.explodingKittenCardId = null;
-    } else {
-      // Show that they have a defuse using unified showcase
-      await this.specialAnimator.showShowcase({
-        cards: ["EXPLODING_KITTEN"],
-        title: `💣 ${playerName} drew an Exploding Kitten!`,
-        subtitle: "But has a Defuse card!",
-        duration: 1500
-      });
-      
-      // Keep the card for the defuse animation
     }
+    // If has defuse, wait for the defuse animation to show both cards together
   }
 
   /**
-   * Animate defuse card play
+   * Animate defuse card play - shows both exploding kitten and defuse together
    */
   async animateDefuse(playerName: string, _insertPosition: number): Promise<void> {
     const playerHand = this.playerHands.get(playerName) || [];
@@ -385,9 +376,9 @@ export class AnimationController {
       }, 500);
     }
 
-    // Show both cards using unified showcase animation
+    // Show both cards together in one popup
     await this.specialAnimator.showShowcase({
-      cards: ["DEFUSE", "EXPLODING_KITTEN"],
+      cards: ["EXPLODING_KITTEN", "DEFUSE"],
       title: `🛡️ ${playerName} defused the kitten!`,
       subtitle: "The Exploding Kitten is returned to the deck",
       duration: 2000
@@ -443,18 +434,32 @@ export class AnimationController {
   }
 
   /**
-   * Animate card steal (2-of-a-kind or random steal)
+   * Animate card steal (2-of-a-kind or favor)
+   * For favor, this shows both the request and the card being given in one animation
    */
   async animateCardSteal(thief: string, victim: string, stolenCard?: CardType, context?: string): Promise<void> {
     // Show transfer animation using unified system
-    await this.specialAnimator.showTransfer({
-      fromPlayer: victim,
-      toPlayer: thief,
-      card: stolenCard,
-      title: `🎯 ${thief} steals from ${victim}!`,
-      subtitle: context || "Card stolen",
-      duration: 2000
-    });
+    if (context === "favor") {
+      // For favor, show both the request and the card given in one popup
+      await this.specialAnimator.showTransfer({
+        fromPlayer: victim,
+        toPlayer: thief,
+        card: stolenCard,
+        title: `🤝 ${thief} asks ${victim} for a Favor`,
+        subtitle: stolenCard ? `${victim} gives ${this.formatCardName(stolenCard)}` : "Card given",
+        duration: 2500
+      });
+    } else {
+      // For steals (2-of-a-kind), show normal steal animation
+      await this.specialAnimator.showTransfer({
+        fromPlayer: victim,
+        toPlayer: thief,
+        card: stolenCard,
+        title: `🎯 ${thief} steals from ${victim}!`,
+        subtitle: context || "Card stolen",
+        duration: 2000
+      });
+    }
   }
 
   /**

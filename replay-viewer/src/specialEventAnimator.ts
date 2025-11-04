@@ -89,6 +89,7 @@ export class SpecialEventAnimator {
 
     const duration = config.duration || 2500;
     const cardColor = config.card ? this.getCardColor(config.card) : "#888";
+    const textColor = config.card ? this.getTextColor(cardColor) : "#000";
     const cardName = config.card ? this.formatCardName(config.card) : "a card";
 
     this.overlayElement.innerHTML = `
@@ -116,14 +117,14 @@ export class SpecialEventAnimator {
         @keyframes cardTransfer {
           0% {
             left: 0;
-            opacity: 1;
-          }
-          50% {
-            top: -30px;
+            top: 50%;
+            transform: translateY(-50%);
             opacity: 1;
           }
           100% {
             left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
             opacity: 1;
           }
         }
@@ -232,6 +233,8 @@ export class SpecialEventAnimator {
               <div style="
                 position: absolute;
                 left: 0;
+                top: 50%;
+                transform: translateY(-50%);
                 width: 80px;
                 height: 112px;
                 background: ${cardColor};
@@ -242,7 +245,7 @@ export class SpecialEventAnimator {
                 justify-content: center;
                 font-size: 10px;
                 font-weight: bold;
-                color: #000;
+                color: ${textColor};
                 text-align: center;
                 padding: 4px;
                 box-shadow: 0 4px 16px rgba(0,0,0,0.6);
@@ -442,13 +445,15 @@ export class SpecialEventAnimator {
     const duration = config.duration || 2500;
     const cardElements = config.cards.map((cardType, index) => {
       const color = this.getCardColor(cardType);
+      const textColor = this.getTextColor(color);
       const cardName = this.formatCardName(cardType);
       const offset = (index - (config.cards.length - 1) / 2) * 110;
       
       return `
         <div class="showcase-card" style="
           position: absolute;
-          left: ${offset}px;
+          left: calc(50% + ${offset}px);
+          transform: translateX(-50%);
           width: 90px;
           height: 130px;
           background: ${color};
@@ -459,14 +464,13 @@ export class SpecialEventAnimator {
           justify-content: center;
           font-size: 10px;
           font-weight: bold;
-          color: #000;
+          color: ${textColor};
           text-align: center;
           padding: 4px;
           box-shadow: 0 4px 16px rgba(0,0,0,0.6);
           animation: showcaseCardAppear 0.3s ease forwards;
           animation-delay: ${index * 0.1}s;
           opacity: 0;
-          transform: scale(0.8);
         ">${this.escapeHtml(cardName)}</div>
       `;
     }).join('');
@@ -474,6 +478,9 @@ export class SpecialEventAnimator {
     const explosionHTML = config.showExplosion ? `
       <div class="explosion" style="
         position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
         width: 200px;
         height: 200px;
         background: radial-gradient(circle, rgba(255,100,0,0.8) 0%, rgba(255,0,0,0.4) 50%, transparent 70%);
@@ -528,7 +535,7 @@ export class SpecialEventAnimator {
             font-size: 14px;
           ">${this.escapeHtml(config.subtitle)}</p>
         ` : ''}
-        <div style="position: relative; height: 140px; min-width: ${config.cards.length * 110}px;">
+        <div style="position: relative; height: 140px; display: flex; justify-content: center; align-items: center;">
           ${explosionHTML}
           ${cardElements}
         </div>
@@ -602,6 +609,39 @@ export class SpecialEventAnimator {
    */
   private getCardColor(cardType: CardType): string {
     return CARD_COLORS[cardType] || DEFAULT_CARD_COLOR;
+  }
+
+  /**
+   * Calculate text color based on background color luminance
+   * Returns white for dark backgrounds, black for light backgrounds
+   * Uses simplified relative luminance calculation (ITU-R BT.601)
+   */
+  private getTextColor(backgroundColor: string): string {
+    // Remove # if present
+    let hex = backgroundColor.replace('#', '');
+    
+    // Handle 3-character shorthand (e.g., 'fff' -> 'ffffff')
+    if (hex.length === 3) {
+      hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    
+    // Validate hex format
+    if (hex.length !== 6 || !/^[0-9A-Fa-f]{6}$/.test(hex)) {
+      // Default to black text for invalid colors
+      return '#000';
+    }
+    
+    // Convert hex to RGB
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    // Calculate relative luminance using simplified formula
+    // This is a common approximation that works well for basic contrast detection
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    // Use white text for dark backgrounds (luminance < 0.5), black for light
+    return luminance < 0.5 ? '#fff' : '#000';
   }
 
   /**
