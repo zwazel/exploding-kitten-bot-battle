@@ -170,6 +170,31 @@ export class VisualRenderer {
           await this.animationController.animateElimination(event.player);
           break;
 
+        case "card_steal":
+          // Show card steal animation
+          await this.animationController.animateCardSteal(
+            event.thief,
+            event.victim,
+            event.stolen_card,
+            event.context
+          );
+          break;
+
+        case "card_request":
+          // Show card request animation (3-of-a-kind)
+          await this.animationController.animateCardRequest(
+            event.requester,
+            event.target,
+            event.requested_card,
+            event.success
+          );
+          break;
+
+        case "favor":
+          // Show favor animation
+          await this.animationController.animateFavor(event.player, event.target);
+          break;
+
         case "game_end":
           this.animationController.clearHighlight();
           break;

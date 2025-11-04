@@ -4,18 +4,22 @@
 
 import type { CardType, NopeEvent, ReplayEvent } from "./types";
 import { GameBoard } from "./gameBoard";
+import { SpecialEventAnimator } from "./specialEventAnimator";
 
 /**
  * Manages animations for game events
  */
 export class AnimationController {
   private gameBoard: GameBoard;
+  private specialAnimator: SpecialEventAnimator;
   private playerHands: Map<string, string[]> = new Map(); // player -> card IDs
   private currentPlayer: string | null = null;
   private explodingKittenCardId: string | null = null; // Track exploding kitten card for defuse
+  private playOrder: string[] = []; // Track turn order for attack animations
 
   constructor(gameBoard: GameBoard) {
     this.gameBoard = gameBoard;
+    this.specialAnimator = new SpecialEventAnimator(document.body);
   }
 
   /**
@@ -24,6 +28,7 @@ export class AnimationController {
   initializeGame(playerNames: string[], initialHands: Record<string, CardType[]>): void {
     this.gameBoard.setupPlayers(playerNames);
     this.playerHands.clear();
+    this.playOrder = [...playerNames]; // Store play order
 
     // Initialize player hands
     playerNames.forEach((playerName) => {
@@ -121,6 +126,14 @@ export class AnimationController {
 
     // Reorganize remaining cards in hand
     await this.reorganizePlayerHand(playerName);
+
+    // Special handling for ATTACK cards - show who gets attacked
+    if (cardType === "ATTACK") {
+      const nextPlayer = this.getNextPlayer(playerName);
+      if (nextPlayer) {
+        await this.animateAttack(playerName, nextPlayer);
+      }
+    }
   }
 
   /**
@@ -155,15 +168,12 @@ export class AnimationController {
   async animateShuffle(): Promise<void> {
     const deckPile = document.querySelector("#deck-pile") as HTMLElement;
     if (deckPile) {
-      // Visual shuffle effect
-      deckPile.style.transition = "transform 0.2s ease";
-      for (let i = 0; i < 3; i++) {
-        deckPile.style.transform = "rotate(10deg) scale(1.1)";
-        await this.delay(100);
-        deckPile.style.transform = "rotate(-10deg) scale(1.1)";
-        await this.delay(100);
-      }
-      deckPile.style.transform = "rotate(0deg) scale(1)";
+      // Use unified simple animation
+      await this.specialAnimator.showSimple({
+        element: deckPile,
+        type: "shake",
+        duration: 600
+      });
     }
     await this.delay(300);
   }
@@ -235,13 +245,13 @@ export class AnimationController {
     // Small delay before revealing
     await this.delay(300);
 
-    // Show cards prominently in center display popup
-    await this.gameBoard.showCenterDisplay(topCards, `🔮 ${playerName} sees the future...`);
-    await this.delay(2500); // Show for longer to make it clear and visible
-
-    // Fade out center display
-    await this.gameBoard.hideCenterDisplay();
-    await this.delay(200);
+    // Use unified showcase animation
+    await this.specialAnimator.showShowcase({
+      cards: topCards,
+      title: `🔮 ${playerName} sees the future...`,
+      subtitle: `Top ${topCards.length} cards of the deck`,
+      duration: 2500
+    });
   }
 
   /**
@@ -278,18 +288,17 @@ export class AnimationController {
       await this.delay(200);
     }
     
-    // Show nope animation with the original action and the noping player
+    // Show nope animation using unified target system
     const originalAction = event.original_action || "an action";
     const targetPlayer = event.target_player || "someone";
     
-    await this.gameBoard.showNopeAnimation(
-      event.player,
-      targetPlayer,
-      originalAction
-    );
-    
-    await this.delay(1500);
-    await this.gameBoard.hideNopeAnimation();
+    await this.specialAnimator.showTarget({
+      sourcePlayer: playerName,
+      targetPlayer: targetPlayer,
+      action: `🚫 ${playerName} NOPES ${targetPlayer}'s ${originalAction}!`,
+      icon: "🚫",
+      duration: 1800
+    });
     
     // Add nope card to discard pile and remove from board
     if (nopeCardId) {
@@ -320,25 +329,24 @@ export class AnimationController {
       zIndex: 1000
     }, 500);
 
-    // Show explosion effect if no defuse
+    // Show explosion effect if no defuse using unified showcase
     if (!hadDefuse) {
-      await this.gameBoard.showCenterDisplay(
-        ["EXPLODING_KITTEN"],
-        `💥 ${playerName} EXPLODED! 💥`,
-        true
-      );
-      await this.delay(2500);
-      await this.gameBoard.hideCenterDisplay();
+      await this.specialAnimator.showShowcase({
+        cards: ["EXPLODING_KITTEN"],
+        title: `💥 ${playerName} EXPLODED! 💥`,
+        showExplosion: true,
+        duration: 2500
+      });
       this.gameBoard.removeCard(this.explodingKittenCardId);
       this.explodingKittenCardId = null;
     } else {
-      // Show that they have a defuse
-      await this.gameBoard.showCenterDisplay(
-        ["EXPLODING_KITTEN"],
-        `💣 ${playerName} drew an Exploding Kitten!`
-      );
-      await this.delay(1500);
-      await this.gameBoard.hideCenterDisplay();
+      // Show that they have a defuse using unified showcase
+      await this.specialAnimator.showShowcase({
+        cards: ["EXPLODING_KITTEN"],
+        title: `💣 ${playerName} drew an Exploding Kitten!`,
+        subtitle: "But has a Defuse card!",
+        duration: 1500
+      });
       
       // Keep the card for the defuse animation
     }
@@ -377,13 +385,13 @@ export class AnimationController {
       }, 500);
     }
 
-    // Show both cards in center
-    await this.gameBoard.showCenterDisplay(
-      ["DEFUSE", "EXPLODING_KITTEN"],
-      `🛡️ ${playerName} defused the kitten!`
-    );
-    await this.delay(2000);
-    await this.gameBoard.hideCenterDisplay();
+    // Show both cards using unified showcase animation
+    await this.specialAnimator.showShowcase({
+      cards: ["DEFUSE", "EXPLODING_KITTEN"],
+      title: `🛡️ ${playerName} defused the kitten!`,
+      subtitle: "The Exploding Kitten is returned to the deck",
+      duration: 2000
+    });
 
     // Remove exploding kitten card (it goes back to deck)
     if (this.explodingKittenCardId) {
@@ -435,6 +443,106 @@ export class AnimationController {
   }
 
   /**
+   * Animate card steal (2-of-a-kind or random steal)
+   */
+  async animateCardSteal(thief: string, victim: string, stolenCard?: CardType, context?: string): Promise<void> {
+    // Show transfer animation using unified system
+    await this.specialAnimator.showTransfer({
+      fromPlayer: victim,
+      toPlayer: thief,
+      card: stolenCard,
+      title: `🎯 ${thief} steals from ${victim}!`,
+      subtitle: context || "Card stolen",
+      duration: 2000
+    });
+  }
+
+  /**
+   * Animate card request (3-of-a-kind)
+   */
+  async animateCardRequest(requester: string, target: string, requestedCard: CardType, success: boolean): Promise<void> {
+    if (success) {
+      // Show successful transfer animation
+      await this.specialAnimator.showTransfer({
+        fromPlayer: target,
+        toPlayer: requester,
+        card: requestedCard,
+        title: `📢 ${requester} requests ${this.formatCardName(requestedCard)}`,
+        subtitle: `✅ ${target} has it and must give it`,
+        duration: 2000
+      });
+    } else {
+      // Show failed request
+      await this.specialAnimator.showTarget({
+        sourcePlayer: requester,
+        targetPlayer: target,
+        action: `📢 ${requester} requests ${this.formatCardName(requestedCard)}`,
+        icon: "❌",
+        duration: 1500
+      });
+    }
+  }
+
+  /**
+   * Animate favor (choosing a card to give)
+   */
+  async animateFavor(player: string, target: string): Promise<void> {
+    // Show target animation to indicate favor being played
+    await this.specialAnimator.showTarget({
+      sourcePlayer: player,
+      targetPlayer: target,
+      action: `🤝 ${player} asks ${target} for a Favor`,
+      icon: "🤝",
+      duration: 1500
+    });
+  }
+
+  /**
+   * Animate attack (next player takes 2 turns)
+   */
+  async animateAttack(attacker: string, target: string): Promise<void> {
+    // Show attack animation using unified target system
+    await this.specialAnimator.showTarget({
+      sourcePlayer: attacker,
+      targetPlayer: target,
+      action: `⚔️ ${attacker} attacks ${target}!`,
+      icon: "⚔️",
+      duration: 1800
+    });
+  }
+
+  /**
+   * Format card name for display
+   */
+  private formatCardName(cardType: CardType | string): string {
+    return cardType.replace(/_/g, " ");
+  }
+
+  /**
+   * Get the next player in turn order (for ATTACK animation)
+   * Returns the next alive player after the given player
+   */
+  private getNextPlayer(currentPlayerName: string): string | null {
+    if (this.playOrder.length === 0) return null;
+
+    const currentIndex = this.playOrder.indexOf(currentPlayerName);
+    if (currentIndex === -1) return null;
+
+    // Find next alive player in circular turn order
+    for (let i = 1; i < this.playOrder.length; i++) {
+      const nextIndex = (currentIndex + i) % this.playOrder.length;
+      const nextPlayer = this.playOrder[nextIndex];
+      
+      // Check if player is still alive (has a hand with cards or is in playerHands)
+      if (this.playerHands.has(nextPlayer)) {
+        return nextPlayer;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Find the index of a card in the player's hand by matching card type
    * Uses the gameBoard's cardElements map to check the actual card type
    */
@@ -464,6 +572,10 @@ export class AnimationController {
     this.currentPlayer = null;
     this.explodingKittenCardId = null;
     this.gameBoard.clearCards();
+    // Cleanup special animator resources
+    this.specialAnimator.destroy();
+    // Recreate animator for reuse
+    this.specialAnimator = new SpecialEventAnimator(document.body);
   }
 
   /**
