@@ -558,27 +558,46 @@ export class AnimationController {
         break;
 
       case "card_steal":
-        // Move a random card from victim to thief (matches animated behavior)
+        // Transfer the specific stolen card from victim to thief
         const victimHand = this.playerHands.get(event.victim) || [];
         if (victimHand.length > 0) {
-          // Remove random card from victim (not always first card)
-          const randomIndex = Math.floor(Math.random() * victimHand.length);
-          const stolenCardId = victimHand.splice(randomIndex, 1)[0];
-          const stolenCardElement = this.gameBoard.getCardElement(stolenCardId);
-          this.playerHands.set(event.victim, victimHand);
+          let stolenCardId: string | undefined;
           
-          // Add to thief's hand
-          const thiefHand = this.playerHands.get(event.thief) || [];
-          const thiefHandPos = this.gameBoard.getPlayerHandPosition(event.thief, thiefHand.length, thiefHand.length + 1);
-          
-          // Move card instantly to new position
-          if (stolenCardElement) {
-            stolenCardElement.element.style.left = `${thiefHandPos.x}px`;
-            stolenCardElement.element.style.top = `${thiefHandPos.y}px`;
+          // If the replay specifies which card was stolen, find and remove that card
+          if (event.stolen_card) {
+            // Find a card of the stolen type in victim's hand
+            const cardIndex = victimHand.findIndex(cardId => {
+              const cardEl = this.gameBoard.getCardElement(cardId);
+              return cardEl && cardEl.cardType === event.stolen_card;
+            });
+            
+            if (cardIndex !== -1) {
+              stolenCardId = victimHand.splice(cardIndex, 1)[0];
+            }
           }
           
-          thiefHand.push(stolenCardId);
-          this.playerHands.set(event.thief, thiefHand);
+          // Fallback: if no specific card was found, take the first card
+          if (!stolenCardId && victimHand.length > 0) {
+            stolenCardId = victimHand.splice(0, 1)[0];
+          }
+          
+          if (stolenCardId) {
+            const stolenCardElement = this.gameBoard.getCardElement(stolenCardId);
+            this.playerHands.set(event.victim, victimHand);
+            
+            // Add to thief's hand
+            const thiefHand = this.playerHands.get(event.thief) || [];
+            const thiefHandPos = this.gameBoard.getPlayerHandPosition(event.thief, thiefHand.length, thiefHand.length + 1);
+            
+            // Move card instantly to new position
+            if (stolenCardElement) {
+              stolenCardElement.element.style.left = `${thiefHandPos.x}px`;
+              stolenCardElement.element.style.top = `${thiefHandPos.y}px`;
+            }
+            
+            thiefHand.push(stolenCardId);
+            this.playerHands.set(event.thief, thiefHand);
+          }
         }
         break;
 

@@ -118,6 +118,7 @@ export interface CardStealEvent {
   thief: string;
   victim: string;
   context: string;
+  stolen_card?: CardType;  // The actual card that was stolen
 }
 
 export interface CardRequestEvent {
