@@ -446,12 +446,21 @@ The project includes a TypeScript-based web application for visualizing game rep
 ### Core Principle: Deterministic Playback
 **CRITICAL:** The replay viewer must be fully deterministic and always 100% follow what the replay file contains. The replay viewer does NOT make any decisions whatsoever and must always stay in perfect sync with the actual replay file. There should be NO random decisions, NO deviations, and NO desynchronization in the frontend/replay viewer.
 
+**What "100% determinism" means:**
+- Card **types** must match what's in the replay file
+- The cards in each player's **hand** must be correct
+- The specific card **instance** doesn't matter when multiple cards of the same type exist
+  - Example: If a bot has 2 SKIP cards and the replay file says they played a SKIP card, it doesn't matter which of the two SKIP cards is visually shown as being played, as long as one SKIP card is played and the hand count is correct
+
+**Guidelines:**
 - ✅ **DO:** Read and render events exactly as recorded in the replay file
-- ✅ **DO:** Maintain perfect synchronization with the replay data
+- ✅ **DO:** Maintain perfect synchronization with the replay data (card types and hand state)
 - ✅ **DO:** Display game state transitions exactly as they occurred
+- ✅ **DO:** Match cards by type when a player has multiple cards of the same type
 - ❌ **DO NOT:** Make any decisions or choices about game logic
 - ❌ **DO NOT:** Add any randomness or non-deterministic behavior
 - ❌ **DO NOT:** Simulate or predict any game behavior not in the replay file
+- ❌ **DO NOT:** Require exact card instance matching when type-based matching is sufficient
 
 ### Purpose
 - Visualize game replays with animations and interactive controls
