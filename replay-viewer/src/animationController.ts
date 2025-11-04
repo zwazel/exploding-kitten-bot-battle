@@ -572,6 +572,10 @@ export class AnimationController {
     this.currentPlayer = null;
     this.explodingKittenCardId = null;
     this.gameBoard.clearCards();
+    // Cleanup special animator resources
+    this.specialAnimator.destroy();
+    // Recreate animator for reuse
+    this.specialAnimator = new SpecialEventAnimator(document.body);
   }
 
   /**
