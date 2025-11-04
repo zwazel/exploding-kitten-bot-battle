@@ -69,9 +69,6 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
       el.value = '1';
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    });
-    
-    await page.waitForTimeout(500);
     
     // Wait a bit to ensure any potential async updates complete
     await page.waitForTimeout(500);
