@@ -38,7 +38,7 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
     const initialText = await eventCounter.textContent();
     expect(initialText).toContain('Event: 1 /');
     
-    // Jump to event 5 (0-indexed, which is the 6th event)
+    // Jump to event index 5 (displayed as Event: 6 in the UI)
     await agentJumpInput.evaluate((el: HTMLInputElement) => {
       el.value = '5';
       el.dispatchEvent(new Event('input', { bubbles: true }));
