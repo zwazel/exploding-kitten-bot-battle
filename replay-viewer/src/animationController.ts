@@ -2,7 +2,7 @@
  * Animation controller for game events
  */
 
-import type { CardType, NopeEvent } from "./types";
+import type { CardType, NopeEvent, ReplayEvent } from "./types";
 import { GameBoard } from "./gameBoard";
 
 /**
@@ -470,7 +470,7 @@ export class AnimationController {
    * Process event state updates without animations
    * Used for fast-forwarding through events during jump
    */
-  processEventSilently(event: any): void {
+  processEventSilently(event: ReplayEvent): void {
     switch (event.type) {
       case "turn_start":
         // Update current player state
