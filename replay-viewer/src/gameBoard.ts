@@ -28,9 +28,9 @@ export class GameBoard {
   private cardElements: Map<string, CardElement> = new Map();
   private discardPileStack: CardType[] = []; // Track discard pile cards
 
-  // Board positions
-  private deckPosition: Position = { x: 500, y: 350 };
-  private discardPosition: Position = { x: 650, y: 350 };
+  // Board positions (centered on the 1200x800 board)
+  private deckPosition: Position = { x: 550, y: 340 };
+  private discardPosition: Position = { x: 650, y: 340 };
   
   constructor(container: HTMLElement) {
     this.container = container;
@@ -403,6 +403,10 @@ export class GameBoard {
   highlightPlayer(playerName: string, highlight: boolean): void {
     const playerArea = this.container.querySelector(`#player-${playerName}`) as HTMLElement;
     if (playerArea) {
+      // Check if player is already eliminated (don't change their styling)
+      const isEliminated = playerArea.style.opacity === "0.5";
+      if (isEliminated) return;
+      
       if (highlight) {
         playerArea.style.borderColor = "#ffff44";
         playerArea.style.background = "rgba(255, 255, 0, 0.2)";
@@ -422,8 +426,10 @@ export class GameBoard {
     const playerArea = this.container.querySelector(`#player-${playerName}`) as HTMLElement;
     if (playerArea) {
       playerArea.style.borderColor = "#ff4444";
-      playerArea.style.background = "rgba(255, 0, 0, 0.1)";
+      playerArea.style.background = "rgba(255, 0, 0, 0.2)";
       playerArea.style.opacity = "0.5";
+      // Store eliminated state as data attribute
+      playerArea.setAttribute("data-eliminated", "true");
     }
   }
 

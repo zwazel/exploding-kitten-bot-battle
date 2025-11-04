@@ -191,8 +191,8 @@ export class VisualRenderer {
           break;
 
         case "favor":
-          // Show favor animation
-          await this.animationController.animateFavor(event.player, event.target);
+          // Skip favor animation - it will be shown with the card_steal event that follows
+          await this.delay(100);
           break;
 
         case "game_end":
