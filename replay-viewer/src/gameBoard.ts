@@ -75,18 +75,30 @@ export class GameBoard {
   /**
    * Calculate text color based on background color luminance
    * Returns white for dark backgrounds, black for light backgrounds
+   * Uses simplified relative luminance calculation (ITU-R BT.601)
    */
   private getTextColor(backgroundColor: string): string {
     // Remove # if present
-    const hex = backgroundColor.replace('#', '');
+    let hex = backgroundColor.replace('#', '');
+    
+    // Handle 3-character shorthand (e.g., 'fff' -> 'ffffff')
+    if (hex.length === 3) {
+      hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    
+    // Validate hex format
+    if (hex.length !== 6 || !/^[0-9A-Fa-f]{6}$/.test(hex)) {
+      // Default to black text for invalid colors
+      return '#000';
+    }
     
     // Convert hex to RGB
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
     
-    // Calculate relative luminance using sRGB formula
-    // https://www.w3.org/TR/WCAG20/#relativeluminancedef
+    // Calculate relative luminance using simplified formula
+    // This is a common approximation that works well for basic contrast detection
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     
     // Use white text for dark backgrounds (luminance < 0.5), black for light
