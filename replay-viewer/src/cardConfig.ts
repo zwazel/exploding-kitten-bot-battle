@@ -4,14 +4,14 @@
  */
 
 export const CARD_COLORS: Record<string, string> = {
-  EXPLODING_KITTEN: "#ff4444",    // Red
+  EXPLODING_KITTEN: "#000000",    // Black
   DEFUSE: "#44ff44",               // Green
   SKIP: "#ffff44",                 // Yellow
   SEE_THE_FUTURE: "#4444ff",       // Blue
   SHUFFLE: "#ff44ff",              // Magenta
   ATTACK: "#ff8844",               // Orange
   FAVOR: "#ff88ff",                // Pink
-  NOPE: "#888888",                 // Gray
+  NOPE: "#ff0000",                 // Red
   TACOCAT: "#88ffff",              // Cyan
   CATTERMELON: "#ffaa88",          // Peach
   HAIRY_POTATO_CAT: "#aa88ff",     // Purple

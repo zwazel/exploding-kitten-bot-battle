@@ -88,8 +88,21 @@ export class AnimationController {
   async animateCardPlay(playerName: string, cardType: CardType): Promise<void> {
     const playerHand = this.playerHands.get(playerName) || [];
     
-    // Find a card of this type in the player's hand (or use the first card)
-    const cardId = playerHand.shift();
+    // Find a card of this type in the player's hand by matching the card type
+    const cardIndex = this.findCardIndexByType(playerHand, cardType);
+    let cardId: string | undefined;
+    
+    if (cardIndex === -1) {
+      console.warn(`Card type ${cardType} not found in ${playerName}'s hand, using first card as fallback`);
+      // Fallback: use first card if exact match not found
+      if (playerHand.length === 0) return;
+      cardId = playerHand.shift();
+    } else {
+      // Remove the specific card from the hand
+      cardId = playerHand[cardIndex];
+      playerHand.splice(cardIndex, 1);
+    }
+    
     if (!cardId) return;
 
     this.playerHands.set(playerName, playerHand);
@@ -368,8 +381,20 @@ export class AnimationController {
     const playerHand = this.playerHands.get(playerName) || [];
     const centerPos = this.gameBoard.getCenterPosition();
 
-    // Find defuse card in hand (or use first card)
-    const defuseCardId = playerHand.shift();
+    // Find defuse card in hand by matching card type
+    const defuseCardIndex = this.findCardIndexByType(playerHand, "DEFUSE");
+    let defuseCardId: string | undefined;
+    
+    if (defuseCardIndex === -1) {
+      console.warn(`DEFUSE card not found in ${playerName}'s hand, using first card as fallback`);
+      // Fallback: use first card if defuse not found
+      defuseCardId = playerHand.shift();
+    } else {
+      // Remove the defuse card from the hand
+      defuseCardId = playerHand[defuseCardIndex];
+      playerHand.splice(defuseCardIndex, 1);
+    }
+    
     if (defuseCardId) {
       this.playerHands.set(playerName, playerHand);
 
@@ -437,6 +462,21 @@ export class AnimationController {
     
     // Reorganize hand
     await this.reorganizePlayerHand(playerName);
+  }
+
+  /**
+   * Find the index of a card in the player's hand by matching card type
+   * Uses the gameBoard's cardElements map to check the actual card type
+   */
+  private findCardIndexByType(playerHand: string[], targetCardType: CardType): number {
+    for (let i = 0; i < playerHand.length; i++) {
+      const cardId = playerHand[i];
+      const cardElement = this.gameBoard.getCardElement(cardId);
+      if (cardElement && cardElement.cardType === targetCardType) {
+        return i;
+      }
+    }
+    return -1; // Not found
   }
 
   /**
