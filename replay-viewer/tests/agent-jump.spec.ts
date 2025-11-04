@@ -111,7 +111,6 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
     
-    
     // Should remain at initial position
     const currentText = await eventCounter.textContent();
     expect(currentText).toBe(initialText);
