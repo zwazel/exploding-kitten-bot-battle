@@ -1282,6 +1282,89 @@ class TestBotDefuseComboValidation(unittest.TestCase):
         self.assertIsNone(result, "CautiousBot should not play combos")
 
 
+class TestStatistics(unittest.TestCase):
+    """Test GameStatistics class."""
+    
+    def test_statistics_initialization(self):
+        """Test creating a statistics tracker."""
+        from game import GameStatistics
+        stats = GameStatistics()
+        self.assertEqual(stats.total_games, 0)
+        self.assertEqual(len(stats.placements), 0)
+    
+    def test_statistics_record_game(self):
+        """Test recording game results."""
+        from game import GameStatistics
+        stats = GameStatistics()
+        
+        # Record a 3-player game
+        results = [("Bot1", 1), ("Bot2", 2), ("Bot3", 3)]
+        stats.record_game(results)
+        
+        self.assertEqual(stats.total_games, 1)
+        self.assertEqual(stats.wins["Bot1"], 1)
+        self.assertEqual(stats.wins["Bot2"], 0)
+        self.assertEqual(stats.placements["Bot1"], [1])
+        self.assertEqual(stats.placements["Bot2"], [2])
+    
+    def test_statistics_multiple_games(self):
+        """Test recording multiple games."""
+        from game import GameStatistics
+        stats = GameStatistics()
+        
+        # Record 3 games
+        stats.record_game([("Bot1", 1), ("Bot2", 2)])
+        stats.record_game([("Bot2", 1), ("Bot1", 2)])
+        stats.record_game([("Bot1", 1), ("Bot2", 2)])
+        
+        self.assertEqual(stats.total_games, 3)
+        self.assertEqual(stats.wins["Bot1"], 2)
+        self.assertEqual(stats.wins["Bot2"], 1)
+    
+    def test_statistics_summary(self):
+        """Test generating statistics summary."""
+        from game import GameStatistics
+        stats = GameStatistics()
+        
+        # Record games
+        stats.record_game([("Bot1", 1), ("Bot2", 2)])
+        stats.record_game([("Bot1", 1), ("Bot2", 2)])
+        
+        summary = stats.get_summary()
+        
+        self.assertEqual(summary["total_games"], 2)
+        self.assertEqual(summary["total_bots"], 2)
+        self.assertEqual(summary["bots"]["Bot1"]["wins"], 2)
+        self.assertEqual(summary["bots"]["Bot1"]["win_rate"], 100.0)
+        self.assertEqual(summary["bots"]["Bot2"]["wins"], 0)
+        self.assertEqual(summary["bots"]["Bot2"]["win_rate"], 0.0)
+    
+    def test_game_engine_placements(self):
+        """Test that GameEngine correctly tracks placements."""
+        bot1 = SimpleBot("Bot1")
+        bot2 = SimpleBot("Bot2")
+        bot3 = SimpleBot("Bot3")
+        
+        game = GameEngine([bot1, bot2, bot3], verbose=False)
+        winner = game.play_game()
+        
+        placements = game.get_placements()
+        
+        # Should have 3 placements
+        self.assertEqual(len(placements), 3)
+        
+        # Winner should be in first place
+        winner_placement = next(p for p in placements if p[0] == winner.name)
+        self.assertEqual(winner_placement[1], 1)
+        
+        # All placements should be unique
+        placement_numbers = [p[1] for p in placements]
+        self.assertEqual(len(set(placement_numbers)), 3)
+        
+        # Placements should be 1, 2, 3
+        self.assertEqual(sorted(placement_numbers), [1, 2, 3])
+
+
 if __name__ == '__main__':
     unittest.main()
 

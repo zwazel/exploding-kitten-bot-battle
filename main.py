@@ -5,7 +5,7 @@ import sys
 import importlib.util
 import argparse
 from typing import List
-from game import Bot, GameEngine, ReplayRecorder
+from game import Bot, GameEngine, ReplayRecorder, GameStatistics
 
 
 def load_bots_from_directory(directory: str = "bots") -> List[Bot]:
@@ -67,7 +67,16 @@ def main() -> None:
                        help='Run in test mode (auto-play without user input)')
     parser.add_argument('--replay', type=str, metavar='FILENAME',
                        help='Enable replay recording and save to specified file (e.g., replay.json)')
+    parser.add_argument('--stats', type=str, metavar='FILENAME',
+                       help='Run multiple games and save statistics to specified file (e.g., stats.json)')
+    parser.add_argument('--runs', type=int, default=100, metavar='N',
+                       help='Number of games to run in statistics mode (default: 100)')
     args = parser.parse_args()
+    
+    # Validate incompatible flags
+    if args.replay and args.stats:
+        print("Error: --replay and --stats flags are incompatible. Use one or the other.")
+        sys.exit(1)
     
     # Load bots
     print("Loading bots...")
@@ -90,6 +99,12 @@ def main() -> None:
         print("Error: Need at least 2 bots to play. Load more bots or use --test flag.")
         sys.exit(1)
     
+    # Statistics mode
+    if args.stats:
+        run_statistics_mode(bots, args.runs, args.stats)
+        return
+    
+    # Single game mode (with optional replay)
     # Create replay recorder if requested
     replay_recorder = None
     replay_filename = None
@@ -116,6 +131,56 @@ def main() -> None:
         print(f"\n🏆 Victory goes to: {winner.name}! 🏆")
     else:
         print("\nGame ended with no winner.")
+
+
+def run_statistics_mode(bot_templates: List[Bot], num_runs: int, output_file: str) -> None:
+    """
+    Run multiple games and collect statistics.
+    
+    Args:
+        bot_templates: List of bot instances to use as templates
+        num_runs: Number of games to run
+        output_file: Path to save statistics JSON file
+    """
+    print(f"\nRunning {num_runs} games for statistics...")
+    print(f"Bots: {', '.join(bot.name for bot in bot_templates)}")
+    print("=" * 70)
+    
+    stats = GameStatistics()
+    
+    for run_num in range(1, num_runs + 1):
+        # Create fresh bot instances for each game
+        bots = []
+        for bot_template in bot_templates:
+            bot_class = type(bot_template)
+            new_bot = bot_class(bot_template.name)
+            bots.append(new_bot)
+        
+        # Run the game in silent mode (verbose=False)
+        game = GameEngine(bots, verbose=False)
+        winner = game.play_game()
+        
+        # Record results
+        placements = game.get_placements()
+        stats.record_game(placements)
+        
+        # Show progress
+        if run_num % 10 == 0 or run_num == num_runs:
+            percentage = (run_num / num_runs) * 100
+            print(f"Progress: {run_num}/{num_runs} games completed ({percentage:.1f}%)")
+    
+    print("=" * 70)
+    print("All games completed!\n")
+    
+    # Display summary statistics
+    stats.print_summary()
+    
+    # Save to file
+    try:
+        stats.save_to_file(output_file)
+        print(f"\n✅ Statistics saved to: {output_file}")
+    except Exception as e:
+        print(f"\n❌ Error saving statistics: {e}")
 
 
 if __name__ == "__main__":

@@ -44,6 +44,7 @@ class GameEngine:
         self.current_bot_index = 0
         self.turns_to_take = 1  # For Attack cards
         self.replay_recorder = replay_recorder
+        self.elimination_order = []  # Track order of elimination for placements
         
     def _log(self, message: str) -> None:
         """Print a message if verbose mode is enabled."""
@@ -384,6 +385,31 @@ class GameEngine:
             self.replay_recorder.record_game_end(None)
         
         return None
+
+    def get_placements(self) -> List[tuple]:
+        """
+        Get final placements for all bots.
+        
+        Returns:
+            List of (bot_name, placement) tuples
+            placement 1 = winner (last alive)
+            placement 2 = second place (second to last eliminated)
+            etc.
+        """
+        placements = []
+        
+        # Winner gets 1st place
+        alive_bots = [bot for bot in self.bots if bot.alive]
+        if alive_bots:
+            placements.append((alive_bots[0].name, 1))
+        
+        # Eliminated bots get placements based on reverse elimination order
+        # Last eliminated = 2nd place, second-to-last = 3rd place, etc.
+        for i, bot_name in enumerate(reversed(self.elimination_order)):
+            placement = i + 2  # Start at 2 since 1 is the winner
+            placements.append((bot_name, placement))
+        
+        return placements
 
     def _play_phase(self, bot: Bot) -> bool:
         """
@@ -796,6 +822,8 @@ class GameEngine:
             self._log(f"  💀 {bot.name} has no Defuse card and EXPLODES!")
             bot.alive = False
             self.game_state.alive_bots -= 1
+            # Track elimination order for placements
+            self.elimination_order.append(bot.name)
             if self.replay_recorder:
                 self.replay_recorder.record_player_elimination(bot.name)
             # Notify all bots about the elimination
