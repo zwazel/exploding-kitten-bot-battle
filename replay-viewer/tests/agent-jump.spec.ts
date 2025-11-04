@@ -92,7 +92,6 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
       el.dispatchEvent(new Event('input', { bubbles: true }));
     }, lastEventIndex);
     
-    await page.waitForTimeout(500);
     
     // Should be at the last event
     const updatedText = await eventCounter.textContent();
