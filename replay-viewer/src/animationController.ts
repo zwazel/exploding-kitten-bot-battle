@@ -2,7 +2,7 @@
  * Animation controller for game events
  */
 
-import type { CardType } from "./types";
+import type { CardType, NopeEvent } from "./types";
 import { GameBoard } from "./gameBoard";
 
 /**
@@ -247,7 +247,7 @@ export class AnimationController {
   /**
    * Animate nope card play with showoff effect for chains
    */
-  async animateNope(event: any): Promise<void> {
+  async animateNope(event: NopeEvent): Promise<void> {
     const playerName = event.player;
     const playerHand = this.playerHands.get(playerName) || [];
     
