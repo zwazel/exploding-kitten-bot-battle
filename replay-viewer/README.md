@@ -5,8 +5,8 @@ A TypeScript-based web application for visualizing and analyzing game replays fr
 ## Features
 
 - 🎮 Load and visualize game replay JSON files
-- ▶️ Play/Pause replay with adjustable speed (0.1x to 5x)
-- ⏭️ Step forward and backward through game events
+- ▶️ Play/Pause replay with adjustable speed (0.5x to 3x)
+- ⏭️ Step forward through game events
 - 📊 Real-time player status and card counts
 - 🎯 Event-by-event game state visualization
 - 📱 Responsive design for desktop and mobile
@@ -81,11 +81,9 @@ This will create a `my_game.json` file containing the complete game replay.
 2. Click "📁 Load Replay File" and select your replay JSON file
 3. Use the playback controls:
    - **⏹️ Stop**: Reset to the beginning
-   - **⏮️ Step Back**: Go back one event
    - **▶️/⏸️ Play/Pause**: Auto-play through events
    - **⏭️ Step Forward**: Advance one event
-   - **Speed slider**: Adjust playback speed (0.1x to 5x)
-   - **Event slider**: Jump to any event in the replay
+   - **Speed slider**: Adjust playback speed (0.5x to 3x)
 
 ## Project Structure
 
