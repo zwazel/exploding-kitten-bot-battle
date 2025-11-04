@@ -52,6 +52,9 @@ class ReplayApp {
             <div class="event-progress">
               <span id="event-counter">Event: 0 / 0</span>
             </div>
+            
+            <!-- Hidden jump control for automated testing/agents only -->
+            <input type="hidden" id="agent-jump-to-event" data-testid="agent-jump-to-event" value="0" />
           </div>
         </div>
         
@@ -83,6 +86,16 @@ class ReplayApp {
       this.player.setSpeed(speed);
       document.querySelector("#speed-display")!.textContent = `${speed.toFixed(1)}x`;
     });
+
+    // Hidden agent jump control - monitors value changes
+    const agentJumpInput = document.querySelector<HTMLInputElement>("#agent-jump-to-event")!;
+    const observer = new MutationObserver(() => {
+      this.handleAgentJump();
+    });
+    observer.observe(agentJumpInput, { attributes: true, attributeFilter: ['value'] });
+    
+    // Also listen for input event (when value is set programmatically and input event is dispatched)
+    agentJumpInput.addEventListener("input", () => this.handleAgentJump());
 
     // Player callbacks
     this.player.onEventChange(async (_event, index) => {
@@ -165,6 +178,65 @@ class ReplayApp {
     }
     
     this.player.stepForward();
+  }
+
+  /**
+   * Handle agent jump to event (hidden feature for automated testing)
+   * Only allows jumping forward, not backward
+   */
+  private async handleAgentJump(): Promise<void> {
+    const agentJumpInput = document.querySelector<HTMLInputElement>("#agent-jump-to-event")!;
+    const targetEventIndex = parseInt(agentJumpInput.value, 10);
+    
+    if (isNaN(targetEventIndex)) return;
+
+    const currentState = this.player.getPlaybackState();
+    const replayData = this.player.getReplayData();
+    
+    if (!replayData) return;
+
+    // Only allow jumping forward, not backward
+    if (targetEventIndex <= currentState.currentEventIndex) {
+      console.warn(`Agent jump: Cannot jump backward. Current: ${currentState.currentEventIndex}, Target: ${targetEventIndex}`);
+      return;
+    }
+
+    // Validate target is within bounds
+    const maxIndex = replayData.events.length - 1;
+    if (targetEventIndex > maxIndex) {
+      console.warn(`Agent jump: Target ${targetEventIndex} exceeds max ${maxIndex}`);
+      return;
+    }
+
+    // Pause playback if playing
+    if (currentState.isPlaying) {
+      this.player.pause();
+    }
+
+    // Wait for any ongoing event processing
+    while (this.isProcessingEvent) {
+      await this.delay(50);
+    }
+
+    // Jump without animations - process events silently
+    await this.jumpToEventFast(targetEventIndex);
+  }
+
+  /**
+   * Fast jump to event without animations
+   * Processes all events between current and target silently
+   */
+  private async jumpToEventFast(targetIndex: number): Promise<void> {
+    const replayData = this.player.getReplayData();
+    if (!replayData) return;
+    
+    // Use the player's jump method to update the index
+    this.player.jumpToEvent(targetIndex);
+    
+    // Update the display to reflect the new state
+    // The updateDisplay will be called via the event callback
+    // but we ensure the UI is in sync
+    this.updateEventCounter(targetIndex, replayData.events.length);
   }
 
   private async updateDisplay(eventIndex: number): Promise<void> {

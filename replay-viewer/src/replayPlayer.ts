@@ -159,6 +159,23 @@ export class ReplayPlayer {
     }
   }
 
+  /**
+   * Jump to a specific event index
+   * This is used for quick navigation without animations
+   */
+  jumpToEvent(targetIndex: number): void {
+    if (!this.replayData) return;
+
+    // Validate target index
+    const maxIndex = this.replayData.events.length - 1;
+    const validIndex = Math.max(0, Math.min(targetIndex, maxIndex));
+
+    this.playbackState.currentEventIndex = validIndex;
+    // Fire and forget - main.ts will handle the update
+    this.notifyCurrentEvent();
+    this.notifyStateChange();
+  }
+
 
 
   /**
