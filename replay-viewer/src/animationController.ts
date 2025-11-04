@@ -221,37 +221,49 @@ export class AnimationController {
     const deckPos = this.gameBoard.getDeckPosition();
     const centerPos = this.gameBoard.getCenterPosition();
 
-    // Create temporary card elements
+    // Create temporary card elements at deck
     const cardIds: string[] = [];
     for (let i = 0; i < topCards.length; i++) {
       const cardId = `see-future-${Date.now()}-${i}`;
       this.gameBoard.createCard(topCards[i], deckPos, cardId);
       cardIds.push(cardId);
-      
-      // Animate to center with offset
-      await this.delay(100);
-      const offset = (i - (topCards.length - 1) / 2) * 30;
-      await this.gameBoard.moveCard(cardId, {
-        ...centerPos,
-        x: centerPos.x + offset,
-        y: centerPos.y - 100,
-        rotation: 0,
-        zIndex: 1000 + i
-      }, 400);
     }
 
-    // Show them prominently in center display
-    await this.gameBoard.showCenterDisplay(topCards, `${playerName} sees the future...`);
+    // Small delay to show cards at deck
+    await this.delay(200);
+
+    // Animate all cards to center simultaneously
+    const movePromises: Promise<void>[] = [];
+    for (let i = 0; i < cardIds.length; i++) {
+      const offset = (i - (topCards.length - 1) / 2) * 30;
+      movePromises.push(
+        this.gameBoard.moveCard(cardIds[i], {
+          ...centerPos,
+          x: centerPos.x + offset,
+          y: centerPos.y - 100,
+          rotation: 0,
+          zIndex: 1000 + i
+        }, 500)
+      );
+    }
+    await Promise.all(movePromises);
+
+    // Show them prominently in center display popup
+    await this.delay(200);
+    await this.gameBoard.showCenterDisplay(topCards, `🔮 ${playerName} sees the future...`);
     await this.delay(2000);
     await this.gameBoard.hideCenterDisplay();
+    await this.delay(200);
 
-    // Animate cards back to deck
+    // Animate all cards back to deck simultaneously
+    const returnPromises: Promise<void>[] = [];
     for (const cardId of cardIds) {
-      await this.gameBoard.moveCard(cardId, deckPos, 400);
-      await this.delay(50);
+      returnPromises.push(this.gameBoard.moveCard(cardId, deckPos, 500));
     }
+    await Promise.all(returnPromises);
 
     // Remove the cards
+    await this.delay(200);
     for (const cardId of cardIds) {
       this.gameBoard.removeCard(cardId);
     }
