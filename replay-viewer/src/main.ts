@@ -273,16 +273,10 @@ class ReplayApp {
     
     try {
       const replayData = this.player.getReplayData();
-      if (!replayData) {
-        console.warn('[updateDisplay] No replay data available');
-        return;
-      }
+      if (!replayData) return;
 
       const event = replayData.events[eventIndex];
-      if (!event) {
-        console.warn(`[updateDisplay] No event at index ${eventIndex}`);
-        return;
-      }
+      if (!event) return;
 
       // Calculate deck size at this point
       let deckSize = 33; // Default starting size

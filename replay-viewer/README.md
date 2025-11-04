@@ -270,6 +270,29 @@ The replay viewer expects JSON files with the following structure:
 
 See the main repository README for complete event type documentation.
 
+## Architecture & Implementation Notes
+
+### Event Processing and Synchronization
+
+The replay viewer processes events from the replay JSON file sequentially. Important considerations:
+
+#### Event Display vs Replay Events
+- **Replay events** are the events stored in the JSON file (e.g., `game_setup`, `turn_start`, `combo_play`, `card_play`)
+- **Frontend animations** may render multiple cards or sub-animations for a single replay event
+- For example, a `combo_play` event with 3 cards will trigger 3 separate card animations, but counts as ONE event
+- The event counter always reflects the replay file's event index, not the number of animation frames
+
+#### Asynchronous Processing
+- Event rendering is fully asynchronous to support smooth animations
+- The `isProcessingEvent` flag prevents concurrent event processing
+- Event counter updates occur in a `finally` block AFTER the processing flag is cleared
+- This ensures tests can rely on the counter appearing only when the system is ready for the next event
+
+#### Testing Considerations  
+- Playwright tests should wait for UI state changes (e.g., counter updates, button enabled state)
+- For rapid sequential operations, prefer using the agent jump functionality over multiple step clicks
+- The step-forward button is disabled during event processing to prevent race conditions
+
 ## Browser Support
 
 The replay viewer works in all modern browsers:
