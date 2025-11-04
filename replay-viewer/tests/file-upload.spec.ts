@@ -10,9 +10,6 @@ test.describe('Replay Viewer - File Upload', () => {
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(filePath);
     
-    // Wait a moment for the file to be processed
-    await page.waitForTimeout(500);
-    
     // Check that the file name is displayed
     const fileName = page.locator('#file-name');
     await expect(fileName).toContainText('test_replay.json');
@@ -30,8 +27,8 @@ test.describe('Replay Viewer - File Upload', () => {
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(filePath);
     
-    // Wait for the file to be processed
-    await page.waitForTimeout(500);
+    // Wait for playback controls to be visible (indicates file is loaded)
+    await page.locator('#playback-controls').waitFor({ state: 'visible' });
     
     // Check that game display shows some content
     const gameDisplay = page.locator('#game-display');

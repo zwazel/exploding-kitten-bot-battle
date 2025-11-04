@@ -8,7 +8,9 @@ test.describe('Replay Viewer - Playback Controls', () => {
     const filePath = path.join(__dirname, 'fixtures', 'test_replay.json');
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(filePath);
-    await page.waitForTimeout(500);
+    
+    // Wait for playback controls to become visible
+    await page.locator('#playback-controls').waitFor({ state: 'visible' });
   });
 
   test('should have stop button', async ({ page }) => {
@@ -57,11 +59,7 @@ test.describe('Replay Viewer - Playback Controls', () => {
     // Click step forward button
     await stepButton.click();
     
-    // Wait a moment for the UI to update
-    await page.waitForTimeout(200);
-    
-    // The game display should have updated (we can't check exact content without knowing structure)
-    // But we can verify the button is still clickable
+    // The button should remain enabled after stepping
     await expect(stepButton).toBeEnabled();
   });
 
@@ -81,14 +79,10 @@ test.describe('Replay Viewer - Playback Controls', () => {
     const stepButton = page.locator('#btn-step-forward');
     await stepButton.click();
     await stepButton.click();
-    await page.waitForTimeout(200);
     
     // Click stop button
     const stopButton = page.locator('#btn-stop');
     await stopButton.click();
-    
-    // Wait a moment for reset
-    await page.waitForTimeout(200);
     
     // Play button should be visible (not pause)
     const playPauseButton = page.locator('#btn-play-pause');
