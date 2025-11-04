@@ -170,6 +170,31 @@ export class VisualRenderer {
           await this.animationController.animateElimination(event.player);
           break;
 
+        case "card_steal":
+          // Show card steal animation
+          await this.animationController.animateCardSteal(
+            event.thief,
+            event.victim,
+            event.stolen_card,
+            event.context
+          );
+          break;
+
+        case "card_request":
+          // Show card request animation (3-of-a-kind)
+          await this.animationController.animateCardRequest(
+            event.requester,
+            event.target,
+            event.requested_card,
+            event.success
+          );
+          break;
+
+        case "favor":
+          // Show favor animation
+          await this.animationController.animateFavor(event.player, event.target);
+          break;
+
         case "game_end":
           this.animationController.clearHighlight();
           break;
@@ -279,6 +304,19 @@ export class VisualRenderer {
    */
   getIsAnimating(): boolean {
     return this.isAnimating;
+  }
+
+  /**
+   * Process events silently without animations
+   * Used for fast-forwarding during jumps
+   * @param events - Array of events to process
+   * @param startIndex - Absolute index of the first event in the replay (for unique ID generation)
+   */
+  processEventsSilently(events: ReplayEvent[], startIndex: number = 0): void {
+    // Pass absolute event indices to ensure unique card IDs across multiple jumps
+    for (let i = 0; i < events.length; i++) {
+      this.animationController.processEventSilently(events[i], startIndex + i);
+    }
   }
 
   /**

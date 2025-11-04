@@ -12,9 +12,9 @@ export class ReplayPlayer {
     speed: 1.0, // 1 event per second by default
     isPaused: false,
   };
-  private playbackInterval: number | null = null;
-  private eventCallbacks: Set<(event: ReplayEvent, index: number) => void> = new Set();
+  private eventCallbacks: Set<(event: ReplayEvent, index: number) => Promise<void>> = new Set();
   private stateChangeCallbacks: Set<(state: PlaybackState) => void> = new Set();
+  private isPlaybackLoopRunning: boolean = false;
 
   /**
    * Load replay data
@@ -44,7 +44,7 @@ export class ReplayPlayer {
   /**
    * Subscribe to event changes
    */
-  onEventChange(callback: (event: ReplayEvent, index: number) => void): void {
+  onEventChange(callback: (event: ReplayEvent, index: number) => Promise<void>): void {
     this.eventCallbacks.add(callback);
   }
 
@@ -60,15 +60,54 @@ export class ReplayPlayer {
    */
   play(): void {
     if (!this.replayData || this.playbackState.isPlaying) return;
+    
+    // Prevent multiple concurrent playback loops
+    if (this.isPlaybackLoopRunning) return;
 
     this.playbackState.isPlaying = true;
     this.playbackState.isPaused = false;
     this.notifyStateChange();
 
-    const intervalMs = 1000 / this.playbackState.speed;
-    this.playbackInterval = window.setInterval(() => {
-      this.stepForward();
-    }, intervalMs);
+    // Start async playback loop
+    this.playbackLoop();
+  }
+
+  /**
+   * Async playback loop that waits for animations
+   */
+  private async playbackLoop(): Promise<void> {
+    this.isPlaybackLoopRunning = true;
+    try {
+      while (this.playbackState.isPlaying && this.replayData) {
+        if (this.playbackState.currentEventIndex < this.replayData.events.length - 1) {
+          // Step forward and wait for event processing
+          await this.stepForwardAsync();
+          
+          // Wait based on speed (time between events)
+          const delayMs = 1000 / this.playbackState.speed;
+          await this.delay(delayMs);
+        } else {
+          // Reached the end
+          this.pause();
+          break;
+        }
+      }
+    } finally {
+      this.isPlaybackLoopRunning = false;
+    }
+  }
+
+  /**
+   * Step forward one event asynchronously (waits for callbacks)
+   */
+  private async stepForwardAsync(): Promise<void> {
+    if (!this.replayData) return;
+
+    if (this.playbackState.currentEventIndex < this.replayData.events.length - 1) {
+      this.playbackState.currentEventIndex++;
+      await this.notifyCurrentEvent();
+      this.notifyStateChange();
+    }
   }
 
   /**
@@ -80,11 +119,6 @@ export class ReplayPlayer {
     this.playbackState.isPlaying = false;
     this.playbackState.isPaused = true;
     this.notifyStateChange();
-
-    if (this.playbackInterval !== null) {
-      clearInterval(this.playbackInterval);
-      this.playbackInterval = null;
-    }
   }
 
   /**
@@ -108,19 +142,47 @@ export class ReplayPlayer {
   }
 
   /**
-   * Step forward one event
+   * Step forward one event (async version for manual stepping)
+   * Note: This is called from main.ts which already handles waiting for animations
    */
-  stepForward(): void {
+  async stepForward(): Promise<void> {
     if (!this.replayData) return;
 
     if (this.playbackState.currentEventIndex < this.replayData.events.length - 1) {
       this.playbackState.currentEventIndex++;
-      this.notifyCurrentEvent();
+      // Wait for event callbacks to complete before returning
+      await this.notifyCurrentEvent();
       this.notifyStateChange();
     } else {
       // Reached the end
       this.pause();
     }
+  }
+
+  /**
+   * Jump to a specific event index
+   * This is used for quick navigation without animations
+   * Only allows jumping forward to prevent state inconsistencies
+   */
+  jumpToEvent(targetIndex: number): void {
+    if (!this.replayData) return;
+
+    // Enforce forward-only jumping
+    if (targetIndex <= this.playbackState.currentEventIndex) {
+      console.warn(`Jump to event: Cannot jump backward. Current: ${this.playbackState.currentEventIndex}, Target: ${targetIndex}`);
+      return;
+    }
+
+    // Validate target index is within bounds
+    const maxIndex = this.replayData.events.length - 1;
+    if (targetIndex > maxIndex) {
+      console.warn(`Jump to event: Target ${targetIndex} exceeds max ${maxIndex}`);
+      return;
+    }
+
+    this.playbackState.currentEventIndex = targetIndex;
+    // Do not notify event callbacks here; main.ts will handle rendering the event and updating the UI
+    this.notifyStateChange();
   }
 
 
@@ -131,15 +193,7 @@ export class ReplayPlayer {
   setSpeed(speed: number): void {
     this.playbackState.speed = Math.max(0.1, Math.min(10, speed));
     this.notifyStateChange();
-
-    // If currently playing, restart with new speed
-    if (this.playbackState.isPlaying && this.playbackInterval !== null) {
-      clearInterval(this.playbackInterval);
-      const intervalMs = 1000 / this.playbackState.speed;
-      this.playbackInterval = window.setInterval(() => {
-        this.stepForward();
-      }, intervalMs);
-    }
+    // Speed change will be picked up in the next loop iteration
   }
 
   /**
@@ -161,12 +215,15 @@ export class ReplayPlayer {
   /**
    * Notify all event change callbacks
    */
-  private notifyCurrentEvent(): void {
+  private async notifyCurrentEvent(): Promise<void> {
     const event = this.getCurrentEvent();
     if (event) {
-      this.eventCallbacks.forEach((callback) => {
-        callback(event, this.playbackState.currentEventIndex);
-      });
+      // Wait for all callbacks to complete
+      await Promise.all(
+        Array.from(this.eventCallbacks).map(callback => 
+          callback(event, this.playbackState.currentEventIndex)
+        )
+      );
     }
   }
 
@@ -177,5 +234,12 @@ export class ReplayPlayer {
     this.stateChangeCallbacks.forEach((callback) => {
       callback(this.getPlaybackState());
     });
+  }
+
+  /**
+   * Helper delay function
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

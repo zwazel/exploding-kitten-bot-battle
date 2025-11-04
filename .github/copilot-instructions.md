@@ -4,6 +4,33 @@
 
 This is a Python-based simulation of the "Exploding Kittens" card game where autonomous bots compete against each other. The project serves as an educational platform for students to create and test game-playing AI strategies.
 
+## Getting Started: Read All Markdown Files
+
+**IMPORTANT:** When you start working on any issue or task in this repository, you should ALWAYS:
+
+1. **Search for all markdown files** in the repository using:
+   ```bash
+   find . -type f -name "*.md"
+   ```
+
+2. **Read ALL markdown files** you find, as they contain crucial information and context:
+   - `README.md` - Complete game rules, API documentation, and examples
+   - `CONTRIBUTING.md` - Detailed bot creation guide with strategies
+   - `.github/copilot-instructions.md` - These instructions (you're reading them now!)
+   - `replay-viewer/README.md` - Replay viewer documentation and features
+   - `replay-viewer/QUICKSTART.md` - Quick start guide for the replay viewer
+   - Any other markdown files that may have been added to the repository
+
+3. **Use this information** to understand:
+   - Project structure and organization
+   - Coding standards and conventions
+   - Game rules and mechanics
+   - Testing requirements
+   - Development workflows
+   - Domain-specific knowledge
+
+**Why this matters:** Markdown files in this repository contain essential context that will help you make informed decisions, avoid breaking existing functionality, and follow established patterns. Reading them upfront saves time and prevents mistakes.
+
 ## Repository Structure
 
 ```
@@ -45,12 +72,66 @@ exploding-kitten-bot-battle/
 - **Dependencies:** No external runtime dependencies (pure Python standard library)
 
 ### Testing
-Always run tests before and after making changes:
+
+**IMPORTANT: Always run relevant tests before and after making changes. Only run tests for the parts of the codebase you're modifying.**
+
+#### Python Tests
+Run Python tests when making changes to:
+- Python game engine code (`game/` directory)
+- Bot implementations (`bots/` directory)
+- Main game entry point (`main.py`)
+- Test files (`tests/` directory)
+- Any other Python files
+
 ```bash
+# Run all Python tests
 python3 -m unittest tests.test_game -v
 ```
 
+**When to add new Python tests:**
+- When adding new features to the game engine
+- When fixing bugs (add regression tests)
+- When adding new card types or game mechanics
+- When modifying bot behavior or adding new bot methods
+
 All existing tests must pass. Do not break existing tests.
+
+#### TypeScript/Playwright Tests
+Run Playwright tests when making changes to:
+- Replay viewer code (`replay-viewer/src/` directory)
+- Replay viewer UI (`replay-viewer/index.html`)
+- Replay viewer configuration (`replay-viewer/vite.config.ts`, `replay-viewer/playwright.config.ts`)
+- Test files (`replay-viewer/tests/` directory)
+- Any other TypeScript/JavaScript files in the replay viewer
+
+```bash
+# Install dependencies (first time only)
+cd replay-viewer
+npm install
+
+# Install Playwright browsers (first time only)
+npx playwright install --with-deps chromium
+
+# Run Playwright tests
+npm test
+
+# Run tests in UI mode for debugging
+npm run test:ui
+
+# Run tests in headed mode (see browser)
+npm run test:headed
+```
+
+**When to add new Playwright tests:**
+- When adding new UI features to the replay viewer
+- When fixing UI bugs (add regression tests)
+- When adding new playback controls or visualizations
+- When modifying replay file loading or parsing
+
+**Note:** Do NOT run tests for parts of the codebase you haven't modified. For example:
+- If you only changed Python code, only run Python tests
+- If you only changed TypeScript code, only run Playwright tests
+- If you changed both, run both test suites
 
 ### Running the Game
 ```bash
@@ -97,6 +178,48 @@ python3 main.py --test --replay my_game.json
 # Use this file to test the replay viewer
 ```
 
+**Creating Custom Test Replay Files (For Agents):**
+Agents can manually create minimal test replay files to test specific scenarios without waiting for full game simulations. This saves significant time during testing. Example minimal replay file:
+
+```json
+{
+  "metadata": {
+    "timestamp": "2025-11-04T12:00:00",
+    "players": ["TestBot1", "TestBot2"],
+    "version": "1.0"
+  },
+  "events": [
+    {
+      "type": "game_setup",
+      "deck_size": 10,
+      "initial_hand_size": 3,
+      "play_order": ["TestBot1", "TestBot2"],
+      "initial_hands": {
+        "TestBot1": ["SKIP", "NOPE", "ATTACK"],
+        "TestBot2": ["SKIP", "FAVOR", "DEFUSE"]
+      }
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 1,
+      "player": "TestBot1",
+      "turns_remaining": 1,
+      "hand_size": 3,
+      "cards_in_deck": 10
+    },
+    {
+      "type": "card_play",
+      "turn_number": 1,
+      "player": "TestBot1",
+      "card": "SKIP"
+    }
+  ],
+  "winner": null
+}
+```
+
+Save this to a `.json` file and load it in the replay viewer to test specific UI behaviors quickly.
+
 ### Linting (Optional)
 Optional development tools are listed in `requirements.txt`:
 - `black` for code formatting
@@ -117,6 +240,32 @@ npm run preview      # Preview production build
 1. Generate a replay file: `python3 main.py --test --replay test_replay.json`
 2. Start the replay viewer: `cd replay-viewer && npm run dev`
 3. Load the replay file in the browser at http://localhost:5173
+
+**Agent Jump-to-Step Feature (For Automated Testing):**
+The replay viewer includes a hidden jump-to-step feature for agents and automated testing. This allows jumping forward to a specific event without waiting for animations, significantly speeding up testing.
+
+To use with Playwright:
+```typescript
+// Access the hidden input field
+const jumpInput = page.getByTestId('agent-jump-to-event');
+
+// Jump to event index 50 (0-indexed)
+await jumpInput.evaluate((el: HTMLInputElement) => {
+  el.value = '50';
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+// Wait for the jump to complete
+await page.waitForTimeout(500);
+```
+
+**Important constraints:**
+- Jump only works forward, not backward (prevents state inconsistencies)
+- Target index must be within valid bounds (0 to events.length - 1)
+- Jumps will pause playback if currently playing
+- All events are processed, just without animations
+
+This feature is NOT visible in the UI and is only accessible via the `agent-jump-to-event` input field using Playwright or similar automation tools.
 
 **GitHub Pages Deployment:**
 - The replay viewer automatically deploys to GitHub Pages when pushed to main branch
@@ -389,6 +538,25 @@ When adding a new bot:
 
 The project includes a TypeScript-based web application for visualizing game replays:
 
+### Core Principle: Deterministic Playback
+**CRITICAL:** The replay viewer must be fully deterministic and always 100% follow what the replay file contains. The replay viewer does NOT make any decisions whatsoever and must always stay in perfect sync with the actual replay file. There should be NO random decisions, NO deviations, and NO desynchronization in the frontend/replay viewer.
+
+**What "100% determinism" means:**
+- Card **types** must match what's in the replay file
+- The cards in each player's **hand** must be correct
+- The specific card **instance** doesn't matter when multiple cards of the same type exist
+  - Example: If a bot has 2 SKIP cards and the replay file says they played a SKIP card, it doesn't matter which of the two SKIP cards is visually shown as being played, as long as one SKIP card is played and the hand count is correct
+
+**Guidelines:**
+- ✅ **DO:** Read and render events exactly as recorded in the replay file
+- ✅ **DO:** Maintain perfect synchronization with the replay data (card types and hand state)
+- ✅ **DO:** Display game state transitions exactly as they occurred
+- ✅ **DO:** Match cards by type when a player has multiple cards of the same type
+- ❌ **DO NOT:** Make any decisions or choices about game logic
+- ❌ **DO NOT:** Add any randomness or non-deterministic behavior
+- ❌ **DO NOT:** Simulate or predict any game behavior not in the replay file
+- ❌ **DO NOT:** Require exact card instance matching when type-based matching is sufficient
+
 ### Purpose
 - Visualize game replays with animations and interactive controls
 - Analyze bot strategies and game flow
@@ -432,8 +600,12 @@ When making changes to the replay viewer:
 When assisting with this repository:
 1. **You can modify any part** of the codebase (game engine, replay viewer, Bot interface, etc.)
 2. **Backwards compatibility** is not required - feel free to make breaking changes
-3. **Always test** with `python3 -m unittest tests.test_game -v` before committing
-4. **Update tests** when you change functionality
+3. **Test intelligently based on changes:**
+   - Python changes → Run `python3 -m unittest tests.test_game -v`
+   - TypeScript/replay-viewer changes → Run `cd replay-viewer && npm test` (after `npm install`)
+   - Both changed → Run both test suites
+   - **ONLY** run tests for the parts you modified
+4. **Add new tests** when adding features or fixing bugs (Python or Playwright tests as appropriate)
 5. **Generate replay files** with `python3 main.py --test --replay <filename>.json` to test replay viewer
 6. **Never commit** `replay-viewer/dist/` directory (auto-generated)
 7. **Student-facing docs** (README.md, CONTRIBUTING.md) explain rules for students creating bots

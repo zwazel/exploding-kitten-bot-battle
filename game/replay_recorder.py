@@ -204,18 +204,23 @@ class ReplayRecorder:
             "target": target
         })
     
-    def record_card_steal(self, thief: str, victim: str, context: str) -> None:
+    def record_card_steal(self, thief: str, victim: str, context: str, stolen_card: Optional[CardType] = None) -> None:
         """Record a card being stolen (from combo or favor)."""
         if not self.enabled:
             return
         
-        self.events.append({
+        event: Dict[str, Any] = {
             "type": "card_steal",
             "turn_number": self.turn_number,
             "thief": thief,
             "victim": victim,
             "context": context
-        })
+        }
+        
+        if stolen_card:
+            event["stolen_card"] = stolen_card.name
+        
+        self.events.append(event)
     
     def record_card_request(self, requester: str, target: str, 
                            card_type: CardType, success: bool) -> None:

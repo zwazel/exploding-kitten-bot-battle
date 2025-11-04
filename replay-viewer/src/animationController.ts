@@ -2,20 +2,24 @@
  * Animation controller for game events
  */
 
-import type { CardType } from "./types";
+import type { CardType, NopeEvent, ReplayEvent } from "./types";
 import { GameBoard } from "./gameBoard";
+import { SpecialEventAnimator } from "./specialEventAnimator";
 
 /**
  * Manages animations for game events
  */
 export class AnimationController {
   private gameBoard: GameBoard;
+  private specialAnimator: SpecialEventAnimator;
   private playerHands: Map<string, string[]> = new Map(); // player -> card IDs
   private currentPlayer: string | null = null;
   private explodingKittenCardId: string | null = null; // Track exploding kitten card for defuse
+  private playOrder: string[] = []; // Track turn order for attack animations
 
   constructor(gameBoard: GameBoard) {
     this.gameBoard = gameBoard;
+    this.specialAnimator = new SpecialEventAnimator(document.body);
   }
 
   /**
@@ -24,6 +28,7 @@ export class AnimationController {
   initializeGame(playerNames: string[], initialHands: Record<string, CardType[]>): void {
     this.gameBoard.setupPlayers(playerNames);
     this.playerHands.clear();
+    this.playOrder = [...playerNames]; // Store play order
 
     // Initialize player hands
     playerNames.forEach((playerName) => {
@@ -88,8 +93,21 @@ export class AnimationController {
   async animateCardPlay(playerName: string, cardType: CardType): Promise<void> {
     const playerHand = this.playerHands.get(playerName) || [];
     
-    // Find a card of this type in the player's hand (or use the first card)
-    const cardId = playerHand.shift();
+    // Find a card of this type in the player's hand by matching the card type
+    const cardIndex = this.findCardIndexByType(playerHand, cardType);
+    let cardId: string | undefined;
+    
+    if (cardIndex === -1) {
+      console.warn(`Card type ${cardType} not found in ${playerName}'s hand, using first card as fallback`);
+      // Fallback: use first card if exact match not found
+      if (playerHand.length === 0) return;
+      cardId = playerHand.shift();
+    } else {
+      // Remove the specific card from the hand
+      cardId = playerHand[cardIndex];
+      playerHand.splice(cardIndex, 1);
+    }
+    
     if (!cardId) return;
 
     this.playerHands.set(playerName, playerHand);
@@ -108,6 +126,14 @@ export class AnimationController {
 
     // Reorganize remaining cards in hand
     await this.reorganizePlayerHand(playerName);
+
+    // Special handling for ATTACK cards - show who gets attacked
+    if (cardType === "ATTACK") {
+      const nextPlayer = this.getNextPlayer(playerName);
+      if (nextPlayer) {
+        await this.animateAttack(playerName, nextPlayer);
+      }
+    }
   }
 
   /**
@@ -142,15 +168,12 @@ export class AnimationController {
   async animateShuffle(): Promise<void> {
     const deckPile = document.querySelector("#deck-pile") as HTMLElement;
     if (deckPile) {
-      // Visual shuffle effect
-      deckPile.style.transition = "transform 0.2s ease";
-      for (let i = 0; i < 3; i++) {
-        deckPile.style.transform = "rotate(10deg) scale(1.1)";
-        await this.delay(100);
-        deckPile.style.transform = "rotate(-10deg) scale(1.1)";
-        await this.delay(100);
-      }
-      deckPile.style.transform = "rotate(0deg) scale(1)";
+      // Use unified simple animation
+      await this.specialAnimator.showSimple({
+        element: deckPile,
+        type: "shake",
+        duration: 600
+      });
     }
     await this.delay(300);
   }
@@ -222,31 +245,69 @@ export class AnimationController {
     // Small delay before revealing
     await this.delay(300);
 
-    // Show cards prominently in center display popup
-    await this.gameBoard.showCenterDisplay(topCards, `🔮 ${playerName} sees the future...`);
-    await this.delay(2500); // Show for longer to make it clear and visible
-
-    // Fade out center display
-    await this.gameBoard.hideCenterDisplay();
-    await this.delay(200);
+    // Use unified showcase animation
+    await this.specialAnimator.showShowcase({
+      cards: topCards,
+      title: `🔮 ${playerName} sees the future...`,
+      subtitle: `Top ${topCards.length} cards of the deck`,
+      duration: 2500
+    });
   }
 
   /**
    * Animate nope card play with showoff effect for chains
    */
-  async animateNope(event: any): Promise<void> {
-    // Show nope animation with the original action and the noping player
+  async animateNope(event: NopeEvent): Promise<void> {
+    const playerName = event.player;
+    const playerHand = this.playerHands.get(playerName) || [];
+    
+    // Find the NOPE card in the player's hand
+    const nopeCardIndex = this.findCardIndexByType(playerHand, "NOPE");
+    let nopeCardId: string | undefined;
+    
+    if (nopeCardIndex === -1) {
+      if (playerHand.length === 0) {
+        console.warn(`NOPE card not found and hand is empty for ${playerName}, skipping NOPE animation`);
+        return;
+      }
+      console.warn(`NOPE card not found in ${playerName}'s hand, using first card as fallback`);
+      // Fallback: use first card if nope not found
+      nopeCardId = playerHand.shift();
+    } else {
+      // Remove the nope card from the hand
+      nopeCardId = playerHand[nopeCardIndex];
+      playerHand.splice(nopeCardIndex, 1);
+    }
+    
+    if (nopeCardId) {
+      this.playerHands.set(playerName, playerHand);
+      
+      // Animate nope card to discard pile
+      const discardPos = this.gameBoard.getDiscardPosition();
+      await this.gameBoard.moveCard(nopeCardId, { ...discardPos, rotation: 0, zIndex: 10 }, 500);
+      await this.delay(200);
+    }
+    
+    // Show nope animation using unified target system
     const originalAction = event.original_action || "an action";
     const targetPlayer = event.target_player || "someone";
     
-    await this.gameBoard.showNopeAnimation(
-      event.player,
-      targetPlayer,
-      originalAction
-    );
+    await this.specialAnimator.showTarget({
+      sourcePlayer: playerName,
+      targetPlayer: targetPlayer,
+      action: `🚫 ${playerName} NOPES ${targetPlayer}'s ${originalAction}!`,
+      icon: "🚫",
+      duration: 1800
+    });
     
-    await this.delay(1500);
-    await this.gameBoard.hideNopeAnimation();
+    // Add nope card to discard pile and remove from board
+    if (nopeCardId) {
+      this.gameBoard.addToDiscardPile("NOPE");
+      this.gameBoard.removeCard(nopeCardId);
+    }
+    
+    // Reorganize remaining cards in hand
+    await this.reorganizePlayerHand(playerName);
   }
 
   /**
@@ -268,25 +329,24 @@ export class AnimationController {
       zIndex: 1000
     }, 500);
 
-    // Show explosion effect if no defuse
+    // Show explosion effect if no defuse using unified showcase
     if (!hadDefuse) {
-      await this.gameBoard.showCenterDisplay(
-        ["EXPLODING_KITTEN"],
-        `💥 ${playerName} EXPLODED! 💥`,
-        true
-      );
-      await this.delay(2500);
-      await this.gameBoard.hideCenterDisplay();
+      await this.specialAnimator.showShowcase({
+        cards: ["EXPLODING_KITTEN"],
+        title: `💥 ${playerName} EXPLODED! 💥`,
+        showExplosion: true,
+        duration: 2500
+      });
       this.gameBoard.removeCard(this.explodingKittenCardId);
       this.explodingKittenCardId = null;
     } else {
-      // Show that they have a defuse
-      await this.gameBoard.showCenterDisplay(
-        ["EXPLODING_KITTEN"],
-        `💣 ${playerName} drew an Exploding Kitten!`
-      );
-      await this.delay(1500);
-      await this.gameBoard.hideCenterDisplay();
+      // Show that they have a defuse using unified showcase
+      await this.specialAnimator.showShowcase({
+        cards: ["EXPLODING_KITTEN"],
+        title: `💣 ${playerName} drew an Exploding Kitten!`,
+        subtitle: "But has a Defuse card!",
+        duration: 1500
+      });
       
       // Keep the card for the defuse animation
     }
@@ -299,8 +359,20 @@ export class AnimationController {
     const playerHand = this.playerHands.get(playerName) || [];
     const centerPos = this.gameBoard.getCenterPosition();
 
-    // Find defuse card in hand (or use first card)
-    const defuseCardId = playerHand.shift();
+    // Find defuse card in hand by matching card type
+    const defuseCardIndex = this.findCardIndexByType(playerHand, "DEFUSE");
+    let defuseCardId: string | undefined;
+    
+    if (defuseCardIndex === -1) {
+      console.warn(`DEFUSE card not found in ${playerName}'s hand, using first card as fallback`);
+      // Fallback: use first card if defuse not found
+      defuseCardId = playerHand.shift();
+    } else {
+      // Remove the defuse card from the hand
+      defuseCardId = playerHand[defuseCardIndex];
+      playerHand.splice(defuseCardIndex, 1);
+    }
+    
     if (defuseCardId) {
       this.playerHands.set(playerName, playerHand);
 
@@ -313,13 +385,13 @@ export class AnimationController {
       }, 500);
     }
 
-    // Show both cards in center
-    await this.gameBoard.showCenterDisplay(
-      ["DEFUSE", "EXPLODING_KITTEN"],
-      `🛡️ ${playerName} defused the kitten!`
-    );
-    await this.delay(2000);
-    await this.gameBoard.hideCenterDisplay();
+    // Show both cards using unified showcase animation
+    await this.specialAnimator.showShowcase({
+      cards: ["DEFUSE", "EXPLODING_KITTEN"],
+      title: `🛡️ ${playerName} defused the kitten!`,
+      subtitle: "The Exploding Kitten is returned to the deck",
+      duration: 2000
+    });
 
     // Remove exploding kitten card (it goes back to deck)
     if (this.explodingKittenCardId) {
@@ -371,6 +443,121 @@ export class AnimationController {
   }
 
   /**
+   * Animate card steal (2-of-a-kind or random steal)
+   */
+  async animateCardSteal(thief: string, victim: string, stolenCard?: CardType, context?: string): Promise<void> {
+    // Show transfer animation using unified system
+    await this.specialAnimator.showTransfer({
+      fromPlayer: victim,
+      toPlayer: thief,
+      card: stolenCard,
+      title: `🎯 ${thief} steals from ${victim}!`,
+      subtitle: context || "Card stolen",
+      duration: 2000
+    });
+  }
+
+  /**
+   * Animate card request (3-of-a-kind)
+   */
+  async animateCardRequest(requester: string, target: string, requestedCard: CardType, success: boolean): Promise<void> {
+    if (success) {
+      // Show successful transfer animation
+      await this.specialAnimator.showTransfer({
+        fromPlayer: target,
+        toPlayer: requester,
+        card: requestedCard,
+        title: `📢 ${requester} requests ${this.formatCardName(requestedCard)}`,
+        subtitle: `✅ ${target} has it and must give it`,
+        duration: 2000
+      });
+    } else {
+      // Show failed request
+      await this.specialAnimator.showTarget({
+        sourcePlayer: requester,
+        targetPlayer: target,
+        action: `📢 ${requester} requests ${this.formatCardName(requestedCard)}`,
+        icon: "❌",
+        duration: 1500
+      });
+    }
+  }
+
+  /**
+   * Animate favor (choosing a card to give)
+   */
+  async animateFavor(player: string, target: string): Promise<void> {
+    // Show target animation to indicate favor being played
+    await this.specialAnimator.showTarget({
+      sourcePlayer: player,
+      targetPlayer: target,
+      action: `🤝 ${player} asks ${target} for a Favor`,
+      icon: "🤝",
+      duration: 1500
+    });
+  }
+
+  /**
+   * Animate attack (next player takes 2 turns)
+   */
+  async animateAttack(attacker: string, target: string): Promise<void> {
+    // Show attack animation using unified target system
+    await this.specialAnimator.showTarget({
+      sourcePlayer: attacker,
+      targetPlayer: target,
+      action: `⚔️ ${attacker} attacks ${target}!`,
+      icon: "⚔️",
+      duration: 1800
+    });
+  }
+
+  /**
+   * Format card name for display
+   */
+  private formatCardName(cardType: CardType | string): string {
+    return cardType.replace(/_/g, " ");
+  }
+
+  /**
+   * Get the next player in turn order (for ATTACK animation)
+   * Returns the next alive player after the given player
+   */
+  private getNextPlayer(currentPlayerName: string): string | null {
+    if (this.playOrder.length === 0) return null;
+
+    const currentIndex = this.playOrder.indexOf(currentPlayerName);
+    if (currentIndex === -1) return null;
+
+    // Find next alive player in circular turn order
+    for (let i = 1; i < this.playOrder.length; i++) {
+      const nextIndex = (currentIndex + i) % this.playOrder.length;
+      const nextPlayer = this.playOrder[nextIndex];
+      
+      // Check if player is still alive (has a hand with cards or is in playerHands)
+      if (this.playerHands.has(nextPlayer)) {
+        return nextPlayer;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Find the index of a card in the player's hand by matching card type
+   * Uses the gameBoard's cardElements map to check the actual card type
+   */
+  private findCardIndexByType(playerHand: string[], targetCardType: CardType): number {
+    for (let i = 0; i < playerHand.length; i++) {
+      const cardId = playerHand[i];
+      const cardElement = this.gameBoard.getCardElement(cardId);
+      if (cardElement && cardElement.cardType === targetCardType) {
+        return i;
+      }
+    }
+    return -1; // Not found
+  }
+
+  /**
    * Helper delay function
    */
   private delay(ms: number): Promise<void> {
@@ -385,5 +572,214 @@ export class AnimationController {
     this.currentPlayer = null;
     this.explodingKittenCardId = null;
     this.gameBoard.clearCards();
+    // Cleanup special animator resources
+    this.specialAnimator.destroy();
+    // Recreate animator for reuse
+    this.specialAnimator = new SpecialEventAnimator(document.body);
+  }
+
+  /**
+   * Process event state updates without animations
+   * Used for fast-forwarding through events during jump
+   * @param event - The event to process
+   * @param eventIndex - Optional index to help generate unique card IDs when processing batches
+   */
+  processEventSilently(event: ReplayEvent, eventIndex: number = 0): void {
+    switch (event.type) {
+      case "turn_start":
+        // Update current player state
+        if (this.currentPlayer) {
+          this.gameBoard.highlightPlayer(this.currentPlayer, false);
+        }
+        this.currentPlayer = event.player;
+        this.gameBoard.highlightPlayer(event.player, true);
+        this.gameBoard.updateDeckCount(event.cards_in_deck);
+        break;
+
+      case "card_draw":
+        // Add card to player's hand state
+        const playerHand = this.playerHands.get(event.player) || [];
+        const cardId = `${event.player}-draw-${eventIndex}-${playerHand.length}`;
+        const handPos = this.gameBoard.getPlayerHandPosition(event.player, playerHand.length, playerHand.length + 1);
+        this.gameBoard.createCard(event.card, handPos, cardId);
+        playerHand.push(cardId);
+        this.playerHands.set(event.player, playerHand);
+        break;
+
+      case "card_play":
+        // Remove card from player's hand state
+        this.removeCardFromHand(event.player, event.card);
+        this.gameBoard.addToDiscardPile(event.card);
+        break;
+
+      case "combo_play":
+        // Remove multiple cards from player's hand
+        if (event.cards) {
+          event.cards.forEach((cardType: CardType) => {
+            this.removeCardFromHand(event.player, cardType);
+            this.gameBoard.addToDiscardPile(cardType);
+          });
+        }
+        break;
+
+      case "player_elimination":
+        // Mark player as eliminated
+        this.gameBoard.eliminatePlayer(event.player);
+        const eliminatedHand = this.playerHands.get(event.player) || [];
+        eliminatedHand.forEach(id => this.gameBoard.removeCard(id));
+        this.playerHands.set(event.player, []);
+        break;
+
+      case "exploding_kitten_draw":
+        // Track exploding kitten if player has defuse
+        if (event.had_defuse) {
+          const hand = this.playerHands.get(event.player) || [];
+          const ektCardId = `${event.player}-ekt-${eventIndex}-${hand.length}`;
+          const handPos = this.gameBoard.getPlayerHandPosition(event.player, hand.length, hand.length + 1);
+          this.gameBoard.createCard("EXPLODING_KITTEN", handPos, ektCardId);
+          hand.push(ektCardId);
+          this.playerHands.set(event.player, hand);
+          this.explodingKittenCardId = ektCardId;
+        }
+        break;
+
+      case "defuse":
+        // Remove exploding kitten from hand
+        if (this.explodingKittenCardId) {
+          const hand = this.playerHands.get(event.player) || [];
+          const index = hand.indexOf(this.explodingKittenCardId);
+          if (index !== -1) {
+            hand.splice(index, 1);
+            this.playerHands.set(event.player, hand);
+            this.gameBoard.removeCard(this.explodingKittenCardId);
+          }
+          this.explodingKittenCardId = null;
+        }
+        // Also remove defuse card
+        this.removeCardFromHand(event.player, "DEFUSE");
+        break;
+
+      case "discard_take":
+        // Add card from discard to player's hand
+        const dtHand = this.playerHands.get(event.player) || [];
+        const dtCardId = `${event.player}-discard_take-${eventIndex}-${dtHand.length}`;
+        const dtHandPos = this.gameBoard.getPlayerHandPosition(event.player, dtHand.length, dtHand.length + 1);
+        this.gameBoard.createCard(event.card, dtHandPos, dtCardId);
+        dtHand.push(dtCardId);
+        this.playerHands.set(event.player, dtHand);
+        break;
+
+      case "card_steal":
+        // Transfer the specific stolen card from victim to thief
+        const victimHand = this.playerHands.get(event.victim) || [];
+        if (victimHand.length > 0) {
+          let stolenCardId: string | undefined;
+          
+          // If the replay specifies which card was stolen, find and remove that card
+          if (event.stolen_card) {
+            // Find a card of the stolen type in victim's hand
+            const cardIndex = victimHand.findIndex(cardId => {
+              const cardEl = this.gameBoard.getCardElement(cardId);
+              if (!cardEl) {
+                throw new Error(
+                  `[AnimationController] getCardElement(${cardId}) returned null/undefined during card_steal. Victim: ${event.victim}, Thief: ${event.thief}, Looking for card type: ${event.stolen_card}, Event index: ${eventIndex}`
+                );
+              }
+              return cardEl.cardType === event.stolen_card;
+            });
+            
+            if (cardIndex !== -1) {
+              stolenCardId = victimHand.splice(cardIndex, 1)[0];
+            }
+          }
+          
+          // Fallback: if no specific card was found, take the first card
+          if (!stolenCardId && victimHand.length > 0) {
+            stolenCardId = victimHand.splice(0, 1)[0];
+          }
+          
+          if (stolenCardId) {
+            const stolenCardElement = this.gameBoard.getCardElement(stolenCardId);
+            this.playerHands.set(event.victim, victimHand);
+            
+            // Add to thief's hand
+            const thiefHand = this.playerHands.get(event.thief) || [];
+            const thiefHandPos = this.gameBoard.getPlayerHandPosition(event.thief, thiefHand.length, thiefHand.length + 1);
+            
+            // Move card instantly to new position
+            if (stolenCardElement) {
+              stolenCardElement.element.style.left = `${thiefHandPos.x}px`;
+              stolenCardElement.element.style.top = `${thiefHandPos.y}px`;
+            }
+            
+            thiefHand.push(stolenCardId);
+            this.playerHands.set(event.thief, thiefHand);
+          }
+        }
+        break;
+
+      case "card_request":
+        // Move specific card from target to requester if successful
+        if (event.success) {
+          const targetHand = this.playerHands.get(event.target) || [];
+          const cardIndex = this.findCardIndexByType(targetHand, event.requested_card);
+          
+          if (cardIndex !== -1) {
+            const requestedCardId = targetHand[cardIndex];
+            const requestedCardElement = this.gameBoard.getCardElement(requestedCardId);
+            targetHand.splice(cardIndex, 1);
+            this.playerHands.set(event.target, targetHand);
+            
+            // Add to requester's hand
+            const requesterHand = this.playerHands.get(event.requester) || [];
+            const requesterHandPos = this.gameBoard.getPlayerHandPosition(event.requester, requesterHand.length, requesterHand.length + 1);
+            
+            // Move card instantly to new position
+            if (requestedCardElement) {
+              requestedCardElement.element.style.left = `${requesterHandPos.x}px`;
+              requestedCardElement.element.style.top = `${requesterHandPos.y}px`;
+            }
+            
+            requesterHand.push(requestedCardId);
+            this.playerHands.set(event.requester, requesterHand);
+          }
+        }
+        break;
+
+      case "favor":
+        // Note: The actual card transfer happens via card_steal event that follows
+        // This event just indicates the favor was played, no state change needed here
+        break;
+
+      case "game_end":
+        this.clearHighlight();
+        break;
+
+      // Other events don't affect visual state
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Helper to remove a card of specific type from player's hand
+   */
+  private removeCardFromHand(playerName: string, cardType: CardType): void {
+    const playerHand = this.playerHands.get(playerName) || [];
+    const cardIndex = this.findCardIndexByType(playerHand, cardType);
+    
+    if (cardIndex !== -1) {
+      const cardId = playerHand[cardIndex];
+      playerHand.splice(cardIndex, 1);
+      this.playerHands.set(playerName, playerHand);
+      this.gameBoard.removeCard(cardId);
+    } else if (playerHand.length > 0) {
+      // Determinism violation: card type not found in hand
+      console.warn(
+        `[Determinism violation] Tried to remove card of type ${cardType} from ${playerName}'s hand, but no such card was found. Hand: [${playerHand.join(", ")}]`
+      );
+      // Optionally, throw an error to enforce strict determinism:
+      // throw new Error(`[Determinism violation] Tried to remove card of type ${cardType} from ${playerName}'s hand, but no such card was found.`);
+    }
   }
 }
