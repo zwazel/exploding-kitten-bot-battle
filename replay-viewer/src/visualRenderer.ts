@@ -137,7 +137,7 @@ export class VisualRenderer {
           break;
 
         case "combo_play":
-          await this.animationController.animateComboPlay(event.player, event.cards);
+          await this.animationController.animateComboPlay(event.player, event.cards, event.target);
           break;
 
         case "see_future":
@@ -164,6 +164,18 @@ export class VisualRenderer {
 
         case "shuffle":
           await this.animationController.animateShuffle();
+          break;
+
+        case "favor":
+          await this.animationController.animateFavor(event.player, event.target);
+          break;
+
+        case "card_steal":
+          await this.animationController.animateCardSteal(event.thief, event.victim);
+          break;
+
+        case "card_request":
+          await this.animationController.animateCardRequest(event.requester, event.target);
           break;
 
         case "player_elimination":

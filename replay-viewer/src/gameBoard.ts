@@ -374,6 +374,27 @@ export class GameBoard {
   }
 
   /**
+   * Mark a player as targeted (by an action like Favor, combo, etc.)
+   */
+  markTargetPlayer(playerName: string, mark: boolean): void {
+    const playerArea = this.container.querySelector(`#player-${playerName}`) as HTMLElement;
+    if (playerArea) {
+      if (mark) {
+        // Mark as targeted with red border and background
+        playerArea.style.borderColor = "#ff4444";
+        playerArea.style.background = "rgba(255, 0, 0, 0.2)";
+        playerArea.style.boxShadow = "0 0 20px rgba(255, 68, 68, 0.5)";
+      } else {
+        // Reset to default green (unless it's the current player, which should be yellow)
+        // Note: highlightPlayer will override this for the active player
+        playerArea.style.borderColor = "#44ff44";
+        playerArea.style.background = "rgba(0, 255, 0, 0.1)";
+        playerArea.style.boxShadow = "none";
+      }
+    }
+  }
+
+  /**
    * Mark a player as eliminated
    */
   eliminatePlayer(playerName: string): void {
