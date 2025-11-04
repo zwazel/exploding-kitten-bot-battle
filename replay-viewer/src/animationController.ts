@@ -663,10 +663,12 @@ export class AnimationController {
       this.playerHands.set(playerName, playerHand);
       this.gameBoard.removeCard(cardId);
     } else if (playerHand.length > 0) {
-      // Fallback: remove first card
-      const cardId = playerHand.shift()!;
-      this.playerHands.set(playerName, playerHand);
-      this.gameBoard.removeCard(cardId);
+      // Determinism violation: card type not found in hand
+      console.warn(
+        `[Determinism violation] Tried to remove card of type ${cardType} from ${playerName}'s hand, but no such card was found. Hand: [${playerHand.join(", ")}]`
+      );
+      // Optionally, throw an error to enforce strict determinism:
+      // throw new Error(`[Determinism violation] Tried to remove card of type ${cardType} from ${playerName}'s hand, but no such card was found.`);
     }
   }
 }
