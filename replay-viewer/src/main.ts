@@ -13,6 +13,7 @@ class ReplayApp {
   private renderer!: VisualRenderer;
   private fileInput: HTMLInputElement | null = null;
   private isProcessingEvent = false;
+  private lastEventIndex = 0; // Track last event index to detect backward movement
 
   constructor() {
     this.player = new ReplayPlayer();
@@ -155,6 +156,9 @@ class ReplayApp {
       // Update event counter
       this.updateEventCounter(0, data.events.length);
 
+      // Reset last event index
+      this.lastEventIndex = 0;
+
       // Show first event
       this.player.jumpToEvent(0);
     } catch (error) {
@@ -174,6 +178,7 @@ class ReplayApp {
 
   private stop(): void {
     this.player.stop();
+    this.lastEventIndex = 0;
     this.rebuildStateFromScratch();
   }
 
@@ -219,6 +224,14 @@ class ReplayApp {
       const event = replayData.events[eventIndex];
       if (!event) return;
 
+      // If moving backward, rebuild the entire state from scratch
+      // to ensure discard pile and all game state is correct
+      if (eventIndex < this.lastEventIndex) {
+        await this.rebuildStateFromScratch();
+        this.lastEventIndex = eventIndex;
+        return;
+      }
+
       // Calculate deck size at this point
       let deckSize = 33; // Default starting size
       const setupEvent = replayData.events.find(e => e.type === "game_setup");
@@ -234,7 +247,7 @@ class ReplayApp {
         }
       }
 
-      // Render the event with animation
+      // Render the event with animation (forward movement)
       await this.renderer.renderEvent(event, deckSize);
       
       // Update event slider
@@ -243,6 +256,9 @@ class ReplayApp {
       
       // Update event counter
       this.updateEventCounter(eventIndex, replayData.events.length);
+      
+      // Update last event index
+      this.lastEventIndex = eventIndex;
     } finally {
       this.isProcessingEvent = false;
     }
