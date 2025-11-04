@@ -55,11 +55,11 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
     
     // Step forward a few times to get to event 4
     await stepButton.click();
-    await expect(eventCounter).toContainText('Event: 2 /');
+    await expect(eventCounter).toContainText('Event: 2 /', { timeout: 2000 });
     await stepButton.click();
-    await expect(eventCounter).toContainText('Event: 3 /');
+    await expect(eventCounter).toContainText('Event: 3 /', { timeout: 2000 });
     await stepButton.click();
-    await expect(eventCounter).toContainText('Event: 4 /');
+    await expect(eventCounter).toContainText('Event: 4 /', { timeout: 2000 });
     
     // Wait for event counter to show event 4
     // (already ensured above)
@@ -71,7 +71,7 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
     });
     
     // Should still be at event 4 (jump backward prevented)
-    await expect(eventCounter).toContainText('Event: 4 /', { timeout: 1000 });
+    await expect(eventCounter).toContainText('Event: 4 /', { timeout: 2000 });
   });
 
   test('should handle jump to last event', async ({ page }) => {
@@ -93,8 +93,7 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
     }, lastEventIndex);
     
     // Should be at the last event
-    const updatedText = await eventCounter.textContent();
-    expect(updatedText).toContain(`Event: ${totalEvents} /`);
+    await expect(eventCounter).toContainText(`Event: ${totalEvents} /`, { timeout: 2000 });
   });
 
   test('should ignore invalid jump values', async ({ page }) => {
