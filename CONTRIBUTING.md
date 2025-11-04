@@ -289,6 +289,67 @@ class InfoBot(Bot):
    - File: `MyBot.py`
    - Class: `class MyBot(Bot):`
 
+## Testing Your Bot
+
+### Single Game Testing
+Run a single game to see how your bot behaves:
+```bash
+python3 main.py --test
+```
+
+This mode:
+- Shows detailed output of each turn
+- Displays all card plays and decisions
+- Useful for debugging strategy
+
+### Performance Testing with Statistics
+Evaluate your bot's performance over many games:
+```bash
+python3 main.py --stats my_bot_stats.json --runs 100
+```
+
+This mode:
+- Runs 100 games automatically (or specify with `--runs N`)
+- Minimal console output for speed
+- Shows progress every 10 games
+- Generates comprehensive statistics
+
+**Example output:**
+```
+Running 100 games for statistics...
+Progress: 10/100 games completed (10.0%)
+Progress: 20/100 games completed (20.0%)
+...
+Progress: 100/100 games completed (100.0%)
+
+STATISTICS SUMMARY - 100 games played
+
+MyBot:
+  Wins: 42/100 (42.0%)
+  Average Placement: 1.85
+  Placement Distribution:
+    1st   :  42 ( 42.0%) █████████████████████
+    2nd   :  31 ( 31.0%) ███████████████
+    3rd   :  27 ( 27.0%) █████████████
+```
+
+**What to look for in statistics:**
+- **Win Rate**: Higher is better (33.3% is average for 3 bots)
+- **Average Placement**: Lower is better (1.0 = always wins)
+- **Placement Distribution**: Should see more 1st place finishes than 2nd/3rd
+
+**Comparing bots:**
+Run statistics mode with multiple bots to compare strategies:
+```bash
+# Make sure your bot file is in bots/ directory
+ls bots/
+# MyBot.py  AggressiveBot.py  CautiousBot.py  RandomBot.py
+
+python3 main.py --stats comparison.json --runs 200
+```
+
+The statistics file contains detailed JSON data for further analysis.
+
 ## Have Fun!
 
 Remember, this is a learning exercise and a fun competition. Try different strategies, learn from failures, and iterate on your design. Good luck! 🎮
