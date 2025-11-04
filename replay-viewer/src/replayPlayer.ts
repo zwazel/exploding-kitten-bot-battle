@@ -103,7 +103,8 @@ export class ReplayPlayer {
     this.playbackState.currentEventIndex = 0;
     this.playbackState.isPaused = false;
     this.notifyStateChange();
-    // Don't notify current event - let the caller handle display update
+    // Don't notify current event here - the UI handler will manually update the display
+    // to avoid race conditions with the reset logic that needs to happen first
   }
 
   /**
