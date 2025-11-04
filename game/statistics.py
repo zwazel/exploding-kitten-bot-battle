@@ -11,7 +11,10 @@ class GameStatistics:
     def __init__(self):
         """Initialize statistics tracking."""
         self.total_games = 0
-        # Track placements: bot_name -> list of placements (1 = winner, higher = earlier elimination)
+        # Track placements: bot_name -> list of placements (1 = winner, higher = eliminated earlier)
+        # placement 1 = winner (last alive)
+        # placement 2 = second place (second to last eliminated)
+        # placement 3 = third place (third to last eliminated), etc.
         self.placements: Dict[str, List[int]] = defaultdict(list)
         # Track win counts
         self.wins: Dict[str, int] = defaultdict(int)

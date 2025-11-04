@@ -401,12 +401,21 @@ class GameEngine:
         # Winner gets 1st place
         alive_bots = [bot for bot in self.bots if bot.alive]
         if alive_bots:
-            placements.append((alive_bots[0].name, 1))
+            # In a normal game, there should be exactly one winner
+            # If multiple bots are alive, only the first is considered the winner
+            if len(alive_bots) > 1:
+                # This can happen if the game ends due to max turns
+                # All alive bots share first place in this edge case
+                for bot in alive_bots:
+                    placements.append((bot.name, 1))
+            else:
+                placements.append((alive_bots[0].name, 1))
         
         # Eliminated bots get placements based on reverse elimination order
         # Last eliminated = 2nd place, second-to-last = 3rd place, etc.
+        placement_offset = len(alive_bots) + 1  # Account for multiple winners
         for i, bot_name in enumerate(reversed(self.elimination_order)):
-            placement = i + 2  # Start at 2 since 1 is the winner
+            placement = i + placement_offset
             placements.append((bot_name, placement))
         
         return placements
