@@ -151,8 +151,6 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
     
-    await page.waitForTimeout(500);
-    
     // Playback should be paused
     await expect(playPauseButton).toContainText('▶️');
   });
