@@ -29,8 +29,12 @@ export class GameBoard {
   private discardPileStack: CardType[] = []; // Track discard pile cards
 
   // Board positions (centered on the 1200x800 board)
-  private deckPosition: Position = { x: 550, y: 340 };
-  private discardPosition: Position = { x: 650, y: 340 };
+  // Deck and discard piles are in a centered container
+  // Deck: left -150px from center (600px), top -60px from center (400px), 100x140px box
+  // Discard: left 0px from center, top -60px from center, 100x140px box
+  // Position for card top-left corner to center it on the pile (card is 80x112):
+  private deckPosition: Position = { x: 460, y: 354 };
+  private discardPosition: Position = { x: 610, y: 354 };
   
   constructor(container: HTMLElement) {
     this.container = container;
