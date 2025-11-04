@@ -89,9 +89,37 @@ class ReplayApp {
 
     // Event slider
     const eventSlider = document.querySelector<HTMLInputElement>("#event-slider")!;
+    let sliderTimeout: number | null = null;
     eventSlider.addEventListener("input", (e) => {
       const index = parseInt((e.target as HTMLInputElement).value);
-      this.player.jumpToEvent(index);
+      
+      // Debounce slider movements to avoid rebuilding state on every small change
+      if (sliderTimeout !== null) {
+        clearTimeout(sliderTimeout);
+      }
+      
+      sliderTimeout = window.setTimeout(() => {
+        // Pause playback while jumping
+        const wasPlaying = this.player.getPlaybackState().isPlaying;
+        if (wasPlaying) {
+          this.player.pause();
+        }
+        
+        // Jump to the event
+        this.player.jumpToEvent(index);
+        
+        // Rebuild state from scratch to avoid long animation sequences
+        this.rebuildStateFromScratch().then(() => {
+          // Resume if was playing
+          if (wasPlaying) {
+            this.player.play();
+          }
+        }).catch((error) => {
+          console.error("Error rebuilding state:", error);
+        });
+        
+        sliderTimeout = null;
+      }, 100); // Small debounce delay
     });
 
     // Player callbacks
@@ -146,11 +174,24 @@ class ReplayApp {
 
   private stop(): void {
     this.player.stop();
-    this.renderer.reset();
+    this.rebuildStateFromScratch();
+  }
+
+  /**
+   * Rebuild the entire state from scratch without animations
+   */
+  private async rebuildStateFromScratch(): Promise<void> {
     const replayData = this.player.getReplayData();
-    if (replayData) {
-      this.renderer.renderGameSetup(replayData);
-    }
+    if (!replayData) return;
+
+    // Rebuild entire state up to current index
+    const currentIndex = this.player.getPlaybackState().currentEventIndex;
+    await this.renderer.rebuildFromScratch(replayData.events.slice(0, currentIndex + 1));
+    
+    // Update UI
+    this.updateEventCounter(currentIndex, replayData.events.length);
+    const eventSlider = document.querySelector<HTMLInputElement>("#event-slider")!;
+    eventSlider.value = currentIndex.toString();
   }
 
   private async stepForward(): Promise<void> {

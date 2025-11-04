@@ -12,6 +12,7 @@ export class AnimationController {
   private gameBoard: GameBoard;
   private playerHands: Map<string, string[]> = new Map(); // player -> card IDs
   private currentPlayer: string | null = null;
+  private explodingKittenCardId: string | null = null; // Track exploding kitten card for defuse
 
   constructor(gameBoard: GameBoard) {
     this.gameBoard = gameBoard;
@@ -100,7 +101,7 @@ export class AnimationController {
     await this.delay(200);
 
     // Update discard pile to show this card
-    this.gameBoard.setLastDiscardedCard(cardType);
+    this.gameBoard.addToDiscardPile(cardType);
 
     // Remove from board after updating discard pile
     this.gameBoard.removeCard(cardId);
@@ -207,6 +208,195 @@ export class AnimationController {
   }
 
   /**
+   * Set the current player (for state rebuilding)
+   */
+  setCurrentPlayer(playerName: string | null): void {
+    this.currentPlayer = playerName;
+  }
+
+  /**
+   * Animate "See the Future" - show 3 cards from deck, then return them
+   */
+  async animateSeeFuture(playerName: string, topCards: CardType[]): Promise<void> {
+    const deckPos = this.gameBoard.getDeckPosition();
+    const centerPos = this.gameBoard.getCenterPosition();
+
+    // Create temporary card elements
+    const cardIds: string[] = [];
+    for (let i = 0; i < topCards.length; i++) {
+      const cardId = `see-future-${Date.now()}-${i}`;
+      this.gameBoard.createCard(topCards[i], deckPos, cardId);
+      cardIds.push(cardId);
+      
+      // Animate to center with offset
+      await this.delay(100);
+      const offset = (i - (topCards.length - 1) / 2) * 30;
+      await this.gameBoard.moveCard(cardId, {
+        ...centerPos,
+        x: centerPos.x + offset,
+        y: centerPos.y - 100,
+        rotation: 0,
+        zIndex: 1000 + i
+      }, 400);
+    }
+
+    // Show them prominently in center display
+    await this.gameBoard.showCenterDisplay(topCards, `${playerName} sees the future...`);
+    await this.delay(2000);
+    await this.gameBoard.hideCenterDisplay();
+
+    // Animate cards back to deck
+    for (const cardId of cardIds) {
+      await this.gameBoard.moveCard(cardId, deckPos, 400);
+      await this.delay(50);
+    }
+
+    // Remove the cards
+    for (const cardId of cardIds) {
+      this.gameBoard.removeCard(cardId);
+    }
+  }
+
+  /**
+   * Animate nope card play with showoff effect for chains
+   */
+  async animateNope(event: any): Promise<void> {
+    // Show nope animation with the original action and the noping player
+    const originalAction = event.original_action || "an action";
+    const targetPlayer = event.target_player || "someone";
+    
+    await this.gameBoard.showNopeAnimation(
+      event.player,
+      targetPlayer,
+      originalAction
+    );
+    
+    await this.delay(1500);
+    await this.gameBoard.hideNopeAnimation();
+  }
+
+  /**
+   * Animate exploding kitten draw with explosion effect
+   */
+  async animateExplodingKittenDraw(playerName: string, hadDefuse: boolean): Promise<void> {
+    const deckPos = this.gameBoard.getDeckPosition();
+    const centerPos = this.gameBoard.getCenterPosition();
+
+    // Create exploding kitten card and track it
+    this.explodingKittenCardId = `exploding-kitten-${Date.now()}`;
+    this.gameBoard.createCard("EXPLODING_KITTEN", deckPos, this.explodingKittenCardId);
+
+    // Animate to center
+    await this.delay(100);
+    await this.gameBoard.moveCard(this.explodingKittenCardId, {
+      ...centerPos,
+      rotation: 0,
+      zIndex: 1000
+    }, 500);
+
+    // Show explosion effect if no defuse
+    if (!hadDefuse) {
+      await this.gameBoard.showCenterDisplay(
+        ["EXPLODING_KITTEN"],
+        `💥 ${playerName} EXPLODED! 💥`,
+        true
+      );
+      await this.delay(2500);
+      await this.gameBoard.hideCenterDisplay();
+      this.gameBoard.removeCard(this.explodingKittenCardId);
+      this.explodingKittenCardId = null;
+    } else {
+      // Show that they have a defuse
+      await this.gameBoard.showCenterDisplay(
+        ["EXPLODING_KITTEN"],
+        `💣 ${playerName} drew an Exploding Kitten!`
+      );
+      await this.delay(1500);
+      await this.gameBoard.hideCenterDisplay();
+      
+      // Keep the card for the defuse animation
+    }
+  }
+
+  /**
+   * Animate defuse card play
+   */
+  async animateDefuse(playerName: string, _insertPosition: number): Promise<void> {
+    const playerHand = this.playerHands.get(playerName) || [];
+    const centerPos = this.gameBoard.getCenterPosition();
+
+    // Find defuse card in hand (or use first card)
+    const defuseCardId = playerHand.shift();
+    if (defuseCardId) {
+      this.playerHands.set(playerName, playerHand);
+
+      // Animate defuse card to center
+      await this.gameBoard.moveCard(defuseCardId, {
+        ...centerPos,
+        x: centerPos.x - 60,
+        rotation: -10,
+        zIndex: 1001
+      }, 500);
+    }
+
+    // Show both cards in center
+    await this.gameBoard.showCenterDisplay(
+      ["DEFUSE", "EXPLODING_KITTEN"],
+      `🛡️ ${playerName} defused the kitten!`
+    );
+    await this.delay(2000);
+    await this.gameBoard.hideCenterDisplay();
+
+    // Remove exploding kitten card (it goes back to deck)
+    if (this.explodingKittenCardId) {
+      this.gameBoard.removeCard(this.explodingKittenCardId);
+      this.explodingKittenCardId = null;
+    }
+
+    // Move defuse to discard pile
+    if (defuseCardId) {
+      const discardPos = this.gameBoard.getDiscardPosition();
+      await this.gameBoard.moveCard(defuseCardId, { ...discardPos, rotation: 0, zIndex: 10 }, 500);
+      await this.delay(200);
+      
+      // Add to discard pile
+      this.gameBoard.addToDiscardPile("DEFUSE");
+      this.gameBoard.removeCard(defuseCardId);
+    }
+
+    // Reorganize hand
+    await this.reorganizePlayerHand(playerName);
+  }
+
+  /**
+   * Animate discard pile take (for 5-unique combo)
+   */
+  async animateDiscardTake(playerName: string, cardType: CardType): Promise<void> {
+    const discardPos = this.gameBoard.getDiscardPosition();
+    const playerHand = this.playerHands.get(playerName) || [];
+    const handIndex = playerHand.length;
+    const handPos = this.gameBoard.getPlayerHandPosition(playerName, handIndex, handIndex + 1);
+
+    // Remove from discard pile
+    this.gameBoard.removeFromDiscardPile(cardType);
+
+    // Create card at discard position
+    const cardId = `${playerName}-discard-take-${Date.now()}`;
+    this.gameBoard.createCard(cardType, discardPos, cardId);
+
+    // Animate to player hand
+    await this.delay(100);
+    await this.gameBoard.moveCard(cardId, handPos, 500);
+
+    // Add to player's hand
+    playerHand.push(cardId);
+    this.playerHands.set(playerName, playerHand);
+    
+    // Reorganize hand
+    await this.reorganizePlayerHand(playerName);
+  }
+
+  /**
    * Helper delay function
    */
   private delay(ms: number): Promise<void> {
@@ -219,6 +409,7 @@ export class AnimationController {
   reset(): void {
     this.playerHands.clear();
     this.currentPlayer = null;
+    this.explodingKittenCardId = null;
     this.gameBoard.clearCards();
   }
 }
