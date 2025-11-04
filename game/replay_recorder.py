@@ -99,17 +99,27 @@ class ReplayRecorder:
         
         self.events.append(event)
     
-    def record_nope(self, player_name: str, action_description: str) -> None:
+    def record_nope(self, player_name: str, action_description: str, 
+                   original_action: Optional[str] = None, 
+                   target_player: Optional[str] = None) -> None:
         """Record a Nope card being played."""
         if not self.enabled:
             return
         
-        self.events.append({
+        event: Dict[str, Any] = {
             "type": "nope",
             "turn_number": self.turn_number,
             "player": player_name,
             "action": action_description
-        })
+        }
+        
+        if original_action:
+            event["original_action"] = original_action
+        
+        if target_player:
+            event["target_player"] = target_player
+        
+        self.events.append(event)
     
     def record_card_draw(self, player_name: str, card_type: CardType) -> None:
         """Record a card being drawn."""
@@ -159,8 +169,8 @@ class ReplayRecorder:
             "player": player_name
         })
     
-    def record_see_future(self, player_name: str, num_cards: int) -> None:
-        """Record a player using See the Future."""
+    def record_see_future(self, player_name: str, cards: List[Card]) -> None:
+        """Record a player using See the Future with the actual cards seen."""
         if not self.enabled:
             return
         
@@ -168,7 +178,7 @@ class ReplayRecorder:
             "type": "see_future",
             "turn_number": self.turn_number,
             "player": player_name,
-            "cards_seen": num_cards
+            "cards_seen": [card.card_type.name for card in cards]
         })
     
     def record_shuffle(self, player_name: str) -> None:
