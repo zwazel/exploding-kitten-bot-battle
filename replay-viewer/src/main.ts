@@ -233,6 +233,9 @@ class ReplayApp {
       // Process all events from current+1 to target (inclusive) silently
       // This includes the target event to save time by not animating it
       const startIndex = currentState.currentEventIndex + 1;
+      // Process all events from current+1 up to and including the target event silently.
+      // This includes the target event itself (hence +1 in the slice) so that we do not animate it,
+      // which saves time and ensures the jump is instantaneous. See method JSDoc for details.
       const eventsToProcess = replayData.events.slice(startIndex, targetEventIndex + 1); // slice(start, end) is exclusive of end, so +1 to include targetEventIndex
       
       if (eventsToProcess.length > 0) {
