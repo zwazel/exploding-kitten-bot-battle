@@ -113,10 +113,23 @@ export class AnimationController {
   /**
    * Animate combo play (multiple cards)
    */
-  async animateComboPlay(playerName: string, cards: CardType[]): Promise<void> {
+  async animateComboPlay(playerName: string, cards: CardType[], target?: string): Promise<void> {
+    // Mark target player if present
+    if (target) {
+      this.gameBoard.markTargetPlayer(target, true);
+    }
+
     for (const cardType of cards) {
       await this.animateCardPlay(playerName, cardType);
       await this.delay(200);
+    }
+
+    // Hold the target marking for a moment
+    await this.delay(800);
+
+    // Unmark target player
+    if (target) {
+      this.gameBoard.markTargetPlayer(target, false);
     }
   }
 
@@ -239,6 +252,11 @@ export class AnimationController {
     const originalAction = event.original_action || "an action";
     const targetPlayer = event.target_player || "someone";
     
+    // Mark the player whose action is being noped
+    if (targetPlayer && targetPlayer !== "someone") {
+      this.gameBoard.markTargetPlayer(targetPlayer, true);
+    }
+    
     await this.gameBoard.showNopeAnimation(
       event.player,
       targetPlayer,
@@ -247,6 +265,11 @@ export class AnimationController {
     
     await this.delay(1500);
     await this.gameBoard.hideNopeAnimation();
+    
+    // Unmark the target player
+    if (targetPlayer && targetPlayer !== "someone") {
+      this.gameBoard.markTargetPlayer(targetPlayer, false);
+    }
   }
 
   /**
@@ -368,6 +391,48 @@ export class AnimationController {
     
     // Reorganize hand
     await this.reorganizePlayerHand(playerName);
+  }
+
+  /**
+   * Animate favor action - mark the target player
+   */
+  async animateFavor(playerName: string, target: string): Promise<void> {
+    // Mark target player
+    this.gameBoard.markTargetPlayer(target, true);
+    
+    // Hold for a moment to show the targeting
+    await this.delay(1000);
+    
+    // Unmark target player
+    this.gameBoard.markTargetPlayer(target, false);
+  }
+
+  /**
+   * Animate card steal - mark the victim
+   */
+  async animateCardSteal(thief: string, victim: string): Promise<void> {
+    // Mark victim player
+    this.gameBoard.markTargetPlayer(victim, true);
+    
+    // Hold for a moment to show the targeting
+    await this.delay(1000);
+    
+    // Unmark victim player
+    this.gameBoard.markTargetPlayer(victim, false);
+  }
+
+  /**
+   * Animate card request - mark the target player
+   */
+  async animateCardRequest(requester: string, target: string): Promise<void> {
+    // Mark target player
+    this.gameBoard.markTargetPlayer(target, true);
+    
+    // Hold for a moment to show the targeting
+    await this.delay(1000);
+    
+    // Unmark target player
+    this.gameBoard.markTargetPlayer(target, false);
   }
 
   /**
