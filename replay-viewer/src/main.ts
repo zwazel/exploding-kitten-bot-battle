@@ -229,7 +229,8 @@ class ReplayApp {
       const eventsToProcess = replayData.events.slice(startIndex, targetEventIndex + 1); // slice(start, end) is exclusive of end, so +1 to include targetEventIndex
       
       if (eventsToProcess.length > 0) {
-        this.renderer.processEventsSilently(eventsToProcess);
+        // Pass the absolute start index to ensure unique card IDs across multiple jumps
+        this.renderer.processEventsSilently(eventsToProcess, startIndex);
       }
 
       // Now jump to the target event using the player's method
