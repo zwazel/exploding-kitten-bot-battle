@@ -20,6 +20,15 @@ exploding-kitten-bot-battle/
 │   ├── RandomBot.py   # Example: plays randomly
 │   ├── CautiousBot.py # Example: plays defensively
 │   └── AggressiveBot.py # Example: plays aggressively
+├── replay-viewer/     # TypeScript web app for viewing replays (DO NOT MODIFY unless fixing replay viewer)
+│   ├── src/           # TypeScript source files
+│   ├── public/        # Static assets
+│   ├── dist/          # Built files (generated, not in git)
+│   ├── index.html     # HTML entry point
+│   ├── package.json   # Node.js dependencies
+│   ├── vite.config.ts # Vite build configuration
+│   ├── README.md      # Replay viewer documentation
+│   └── QUICKSTART.md  # Quick start guide for replay viewer
 ├── tests/             # Unit tests for game components
 │   └── test_game.py   # Comprehensive test suite
 ├── main.py            # Entry point to run the game
@@ -51,8 +60,18 @@ python3 main.py
 # Test mode (automatic, no pauses)
 python3 main.py --test
 
-# With replay recording
+# With replay recording (generates JSON file for replay viewer)
 python3 main.py --test --replay game_replay.json
+```
+
+### Generating Replay Files for Testing
+To generate a replay file that can be used with the replay viewer:
+```bash
+# Generate a replay file from a game simulation
+python3 main.py --test --replay my_game.json
+
+# This creates a JSON file containing all game events
+# Use this file to test the replay viewer
 ```
 
 ### Linting (Optional)
@@ -60,6 +79,27 @@ Optional development tools are listed in `requirements.txt`:
 - `black` for code formatting
 - `flake8` for linting
 - `pytest` as an alternative test runner
+
+### Replay Viewer (TypeScript Web App)
+The replay viewer is a separate TypeScript/Vite application for visualizing game replays:
+```bash
+cd replay-viewer
+npm install          # Install dependencies (first time only)
+npm run dev          # Start development server at http://localhost:5173
+npm run build        # Build for production (output to dist/)
+npm run preview      # Preview production build
+```
+
+**Testing the Replay Viewer:**
+1. Generate a replay file: `python3 main.py --test --replay test_replay.json`
+2. Start the replay viewer: `cd replay-viewer && npm run dev`
+3. Load the replay file in the browser at http://localhost:5173
+
+**GitHub Pages Deployment:**
+- The replay viewer automatically deploys to GitHub Pages when pushed to main branch
+- Workflow: `.github/workflows/deploy-pages.yml`
+- Built files from `replay-viewer/dist/` are deployed
+- Do NOT commit the `dist/` directory to git (it's generated)
 
 ## Code Modification Rules
 
@@ -69,6 +109,8 @@ Optional development tools are listed in `requirements.txt`:
 - **DO NOT modify** existing tests unless they are incorrect
 - **DO NOT change** the game rules or mechanics
 - **DO NOT modify** other students' bots in the `bots/` directory
+- **DO NOT modify** the replay viewer in `replay-viewer/` directory unless fixing a bug in the replay viewer itself
+- **DO NOT commit** the `replay-viewer/dist/` directory (it's auto-generated)
 
 ### ✅ What Can Be Modified
 - **ADD new bots** to the `bots/` directory
@@ -123,12 +165,13 @@ All bots MUST implement these 9 methods from the `Bot` base class:
 
 8. **`should_play_nope(state: GameState, action: GameAction) -> bool`**
    - Called when another player's action can be noped
-   - `action` is a GameAction object containing action details
+   - `action` is a GameAction object containing action details (action_type, card, actor, target, etc.)
    - Return True to play Nope, False otherwise
 
 9. **`on_action_played(state: GameState, action: GameAction, actor: Bot) -> None`**
    - Called when ANY action occurs in the game (for all bots)
-   - `action` is a GameAction object containing action details
+   - `action` is a GameAction object containing action details (action_type, card, actor, target, etc.)
+   - `actor` is the Bot who performed the action
    - Use to track game state, opponent behavior, and game history
    - Can simply `pass` if you don't need to track actions
 
@@ -313,6 +356,42 @@ When adding a new bot:
 - **bots/CautiousBot.py:** Well-commented example of defensive strategy
 - **bots/AggressiveBot.py:** Example of offensive strategy with combos
 - **bots/RandomBot.py:** Minimal example showing basic structure
+- **replay-viewer/README.md:** Replay viewer documentation and features
+- **replay-viewer/QUICKSTART.md:** Quick start guide for the replay viewer
+
+## Replay Viewer
+
+The project includes a TypeScript-based web application for visualizing game replays:
+
+### Purpose
+- Visualize game replays with animations and interactive controls
+- Analyze bot strategies and game flow
+- Debug bot behavior by seeing exact game events
+
+### Technology Stack
+- TypeScript with Vite for fast development
+- No framework dependencies (vanilla JS/CSS)
+- Node.js 20+ required
+
+### Key Files
+- `replay-viewer/src/main.ts` - Application entry point
+- `replay-viewer/src/types.ts` - TypeScript type definitions
+- `replay-viewer/src/replayPlayer.ts` - Replay playback logic
+- `replay-viewer/src/renderer.ts` - UI rendering and visualization
+
+### Working with Replay Viewer
+When making changes to the replay viewer:
+1. Generate a test replay: `python3 main.py --test --replay test.json`
+2. Start dev server: `cd replay-viewer && npm run dev`
+3. Load the replay in browser at http://localhost:5173
+4. Test all playback controls (play, pause, step, speed adjustment)
+5. Build for production: `npm run build` (output to `dist/`)
+6. Never commit the `dist/` directory (it's auto-generated by CI/CD)
+
+### Deployment
+- Automatic deployment to GitHub Pages via `.github/workflows/deploy-pages.yml`
+- Triggers on push to main branch
+- Builds `replay-viewer/dist/` and deploys to Pages
 
 ## Questions or Issues?
 
@@ -326,10 +405,13 @@ When adding a new bot:
 
 When assisting with this repository:
 1. **Never modify** the game engine in `game/` directory
-2. **Always validate** that bots implement all required methods
-3. **Always test** with `python3 -m unittest tests.test_game -v` before committing
-4. **Follow** the Bot class interface exactly
-5. **Reference** existing example bots for patterns
-6. **Validate** combos don't include DEFUSE or EXPLODING_KITTEN
-7. **Ensure** bot class name matches file name
-8. **Keep** changes minimal and focused on bot logic only
+2. **Never modify** the replay viewer in `replay-viewer/` unless fixing replay viewer bugs
+3. **Always validate** that bots implement all required methods
+4. **Always test** with `python3 -m unittest tests.test_game -v` before committing
+5. **Follow** the Bot class interface exactly
+6. **Reference** existing example bots for patterns
+7. **Validate** combos don't include DEFUSE or EXPLODING_KITTEN
+8. **Ensure** bot class name matches file name
+9. **Keep** changes minimal and focused on bot logic only
+10. **Generate replay files** with `python3 main.py --test --replay <filename>.json` to test replay viewer
+11. **Never commit** `replay-viewer/dist/` directory (auto-generated)
