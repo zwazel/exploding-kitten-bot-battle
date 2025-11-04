@@ -1,21 +1,34 @@
-name: Replay Viewer Tests
+name: CI Tests
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'replay-viewer/**'
-      - '.github/workflows/test-replay-viewer.yml'
   push:
     branches:
       - main
-    paths:
-      - 'replay-viewer/**'
-      - '.github/workflows/test-replay-viewer.yml'
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  test:
+  python-tests:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run Python tests
+        run: python3 -m unittest tests.test_game -v
+
+  playwright-tests:
+    name: Playwright Tests
     timeout-minutes: 10
     runs-on: ubuntu-latest
     permissions:
