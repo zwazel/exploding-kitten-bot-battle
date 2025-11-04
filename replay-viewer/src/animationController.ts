@@ -256,11 +256,13 @@ export class AnimationController {
     let nopeCardId: string | undefined;
     
     if (nopeCardIndex === -1) {
+      if (playerHand.length === 0) {
+        console.warn(`NOPE card not found and hand is empty for ${playerName}, skipping NOPE animation`);
+        return;
+      }
       console.warn(`NOPE card not found in ${playerName}'s hand, using first card as fallback`);
       // Fallback: use first card if nope not found
-      if (playerHand.length > 0) {
-        nopeCardId = playerHand.shift();
-      }
+      nopeCardId = playerHand.shift();
     } else {
       // Remove the nope card from the hand
       nopeCardId = playerHand[nopeCardIndex];
