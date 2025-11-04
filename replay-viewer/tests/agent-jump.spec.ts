@@ -134,11 +134,8 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
       el.dispatchEvent(new Event('input', { bubbles: true }));
     }, invalidIndex);
     
-    await page.waitForTimeout(500);
-    
     // Should remain at initial position (event 1)
-    const currentText = await eventCounter.textContent();
-    expect(currentText).toContain('Event: 1 /');
+    await expect(eventCounter).toContainText('Event: 1 /');
   });
 
   test('should stop playback when jumping', async ({ page }) => {
