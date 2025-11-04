@@ -114,10 +114,79 @@ export class AnimationController {
    * Animate combo play (multiple cards)
    */
   async animateComboPlay(playerName: string, cards: CardType[]): Promise<void> {
-    for (const cardType of cards) {
-      await this.animateCardPlay(playerName, cardType);
-      await this.delay(200);
+    const playerHand = this.playerHands.get(playerName) || [];
+    const centerPos = this.gameBoard.getCenterPosition();
+    
+    // Track card IDs that are part of the combo
+    const comboCardIds: string[] = [];
+    
+    // Step 1: Move all combo cards from hand to center, positioned side-by-side
+    const cardSpacing = 90; // Space between cards in center display
+    const totalWidth = (cards.length - 1) * cardSpacing;
+    const startX = centerPos.x - totalWidth / 2;
+    
+    const movePromises: Promise<void>[] = [];
+    
+    for (let i = 0; i < cards.length; i++) {
+      const cardId = playerHand.shift();
+      if (!cardId) continue;
+      
+      comboCardIds.push(cardId);
+      
+      const cardCenterPos = {
+        x: startX + i * cardSpacing,
+        y: centerPos.y,
+        rotation: 0,
+        zIndex: 100 + i
+      };
+      
+      // Move card to center position
+      movePromises.push(this.gameBoard.moveCard(cardId, cardCenterPos, 500));
     }
+    
+    // Update player hand
+    this.playerHands.set(playerName, playerHand);
+    
+    // Wait for all cards to reach center
+    await Promise.all(movePromises);
+    
+    // Step 2: Brief pause to display the combo in center
+    await this.delay(800);
+    
+    // Step 3: Move all combo cards to discard pile together
+    const discardPos = this.gameBoard.getDiscardPosition();
+    const discardMovePromises: Promise<void>[] = [];
+    
+    for (let i = 0; i < comboCardIds.length; i++) {
+      const cardId = comboCardIds[i];
+      // Slightly offset each card in the discard pile for visual effect
+      const offset = i * 2;
+      discardMovePromises.push(
+        this.gameBoard.moveCard(cardId, { 
+          ...discardPos, 
+          x: discardPos.x + offset,
+          y: discardPos.y + offset,
+          rotation: 0, 
+          zIndex: 10 + i 
+        }, 500)
+      );
+    }
+    
+    await Promise.all(discardMovePromises);
+    await this.delay(200);
+    
+    // Step 4: Add all cards to discard pile and remove from board
+    for (let i = 0; i < cards.length; i++) {
+      this.gameBoard.addToDiscardPile(cards[i]);
+    }
+    
+    // Remove card elements from board
+    for (const cardId of comboCardIds) {
+      this.gameBoard.removeCard(cardId);
+    }
+    
+    // Step 5: Reorganize remaining cards in hand
+    await this.reorganizePlayerHand(playerName);
   }
 
   /**

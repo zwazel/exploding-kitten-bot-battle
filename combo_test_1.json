@@ -1,0 +1,789 @@
+{
+  "metadata": {
+    "timestamp": "2025-11-04T12:35:29.490674",
+    "players": [
+      "AggressiveBot",
+      "CautiousBot",
+      "RandomBot"
+    ],
+    "version": "1.0"
+  },
+  "events": [
+    {
+      "type": "game_setup",
+      "deck_size": 33,
+      "initial_hand_size": 7,
+      "play_order": [
+        "AggressiveBot",
+        "RandomBot",
+        "CautiousBot"
+      ],
+      "initial_hands": {
+        "AggressiveBot": [
+          "DEFUSE",
+          "NOPE",
+          "TACOCAT",
+          "FAVOR",
+          "HAIRY_POTATO_CAT",
+          "RAINBOW_RALPHING_CAT",
+          "NOPE"
+        ],
+        "RandomBot": [
+          "DEFUSE",
+          "SEE_THE_FUTURE",
+          "FAVOR",
+          "SEE_THE_FUTURE",
+          "SKIP",
+          "NOPE",
+          "ATTACK"
+        ],
+        "CautiousBot": [
+          "DEFUSE",
+          "SKIP",
+          "BEARD_CAT",
+          "RAINBOW_RALPHING_CAT",
+          "DEFUSE",
+          "RAINBOW_RALPHING_CAT",
+          "NOPE"
+        ]
+      }
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 1,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 7,
+      "cards_in_deck": 33
+    },
+    {
+      "type": "card_play",
+      "turn_number": 1,
+      "player": "AggressiveBot",
+      "card": "FAVOR"
+    },
+    {
+      "type": "favor",
+      "turn_number": 1,
+      "player": "AggressiveBot",
+      "target": "RandomBot"
+    },
+    {
+      "type": "nope",
+      "turn_number": 1,
+      "player": "RandomBot",
+      "action": "AggressiveBot playing FAVOR on RandomBot",
+      "original_action": "FAVOR",
+      "target_player": "AggressiveBot"
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 1,
+      "player": "AggressiveBot",
+      "card": "CATTERMELON"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 2,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 6,
+      "cards_in_deck": 32
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 2,
+      "player": "RandomBot",
+      "card": "SHUFFLE"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 3,
+      "player": "CautiousBot",
+      "turns_remaining": 1,
+      "hand_size": 7,
+      "cards_in_deck": 31
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 3,
+      "player": "CautiousBot",
+      "card": "SKIP"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 4,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 7,
+      "cards_in_deck": 30
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 4,
+      "player": "AggressiveBot",
+      "card": "SEE_THE_FUTURE"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 5,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 7,
+      "cards_in_deck": 29
+    },
+    {
+      "type": "card_play",
+      "turn_number": 5,
+      "player": "RandomBot",
+      "card": "SEE_THE_FUTURE"
+    },
+    {
+      "type": "nope",
+      "turn_number": 5,
+      "player": "AggressiveBot",
+      "action": "RandomBot playing SEE_THE_FUTURE",
+      "original_action": "SEE_THE_FUTURE",
+      "target_player": "RandomBot"
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 5,
+      "player": "RandomBot",
+      "card": "BEARD_CAT"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 6,
+      "player": "CautiousBot",
+      "turns_remaining": 1,
+      "hand_size": 8,
+      "cards_in_deck": 28
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 6,
+      "player": "CautiousBot",
+      "card": "HAIRY_POTATO_CAT"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 7,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 7,
+      "cards_in_deck": 27
+    },
+    {
+      "type": "card_play",
+      "turn_number": 7,
+      "player": "AggressiveBot",
+      "card": "SEE_THE_FUTURE"
+    },
+    {
+      "type": "see_future",
+      "turn_number": 7,
+      "player": "AggressiveBot",
+      "cards_seen": [
+        "CATTERMELON",
+        "DEFUSE",
+        "FAVOR"
+      ]
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 7,
+      "player": "AggressiveBot",
+      "card": "CATTERMELON"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 8,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 7,
+      "cards_in_deck": 26
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 8,
+      "player": "RandomBot",
+      "card": "DEFUSE"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 9,
+      "player": "CautiousBot",
+      "turns_remaining": 1,
+      "hand_size": 9,
+      "cards_in_deck": 25
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 9,
+      "player": "CautiousBot",
+      "card": "FAVOR"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 10,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 7,
+      "cards_in_deck": 24
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 10,
+      "player": "AggressiveBot",
+      "card": "SEE_THE_FUTURE"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 11,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 8,
+      "cards_in_deck": 23
+    },
+    {
+      "type": "exploding_kitten_draw",
+      "turn_number": 11,
+      "player": "RandomBot",
+      "had_defuse": true
+    },
+    {
+      "type": "defuse",
+      "turn_number": 11,
+      "player": "RandomBot",
+      "insert_position": 14
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 12,
+      "player": "CautiousBot",
+      "turns_remaining": 1,
+      "hand_size": 10,
+      "cards_in_deck": 23
+    },
+    {
+      "type": "card_play",
+      "turn_number": 12,
+      "player": "CautiousBot",
+      "card": "SKIP"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 13,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 8,
+      "cards_in_deck": 23
+    },
+    {
+      "type": "card_play",
+      "turn_number": 13,
+      "player": "AggressiveBot",
+      "card": "SEE_THE_FUTURE"
+    },
+    {
+      "type": "see_future",
+      "turn_number": 13,
+      "player": "AggressiveBot",
+      "cards_seen": [
+        "HAIRY_POTATO_CAT",
+        "NOPE",
+        "FAVOR"
+      ]
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 13,
+      "player": "AggressiveBot",
+      "card": "HAIRY_POTATO_CAT"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 14,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 7,
+      "cards_in_deck": 22
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 14,
+      "player": "RandomBot",
+      "card": "NOPE"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 15,
+      "player": "CautiousBot",
+      "turns_remaining": 1,
+      "hand_size": 9,
+      "cards_in_deck": 21
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 15,
+      "player": "CautiousBot",
+      "card": "FAVOR"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 16,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 8,
+      "cards_in_deck": 20
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 16,
+      "player": "AggressiveBot",
+      "card": "TACOCAT"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 17,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 8,
+      "cards_in_deck": 19
+    },
+    {
+      "type": "card_play",
+      "turn_number": 17,
+      "player": "RandomBot",
+      "card": "SHUFFLE"
+    },
+    {
+      "type": "shuffle",
+      "turn_number": 17,
+      "player": "RandomBot"
+    },
+    {
+      "type": "card_play",
+      "turn_number": 17,
+      "player": "RandomBot",
+      "card": "SKIP"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 18,
+      "player": "CautiousBot",
+      "turns_remaining": 1,
+      "hand_size": 10,
+      "cards_in_deck": 19
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 18,
+      "player": "CautiousBot",
+      "card": "SKIP"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 19,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 9,
+      "cards_in_deck": 18
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 19,
+      "player": "AggressiveBot",
+      "card": "SHUFFLE"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 20,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 6,
+      "cards_in_deck": 17
+    },
+    {
+      "type": "card_play",
+      "turn_number": 20,
+      "player": "RandomBot",
+      "card": "SEE_THE_FUTURE"
+    },
+    {
+      "type": "nope",
+      "turn_number": 20,
+      "player": "AggressiveBot",
+      "action": "RandomBot playing SEE_THE_FUTURE",
+      "original_action": "SEE_THE_FUTURE",
+      "target_player": "RandomBot"
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 20,
+      "player": "RandomBot",
+      "card": "RAINBOW_RALPHING_CAT"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 21,
+      "player": "CautiousBot",
+      "turns_remaining": 1,
+      "hand_size": 11,
+      "cards_in_deck": 16
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 21,
+      "player": "CautiousBot",
+      "card": "TACOCAT"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 22,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 9,
+      "cards_in_deck": 15
+    },
+    {
+      "type": "card_play",
+      "turn_number": 22,
+      "player": "AggressiveBot",
+      "card": "SHUFFLE"
+    },
+    {
+      "type": "shuffle",
+      "turn_number": 22,
+      "player": "AggressiveBot"
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 22,
+      "player": "AggressiveBot",
+      "card": "DEFUSE"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 23,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 6,
+      "cards_in_deck": 14
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 23,
+      "player": "RandomBot",
+      "card": "BEARD_CAT"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 24,
+      "player": "CautiousBot",
+      "turns_remaining": 1,
+      "hand_size": 12,
+      "cards_in_deck": 13
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 24,
+      "player": "CautiousBot",
+      "card": "ATTACK"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 25,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 9,
+      "cards_in_deck": 12
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 25,
+      "player": "AggressiveBot",
+      "card": "SHUFFLE"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 26,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 7,
+      "cards_in_deck": 11
+    },
+    {
+      "type": "card_play",
+      "turn_number": 26,
+      "player": "RandomBot",
+      "card": "FAVOR"
+    },
+    {
+      "type": "favor",
+      "turn_number": 26,
+      "player": "RandomBot",
+      "target": "AggressiveBot"
+    },
+    {
+      "type": "card_steal",
+      "turn_number": 26,
+      "thief": "RandomBot",
+      "victim": "AggressiveBot",
+      "context": "favor"
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 26,
+      "player": "RandomBot",
+      "card": "SHUFFLE"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 27,
+      "player": "CautiousBot",
+      "turns_remaining": 1,
+      "hand_size": 13,
+      "cards_in_deck": 10
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 27,
+      "player": "CautiousBot",
+      "card": "HAIRY_POTATO_CAT"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 28,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 9,
+      "cards_in_deck": 9
+    },
+    {
+      "type": "card_play",
+      "turn_number": 28,
+      "player": "AggressiveBot",
+      "card": "SHUFFLE"
+    },
+    {
+      "type": "shuffle",
+      "turn_number": 28,
+      "player": "AggressiveBot"
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 28,
+      "player": "AggressiveBot",
+      "card": "CATTERMELON"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 29,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 8,
+      "cards_in_deck": 8
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 29,
+      "player": "RandomBot",
+      "card": "ATTACK"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 30,
+      "player": "CautiousBot",
+      "turns_remaining": 1,
+      "hand_size": 14,
+      "cards_in_deck": 7
+    },
+    {
+      "type": "exploding_kitten_draw",
+      "turn_number": 30,
+      "player": "CautiousBot",
+      "had_defuse": true
+    },
+    {
+      "type": "defuse",
+      "turn_number": 30,
+      "player": "CautiousBot",
+      "insert_position": 6
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 31,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 9,
+      "cards_in_deck": 7
+    },
+    {
+      "type": "combo_play",
+      "turn_number": 31,
+      "player": "AggressiveBot",
+      "combo_type": "THREE_OF_A_KIND",
+      "cards": [
+        "CATTERMELON",
+        "CATTERMELON",
+        "CATTERMELON"
+      ],
+      "target": "CautiousBot"
+    },
+    {
+      "type": "card_request",
+      "turn_number": 31,
+      "requester": "AggressiveBot",
+      "target": "CautiousBot",
+      "requested_card": "DEFUSE",
+      "success": true
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 31,
+      "player": "AggressiveBot",
+      "card": "CATTERMELON"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 32,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 9,
+      "cards_in_deck": 6
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 32,
+      "player": "RandomBot",
+      "card": "ATTACK"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 33,
+      "player": "CautiousBot",
+      "turns_remaining": 1,
+      "hand_size": 12,
+      "cards_in_deck": 5
+    },
+    {
+      "type": "exploding_kitten_draw",
+      "turn_number": 33,
+      "player": "CautiousBot",
+      "had_defuse": false
+    },
+    {
+      "type": "player_elimination",
+      "turn_number": 33,
+      "player": "CautiousBot"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 34,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 8,
+      "cards_in_deck": 4
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 34,
+      "player": "AggressiveBot",
+      "card": "TACOCAT"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 35,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 10,
+      "cards_in_deck": 3
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 35,
+      "player": "RandomBot",
+      "card": "SEE_THE_FUTURE"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 36,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 9,
+      "cards_in_deck": 2
+    },
+    {
+      "type": "card_draw",
+      "turn_number": 36,
+      "player": "AggressiveBot",
+      "card": "BEARD_CAT"
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 37,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 11,
+      "cards_in_deck": 1
+    },
+    {
+      "type": "exploding_kitten_draw",
+      "turn_number": 37,
+      "player": "RandomBot",
+      "had_defuse": true
+    },
+    {
+      "type": "defuse",
+      "turn_number": 37,
+      "player": "RandomBot",
+      "insert_position": 0
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 38,
+      "player": "AggressiveBot",
+      "turns_remaining": 1,
+      "hand_size": 10,
+      "cards_in_deck": 1
+    },
+    {
+      "type": "exploding_kitten_draw",
+      "turn_number": 38,
+      "player": "AggressiveBot",
+      "had_defuse": true
+    },
+    {
+      "type": "defuse",
+      "turn_number": 38,
+      "player": "AggressiveBot",
+      "insert_position": 0
+    },
+    {
+      "type": "turn_start",
+      "turn_number": 39,
+      "player": "RandomBot",
+      "turns_remaining": 1,
+      "hand_size": 10,
+      "cards_in_deck": 1
+    },
+    {
+      "type": "exploding_kitten_draw",
+      "turn_number": 39,
+      "player": "RandomBot",
+      "had_defuse": false
+    },
+    {
+      "type": "player_elimination",
+      "turn_number": 39,
+      "player": "RandomBot"
+    },
+    {
+      "type": "game_end",
+      "winner": "AggressiveBot"
+    }
+  ],
+  "winner": "AggressiveBot"
+}
