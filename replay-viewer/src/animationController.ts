@@ -520,7 +520,7 @@ export class AnimationController {
         // Track exploding kitten if player has defuse
         if (event.had_defuse) {
           const hand = this.playerHands.get(event.player) || [];
-          const ektCardId = `${event.player}-ekt-${Date.now()}`;
+          const ektCardId = `${event.player}-ekt-${Date.now()}-${Math.random()}`;
           const handPos = this.gameBoard.getPlayerHandPosition(event.player, hand.length, hand.length + 1);
           this.gameBoard.createCard("EXPLODING_KITTEN", handPos, ektCardId);
           hand.push(ektCardId);
