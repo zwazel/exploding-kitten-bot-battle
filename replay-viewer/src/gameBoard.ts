@@ -249,6 +249,7 @@ export class GameBoard {
 
       playerArea.innerHTML = `
         <div style="color: #44ff44; font-weight: bold; margin-bottom: 4px; text-align: center;">${this.escapeHtml(name)}</div>
+        <div id="turns-${name}" style="color: #ffa500; font-size: 0.9rem; text-align: center; margin-bottom: 4px;">Turns: <span id="turns-count-${name}">-</span></div>
         <div id="hand-${name}" class="player-hand" data-rotation="0" style="position: relative; min-height: 150px;"></div>
       `;
 
@@ -434,6 +435,16 @@ export class GameBoard {
       playerArea.style.opacity = "0.5";
       // Store eliminated state as data attribute
       playerArea.setAttribute("data-eliminated", "true");
+    }
+  }
+
+  /**
+   * Update the turns remaining display for a player
+   */
+  updatePlayerTurns(playerName: string, turnsRemaining: number): void {
+    const turnsCountElement = this.container.querySelector(`#turns-count-${playerName}`) as HTMLElement;
+    if (turnsCountElement) {
+      turnsCountElement.textContent = turnsRemaining.toString();
     }
   }
 
