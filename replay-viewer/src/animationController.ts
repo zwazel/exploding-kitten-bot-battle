@@ -469,8 +469,10 @@ export class AnimationController {
   /**
    * Process event state updates without animations
    * Used for fast-forwarding through events during jump
+   * @param event - The event to process
+   * @param eventIndex - Optional index to help generate unique card IDs when processing batches
    */
-  processEventSilently(event: ReplayEvent): void {
+  processEventSilently(event: ReplayEvent, eventIndex: number = 0): void {
     switch (event.type) {
       case "turn_start":
         // Update current player state
@@ -485,7 +487,7 @@ export class AnimationController {
       case "card_draw":
         // Add card to player's hand state
         const playerHand = this.playerHands.get(event.player) || [];
-        const cardId = `${event.player}-silent-${Date.now()}`;
+        const cardId = `${event.player}-silent-${Date.now()}-${eventIndex}`;
         const handPos = this.gameBoard.getPlayerHandPosition(event.player, playerHand.length, playerHand.length + 1);
         this.gameBoard.createCard(event.card, handPos, cardId);
         playerHand.push(cardId);
@@ -520,7 +522,7 @@ export class AnimationController {
         // Track exploding kitten if player has defuse
         if (event.had_defuse) {
           const hand = this.playerHands.get(event.player) || [];
-          const ektCardId = `${event.player}-ekt-${Date.now()}`;
+          const ektCardId = `${event.player}-ekt-${Date.now()}-${eventIndex}`;
           const handPos = this.gameBoard.getPlayerHandPosition(event.player, hand.length, hand.length + 1);
           this.gameBoard.createCard("EXPLODING_KITTEN", handPos, ektCardId);
           hand.push(ektCardId);
@@ -548,7 +550,7 @@ export class AnimationController {
       case "discard_take":
         // Add card from discard to player's hand
         const dtHand = this.playerHands.get(event.player) || [];
-        const dtCardId = `${event.player}-discard-${Date.now()}`;
+        const dtCardId = `${event.player}-discard-${Date.now()}-${eventIndex}`;
         const dtHandPos = this.gameBoard.getPlayerHandPosition(event.player, dtHand.length, dtHand.length + 1);
         this.gameBoard.createCard(event.card, dtHandPos, dtCardId);
         dtHand.push(dtCardId);
@@ -556,11 +558,12 @@ export class AnimationController {
         break;
 
       case "card_steal":
-        // Move a random card from victim to thief
+        // Move a random card from victim to thief (matches animated behavior)
         const victimHand = this.playerHands.get(event.victim) || [];
         if (victimHand.length > 0) {
-          // Remove random card from victim
-          const stolenCardId = victimHand.shift()!;
+          // Remove random card from victim (not always first card)
+          const randomIndex = Math.floor(Math.random() * victimHand.length);
+          const stolenCardId = victimHand.splice(randomIndex, 1)[0];
           const stolenCardElement = this.gameBoard.getCardElement(stolenCardId);
           this.playerHands.set(event.victim, victimHand);
           

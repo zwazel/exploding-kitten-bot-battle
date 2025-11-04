@@ -286,8 +286,9 @@ export class VisualRenderer {
    * Used for fast-forwarding during jumps
    */
   processEventsSilently(events: ReplayEvent[]): void {
-    for (const event of events) {
-      this.animationController.processEventSilently(event);
+    // Pass the array length to help generate unique IDs
+    for (let i = 0; i < events.length; i++) {
+      this.animationController.processEventSilently(events[i], i);
     }
   }
 
