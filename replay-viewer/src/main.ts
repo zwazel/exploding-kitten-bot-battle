@@ -99,25 +99,28 @@ class ReplayApp {
         clearTimeout(sliderTimeout);
       }
       
-      sliderTimeout = window.setTimeout(() => {
+      sliderTimeout = window.setTimeout(async () => {
         // Pause playback while jumping
         const wasPlaying = this.player.getPlaybackState().isPlaying;
         if (wasPlaying) {
           this.player.pause();
         }
         
-        // Jump to the event
-        this.player.jumpToEvent(index);
+        // Set the index directly without triggering event callbacks
+        // This avoids race condition between updateDisplay and rebuildStateFromScratch
+        this.player.getPlaybackState().currentEventIndex = index;
         
         // Rebuild state from scratch to avoid long animation sequences
-        this.rebuildStateFromScratch().then(() => {
+        try {
+          await this.rebuildStateFromScratch();
+          
           // Resume if was playing
           if (wasPlaying) {
             this.player.play();
           }
-        }).catch((error) => {
+        } catch (error) {
           console.error("Error rebuilding state:", error);
-        });
+        }
         
         sliderTimeout = null;
       }, 100); // Small debounce delay
