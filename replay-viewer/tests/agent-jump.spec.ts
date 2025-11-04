@@ -55,14 +55,14 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
     
     // Step forward a few times to get to event 4
     await stepButton.click();
-    await page.waitForTimeout(300);
+    await expect(eventCounter).toContainText('Event: 2 /');
     await stepButton.click();
-    await page.waitForTimeout(300);
+    await expect(eventCounter).toContainText('Event: 3 /');
     await stepButton.click();
-    await page.waitForTimeout(300);
+    await expect(eventCounter).toContainText('Event: 4 /');
     
     // Wait for event counter to show event 4
-    await expect(eventCounter).toContainText('Event: 4 /', { timeout: 2000 });
+    // (already ensured above)
     
     // Try to jump backward to event 1 (should be ignored)
     await agentJumpInput.evaluate((el: HTMLInputElement) => {
