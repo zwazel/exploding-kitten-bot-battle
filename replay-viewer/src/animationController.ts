@@ -439,6 +439,26 @@ export class AnimationController {
    * For favor, this shows both the request and the card being given in one animation
    */
   async animateCardSteal(thief: string, victim: string, stolenCard?: CardType, context?: string): Promise<void> {
+    // Find and remove the stolen card from victim's hand
+    const victimHand = this.playerHands.get(victim) || [];
+    let stolenCardId: string | undefined;
+    
+    if (victimHand.length > 0) {
+      // If the replay specifies which card was stolen, find and remove that card
+      if (stolenCard) {
+        // Find a card of the stolen type in victim's hand
+        const cardIndex = this.findCardIndexByType(victimHand, stolenCard);
+        if (cardIndex !== -1) {
+          stolenCardId = victimHand.splice(cardIndex, 1)[0];
+        }
+      }
+      
+      // Fallback: if no specific card was found, take the first card
+      if (!stolenCardId && victimHand.length > 0) {
+        stolenCardId = victimHand.shift();
+      }
+    }
+    
     // Show transfer animation using unified system
     if (context === "favor") {
       // For favor, show both the request and the card given in one popup
@@ -461,13 +481,47 @@ export class AnimationController {
         duration: 2000
       });
     }
+    
+    // Now animate the actual card movement from victim to thief
+    if (stolenCardId) {
+      this.playerHands.set(victim, victimHand);
+      
+      // Get thief's hand and calculate new position
+      const thiefHand = this.playerHands.get(thief) || [];
+      const handIndex = thiefHand.length;
+      const thiefHandPos = this.gameBoard.getPlayerHandPosition(thief, handIndex, handIndex + 1);
+      
+      // Animate card to thief's hand
+      await this.gameBoard.moveCard(stolenCardId, thiefHandPos, 500);
+      
+      // Add to thief's hand
+      thiefHand.push(stolenCardId);
+      this.playerHands.set(thief, thiefHand);
+      
+      // Reorganize both hands to fill gaps
+      await Promise.all([
+        this.reorganizePlayerHand(victim),
+        this.reorganizePlayerHand(thief)
+      ]);
+    }
   }
 
   /**
    * Animate card request (3-of-a-kind)
    */
   async animateCardRequest(requester: string, target: string, requestedCard: CardType, success: boolean): Promise<void> {
+    let requestedCardId: string | undefined;
+    
     if (success) {
+      // Find and remove the requested card from target's hand
+      const targetHand = this.playerHands.get(target) || [];
+      const cardIndex = this.findCardIndexByType(targetHand, requestedCard);
+      
+      if (cardIndex !== -1) {
+        requestedCardId = targetHand.splice(cardIndex, 1)[0];
+        this.playerHands.set(target, targetHand);
+      }
+      
       // Show successful transfer animation
       await this.specialAnimator.showTransfer({
         fromPlayer: target,
@@ -477,6 +531,27 @@ export class AnimationController {
         subtitle: `✅ ${target} has it and must give it`,
         duration: 2000
       });
+      
+      // Now animate the actual card movement from target to requester
+      if (requestedCardId) {
+        // Get requester's hand and calculate new position
+        const requesterHand = this.playerHands.get(requester) || [];
+        const handIndex = requesterHand.length;
+        const requesterHandPos = this.gameBoard.getPlayerHandPosition(requester, handIndex, handIndex + 1);
+        
+        // Animate card to requester's hand
+        await this.gameBoard.moveCard(requestedCardId, requesterHandPos, 500);
+        
+        // Add to requester's hand
+        requesterHand.push(requestedCardId);
+        this.playerHands.set(requester, requesterHand);
+        
+        // Reorganize both hands to fill gaps
+        await Promise.all([
+          this.reorganizePlayerHand(target),
+          this.reorganizePlayerHand(requester)
+        ]);
+      }
     } else {
       // Show failed request
       await this.specialAnimator.showTarget({
