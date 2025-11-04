@@ -214,9 +214,16 @@ class ReplayApp {
       this.player.pause();
     }
 
-    // Wait for any ongoing event processing
+    // Wait for any ongoing event processing, with a timeout to prevent infinite loop
+    const maxWaitMs = 5000; // 5 seconds
+    const pollIntervalMs = 50;
+    let waitedMs = 0;
     while (this.isProcessingEvent) {
-      await this.delay(50);
+      if (waitedMs >= maxWaitMs) {
+        throw new Error("Timeout waiting for previous event processing to complete (isProcessingEvent stuck true).");
+      }
+      await this.delay(pollIntervalMs);
+      waitedMs += pollIntervalMs;
     }
 
     // Set flag to prevent event callback from rendering during jump
