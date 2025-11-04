@@ -380,6 +380,106 @@ Events are recorded in chronological order as they happen during the game:
 
 This ordering makes it easy to replay the game visually, showing each action as it happens.
 
+### Statistics Mode
+
+Run multiple games and generate comprehensive statistics to analyze bot performance:
+
+```bash
+python3 main.py --stats statistics.json --runs 100
+```
+
+**Features:**
+- Runs multiple games automatically (default: 100, customizable with `--runs`)
+- Minimal console output - only shows progress updates
+- Collects placement statistics for all bots
+- Generates detailed statistics JSON file
+- Displays summary statistics at the end
+
+**Statistics Tracked:**
+- **Win Rate**: Percentage of games won by each bot
+- **Average Placement**: Mean placement across all games (1.0 = always wins)
+- **Placement Distribution**: Breakdown of 1st, 2nd, 3rd, 4th place finishes
+- **Total Games**: Number of games played
+- **Games Played**: Games each bot participated in
+
+**Console Output:**
+```
+Loading bots...
+Loaded bot: AggressiveBot
+Loaded bot: CautiousBot
+Loaded bot: RandomBot
+
+Running 100 games for statistics...
+Bots: AggressiveBot, CautiousBot, RandomBot
+======================================================================
+Progress: 10/100 games completed (10.0%)
+Progress: 20/100 games completed (20.0%)
+...
+Progress: 100/100 games completed (100.0%)
+======================================================================
+All games completed!
+
+======================================================================
+STATISTICS SUMMARY - 100 games played
+======================================================================
+
+CautiousBot:
+  Wins: 58/100 (58.0%)
+  Average Placement: 1.64
+  Placement Distribution:
+    1st   :  58 ( 58.0%) █████████████████████████████
+    2nd   :  12 ( 12.0%) ██████
+    3rd   :  30 ( 30.0%) ███████████████
+
+AggressiveBot:
+  Wins: 27/100 (27.0%)
+  Average Placement: 2.13
+  Placement Distribution:
+    1st   :  27 ( 27.0%) █████████████
+    2nd   :  47 ( 47.0%) ███████████████████████
+    3rd   :  26 ( 26.0%) █████████████
+
+RandomBot:
+  Wins: 15/100 (15.0%)
+  Average Placement: 2.23
+  Placement Distribution:
+    1st   :  15 ( 15.0%) ███████
+    2nd   :  41 ( 41.0%) ████████████████████
+    3rd   :  44 ( 44.0%) ██████████████████████
+
+======================================================================
+
+✅ Statistics saved to: statistics.json
+```
+
+**Statistics File Format:**
+```json
+{
+  "total_games": 100,
+  "total_bots": 3,
+  "bots": {
+    "CautiousBot": {
+      "wins": 58,
+      "win_rate": 58.0,
+      "average_placement": 1.64,
+      "placement_counts": {
+        "1": 58,
+        "2": 12,
+        "3": 30
+      },
+      "games_played": 100
+    },
+    ...
+  }
+}
+```
+
+**Important Notes:**
+- `--stats` and `--replay` flags are **incompatible** (cannot use both simultaneously)
+- Statistics mode automatically runs in silent mode (verbose=False) for performance
+- Each game uses fresh bot instances to ensure fair comparisons
+- Progress is displayed every 10 games to track completion
+
 ### Game Logging
 
 The game provides detailed console output showing all game actions:

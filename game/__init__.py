@@ -6,6 +6,7 @@ from .bot import Bot
 from .deck import Deck
 from .game_engine import GameEngine
 from .replay_recorder import ReplayRecorder
+from .statistics import GameStatistics
 from .config import (
     DEFAULT_DECK_CONFIG,
     get_deck_config,
@@ -27,6 +28,7 @@ __all__ = [
     'Deck',
     'GameEngine',
     'ReplayRecorder',
+    'GameStatistics',
     'DEFAULT_DECK_CONFIG',
     'get_deck_config',
     'INITIAL_HAND_SIZE',
