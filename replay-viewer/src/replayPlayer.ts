@@ -14,6 +14,7 @@ export class ReplayPlayer {
   };
   private eventCallbacks: Set<(event: ReplayEvent, index: number) => Promise<void>> = new Set();
   private stateChangeCallbacks: Set<(state: PlaybackState) => void> = new Set();
+  private isPlaybackLoopRunning: boolean = false;
 
   /**
    * Load replay data
@@ -59,6 +60,9 @@ export class ReplayPlayer {
    */
   play(): void {
     if (!this.replayData || this.playbackState.isPlaying) return;
+    
+    // Prevent multiple concurrent playback loops
+    if (this.isPlaybackLoopRunning) return;
 
     this.playbackState.isPlaying = true;
     this.playbackState.isPaused = false;
@@ -72,19 +76,24 @@ export class ReplayPlayer {
    * Async playback loop that waits for animations
    */
   private async playbackLoop(): Promise<void> {
-    while (this.playbackState.isPlaying && this.replayData) {
-      if (this.playbackState.currentEventIndex < this.replayData.events.length - 1) {
-        // Step forward and wait for event processing
-        await this.stepForwardAsync();
-        
-        // Wait based on speed (time between events)
-        const delayMs = 1000 / this.playbackState.speed;
-        await this.delay(delayMs);
-      } else {
-        // Reached the end
-        this.pause();
-        break;
+    this.isPlaybackLoopRunning = true;
+    try {
+      while (this.playbackState.isPlaying && this.replayData) {
+        if (this.playbackState.currentEventIndex < this.replayData.events.length - 1) {
+          // Step forward and wait for event processing
+          await this.stepForwardAsync();
+          
+          // Wait based on speed (time between events)
+          const delayMs = 1000 / this.playbackState.speed;
+          await this.delay(delayMs);
+        } else {
+          // Reached the end
+          this.pause();
+          break;
+        }
       }
+    } finally {
+      this.isPlaybackLoopRunning = false;
     }
   }
 
@@ -133,13 +142,15 @@ export class ReplayPlayer {
   }
 
   /**
-   * Step forward one event
+   * Step forward one event (synchronous version for manual stepping)
+   * Note: This is called from main.ts which already handles waiting for animations
    */
   stepForward(): void {
     if (!this.replayData) return;
 
     if (this.playbackState.currentEventIndex < this.replayData.events.length - 1) {
       this.playbackState.currentEventIndex++;
+      // Fire and forget - main.ts waits for animations before calling this
       this.notifyCurrentEvent();
       this.notifyStateChange();
     } else {
