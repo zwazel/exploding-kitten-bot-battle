@@ -535,7 +535,7 @@ export class SpecialEventAnimator {
             font-size: 14px;
           ">${this.escapeHtml(config.subtitle)}</p>
         ` : ''}
-        <div style="position: relative; height: 140px; display: flex; justify-content: center; align-items: center;">
+        <div style="position: relative; height: 140px; width: 100%; display: flex; justify-content: center; align-items: center;">
           ${explosionHTML}
           ${cardElements}
         </div>
