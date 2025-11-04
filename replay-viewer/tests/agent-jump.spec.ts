@@ -38,18 +38,14 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
     const initialText = await eventCounter.textContent();
     expect(initialText).toContain('Event: 1 /');
     
-    // Jump to event 5 (0-indexed, so this is the 6th event)
+    // Jump to event 5 (0-indexed, which is the 6th event)
     await agentJumpInput.evaluate((el: HTMLInputElement) => {
       el.value = '5';
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
     
-    // Wait a bit for the jump to process
-    await page.waitForTimeout(500);
-    
-    // Event counter should now show event 6
-    const updatedText = await eventCounter.textContent();
-    expect(updatedText).toContain('Event: 6 /');
+    // Wait for event counter to update to event 6
+    await expect(eventCounter).toContainText('Event: 6 /', { timeout: 2000 });
   });
 
   test('should not jump backward (safety check)', async ({ page }) => {
@@ -57,29 +53,31 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
     const stepButton = page.locator('#btn-step-forward');
     const eventCounter = page.locator('#event-counter');
     
-    // Step forward a few times to get to event 3
+    // Step forward a few times to get to event 4
     await stepButton.click();
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(300);
     await stepButton.click();
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(300);
     await stepButton.click();
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(300);
     
-    // Should be at event 4 now
-    let currentText = await eventCounter.textContent();
-    expect(currentText).toContain('Event: 4 /');
+    // Wait for event counter to show event 4
+    await expect(eventCounter).toContainText('Event: 4 /', { timeout: 2000 });
     
     // Try to jump backward to event 1 (should be ignored)
     await agentJumpInput.evaluate((el: HTMLInputElement) => {
       el.value = '1';
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
+    });
     
     await page.waitForTimeout(500);
     
+    // Wait a bit to ensure any potential async updates complete
+    await page.waitForTimeout(500);
+    
     // Should still be at event 4 (jump backward prevented)
-    currentText = await eventCounter.textContent();
-    expect(currentText).toContain('Event: 4 /');
+    await expect(eventCounter).toContainText('Event: 4 /', { timeout: 1000 });
   });
 
   test('should handle jump to last event', async ({ page }) => {

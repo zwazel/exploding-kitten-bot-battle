@@ -555,6 +555,63 @@ export class AnimationController {
         this.playerHands.set(event.player, dtHand);
         break;
 
+      case "card_steal":
+        // Move a random card from victim to thief
+        const victimHand = this.playerHands.get(event.victim) || [];
+        if (victimHand.length > 0) {
+          // Remove random card from victim
+          const stolenCardId = victimHand.shift()!;
+          const stolenCardElement = this.gameBoard.getCardElement(stolenCardId);
+          this.playerHands.set(event.victim, victimHand);
+          
+          // Add to thief's hand
+          const thiefHand = this.playerHands.get(event.thief) || [];
+          const thiefHandPos = this.gameBoard.getPlayerHandPosition(event.thief, thiefHand.length, thiefHand.length + 1);
+          
+          // Move card instantly to new position
+          if (stolenCardElement) {
+            stolenCardElement.element.style.left = `${thiefHandPos.x}px`;
+            stolenCardElement.element.style.top = `${thiefHandPos.y}px`;
+          }
+          
+          thiefHand.push(stolenCardId);
+          this.playerHands.set(event.thief, thiefHand);
+        }
+        break;
+
+      case "card_request":
+        // Move specific card from target to requester if successful
+        if (event.success) {
+          const targetHand = this.playerHands.get(event.target) || [];
+          const cardIndex = this.findCardIndexByType(targetHand, event.requested_card);
+          
+          if (cardIndex !== -1) {
+            const requestedCardId = targetHand[cardIndex];
+            const requestedCardElement = this.gameBoard.getCardElement(requestedCardId);
+            targetHand.splice(cardIndex, 1);
+            this.playerHands.set(event.target, targetHand);
+            
+            // Add to requester's hand
+            const requesterHand = this.playerHands.get(event.requester) || [];
+            const requesterHandPos = this.gameBoard.getPlayerHandPosition(event.requester, requesterHand.length, requesterHand.length + 1);
+            
+            // Move card instantly to new position
+            if (requestedCardElement) {
+              requestedCardElement.element.style.left = `${requesterHandPos.x}px`;
+              requestedCardElement.element.style.top = `${requesterHandPos.y}px`;
+            }
+            
+            requesterHand.push(requestedCardId);
+            this.playerHands.set(event.requester, requesterHand);
+          }
+        }
+        break;
+
+      case "favor":
+        // Note: The actual card transfer happens via card_steal event that follows
+        // This event just indicates the favor was played, no state change needed here
+        break;
+
       case "game_end":
         this.clearHighlight();
         break;
