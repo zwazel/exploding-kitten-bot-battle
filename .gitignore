@@ -56,3 +56,6 @@ pnpm-debug.log*
 game.json
 
 my_game.json
+
+# Test replay files
+test_*.json
