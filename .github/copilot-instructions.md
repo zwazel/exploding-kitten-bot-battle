@@ -103,20 +103,23 @@ npm run preview      # Preview production build
 
 ## Code Modification Rules
 
-### ⚠️ CRITICAL: What NOT to Modify
-- **DO NOT modify** any code in the `game/` directory unless fixing a critical bug in the game engine
-- **DO NOT modify** the base `Bot` class interface
-- **DO NOT modify** existing tests unless they are incorrect
-- **DO NOT change** the game rules or mechanics
+### For Students Creating Bots
+These rules apply to students learning to create bots (described in README.md):
+- **DO NOT modify** any code in the `game/` directory - use the game engine as-is
+- **DO NOT modify** the base `Bot` class interface - inherit from it correctly
 - **DO NOT modify** other students' bots in the `bots/` directory
-- **DO NOT modify** the replay viewer in `replay-viewer/` directory unless fixing a bug in the replay viewer itself
-- **DO NOT commit** the `replay-viewer/dist/` directory (it's auto-generated)
+- **ONLY create** your own bot files in the `bots/` directory
 
-### ✅ What Can Be Modified
-- **ADD new bots** to the `bots/` directory
-- **MODIFY your own bot** files in `bots/`
-- **ADD new tests** that validate bot behavior
-- **UPDATE documentation** (README.md, CONTRIBUTING.md) for clarity
+### For Contributors/Agents (You!)
+As a contributor/agent, you have full access to modify any part of the codebase:
+- ✅ **CAN modify** game engine code in `game/` directory
+- ✅ **CAN modify** the replay viewer in `replay-viewer/` directory
+- ✅ **CAN modify** the `Bot` class interface (backwards compatibility not required)
+- ✅ **CAN modify** tests and add new tests
+- ✅ **CAN modify** game rules and mechanics
+- ✅ **CAN modify** documentation
+- ✅ **CAN add/modify** bot examples
+- ⚠️ **DO NOT commit** the `replay-viewer/dist/` directory (it's auto-generated)
 
 ## Creating a New Bot
 
@@ -404,14 +407,11 @@ When making changes to the replay viewer:
 ## Summary for Copilot
 
 When assisting with this repository:
-1. **Never modify** the game engine in `game/` directory
-2. **Never modify** the replay viewer in `replay-viewer/` unless fixing replay viewer bugs
-3. **Always validate** that bots implement all required methods
-4. **Always test** with `python3 -m unittest tests.test_game -v` before committing
-5. **Follow** the Bot class interface exactly
-6. **Reference** existing example bots for patterns
-7. **Validate** combos don't include DEFUSE or EXPLODING_KITTEN
-8. **Ensure** bot class name matches file name
-9. **Keep** changes minimal and focused on bot logic only
-10. **Generate replay files** with `python3 main.py --test --replay <filename>.json` to test replay viewer
-11. **Never commit** `replay-viewer/dist/` directory (auto-generated)
+1. **You can modify any part** of the codebase (game engine, replay viewer, Bot interface, etc.)
+2. **Backwards compatibility** is not required - feel free to make breaking changes
+3. **Always test** with `python3 -m unittest tests.test_game -v` before committing
+4. **Update tests** when you change functionality
+5. **Generate replay files** with `python3 main.py --test --replay <filename>.json` to test replay viewer
+6. **Never commit** `replay-viewer/dist/` directory (auto-generated)
+7. **Student-facing docs** (README.md, CONTRIBUTING.md) explain rules for students creating bots
+8. **These instructions** are for you as a contributor/agent - you have full access
