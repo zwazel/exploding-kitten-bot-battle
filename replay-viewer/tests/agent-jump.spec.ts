@@ -70,9 +70,6 @@ test.describe('Replay Viewer - Agent Jump Functionality', () => {
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
     
-    // Wait a bit to ensure any potential async updates complete
-    await page.waitForTimeout(500);
-    
     // Should still be at event 4 (jump backward prevented)
     await expect(eventCounter).toContainText('Event: 4 /', { timeout: 1000 });
   });
