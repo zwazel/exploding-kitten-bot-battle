@@ -103,7 +103,8 @@ export class ReplayPlayer {
     this.playbackState.currentEventIndex = 0;
     this.playbackState.isPaused = false;
     this.notifyStateChange();
-    this.notifyCurrentEvent();
+    // Don't notify current event here - the UI handler will manually update the display
+    // to avoid race conditions with the reset logic that needs to happen first
   }
 
   /**
@@ -122,30 +123,7 @@ export class ReplayPlayer {
     }
   }
 
-  /**
-   * Step backward one event
-   */
-  stepBackward(): void {
-    if (!this.replayData) return;
 
-    if (this.playbackState.currentEventIndex > 0) {
-      this.playbackState.currentEventIndex--;
-      this.notifyCurrentEvent();
-      this.notifyStateChange();
-    }
-  }
-
-  /**
-   * Jump to a specific event index
-   */
-  jumpToEvent(index: number): void {
-    if (!this.replayData) return;
-
-    const maxIndex = this.replayData.events.length - 1;
-    this.playbackState.currentEventIndex = Math.max(0, Math.min(index, maxIndex));
-    this.notifyCurrentEvent();
-    this.notifyStateChange();
-  }
 
   /**
    * Set playback speed (events per second)

@@ -297,83 +297,9 @@ export class VisualRenderer {
   }
 
   /**
-   * Rebuild entire game state from scratch (for reset and timeline jumps)
+   * Reset just the game state without recreating the layout
    */
-  async rebuildFromScratch(events: ReplayEvent[]): Promise<void> {
-    // Clear game state
+  resetGameState(): void {
     this.animationController.reset();
-    
-    // Find game setup event
-    const setupEvent = events.find((e) => e.type === "game_setup");
-    if (setupEvent && setupEvent.type === "game_setup") {
-      this.animationController.initializeGame(
-        setupEvent.play_order,
-        setupEvent.initial_hands
-      );
-      this.gameBoard.updateDeckCount(setupEvent.deck_size);
-    }
-    
-    // Rebuild state from all events
-    await this.rebuildState(events);
-  }
-
-  /**
-   * Rebuild state from events without animations (for timeline jumps)
-   */
-  async rebuildState(events: ReplayEvent[]): Promise<void> {
-    // Process all events to rebuild the game state
-    let currentPlayer: string | null = null;
-    
-    for (const event of events) {
-      this.updateEventDisplay(event);
-      
-      // Process events without animations to quickly rebuild state
-      switch (event.type) {
-        case "turn_start":
-          this.gameBoard.updateDeckCount(event.cards_in_deck);
-          if (currentPlayer) {
-            this.gameBoard.highlightPlayer(currentPlayer, false);
-          }
-          currentPlayer = event.player;
-          this.gameBoard.highlightPlayer(event.player, true);
-          break;
-
-        case "card_play":
-          // Add to discard pile
-          this.gameBoard.addToDiscardPile(event.card);
-          break;
-
-        case "combo_play":
-          // Add all combo cards to discard pile
-          for (const card of event.cards) {
-            this.gameBoard.addToDiscardPile(card);
-          }
-          break;
-
-        case "defuse":
-          // Defuse card goes to discard
-          this.gameBoard.addToDiscardPile("DEFUSE");
-          break;
-
-        case "discard_take":
-          // Remove from discard pile
-          this.gameBoard.removeFromDiscardPile(event.card);
-          break;
-
-        case "player_elimination":
-          this.gameBoard.eliminatePlayer(event.player);
-          break;
-
-        case "game_end":
-          if (currentPlayer) {
-            this.gameBoard.highlightPlayer(currentPlayer, false);
-            currentPlayer = null;
-          }
-          break;
-      }
-    }
-    
-    // Update animation controller's current player
-    this.animationController.setCurrentPlayer(currentPlayer);
   }
 }
