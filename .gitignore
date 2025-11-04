@@ -60,3 +60,5 @@ my_game.json
 # Test replay files
 test_*.json
 !replay-viewer/tests/fixtures/test_replay.json
+
+statistics.json
