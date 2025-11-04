@@ -13,6 +13,7 @@ class ReplayApp {
   private renderer!: VisualRenderer;
   private fileInput: HTMLInputElement | null = null;
   private isProcessingEvent = false;
+  private readonly MAX_EVENT_PROCESSING_TIMEOUT_MS = 5000;
 
   constructor() {
     this.player = new ReplayPlayer();
@@ -215,11 +216,10 @@ class ReplayApp {
     }
 
     // Wait for any ongoing event processing, with a timeout to prevent infinite loop
-    const maxWaitMs = 5000; // 5 seconds
     const pollIntervalMs = 50;
     let waitedMs = 0;
     while (this.isProcessingEvent) {
-      if (waitedMs >= maxWaitMs) {
+      if (waitedMs >= this.MAX_EVENT_PROCESSING_TIMEOUT_MS) {
         throw new Error("Timeout waiting for previous event processing to complete (isProcessingEvent stuck true).");
       }
       await this.delay(pollIntervalMs);
