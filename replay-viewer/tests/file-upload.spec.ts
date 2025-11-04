@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 test.describe('Replay Viewer - File Upload', () => {
   test('should load a replay file and show playback controls', async ({ page }) => {
