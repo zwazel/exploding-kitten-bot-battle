@@ -73,11 +73,33 @@ export class GameBoard {
   }
 
   /**
+   * Calculate text color based on background color luminance
+   * Returns white for dark backgrounds, black for light backgrounds
+   */
+  private getTextColor(backgroundColor: string): string {
+    // Remove # if present
+    const hex = backgroundColor.replace('#', '');
+    
+    // Convert hex to RGB
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    // Calculate relative luminance using sRGB formula
+    // https://www.w3.org/TR/WCAG20/#relativeluminancedef
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    // Use white text for dark backgrounds (luminance < 0.5), black for light
+    return luminance < 0.5 ? '#fff' : '#000';
+  }
+
+  /**
    * Create a card element
    */
   createCard(cardType: CardType, position: Position, id?: string): CardElement {
     const cardId = id || `card-${Date.now()}-${Math.random()}`;
     const color = this.getCardColor(cardType);
+    const textColor = this.getTextColor(color);
     const cardName = cardType.replace(/_/g, " ");
 
     const card = document.createElement("div");
@@ -97,7 +119,7 @@ export class GameBoard {
       justify-content: center;
       font-size: 10px;
       font-weight: bold;
-      color: #000;
+      color: ${textColor};
       text-align: center;
       padding: 4px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
@@ -312,6 +334,7 @@ export class GameBoard {
     // Show the top card (last in stack)
     const topCard = this.discardPileStack[this.discardPileStack.length - 1];
     const color = this.getCardColor(topCard);
+    const textColor = this.getTextColor(color);
     const cardName = topCard.replace(/_/g, " ");
     
     discardPile.innerHTML = `
@@ -327,7 +350,7 @@ export class GameBoard {
         justify-content: center;
         font-size: 9px;
         font-weight: bold;
-        color: #000;
+        color: ${textColor};
         text-align: center;
         padding: 4px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
@@ -411,6 +434,7 @@ export class GameBoard {
     // Create card elements
     const cardElements = cards.map((cardType, index) => {
       const color = this.getCardColor(cardType);
+      const textColor = this.getTextColor(color);
       const cardName = cardType.replace(/_/g, " ");
       const offset = (index - (cards.length - 1) / 2) * 110; // Space cards horizontally
       
@@ -428,7 +452,7 @@ export class GameBoard {
           justify-content: center;
           font-size: 10px;
           font-weight: bold;
-          color: #000;
+          color: ${textColor};
           text-align: center;
           padding: 4px;
           box-shadow: 0 4px 16px rgba(0,0,0,0.6);
@@ -646,7 +670,7 @@ export class GameBoard {
               justify-content: center;
               font-size: 18px;
               font-weight: bold;
-              color: #000;
+              color: ${this.getTextColor(this.getCardColor("NOPE"))};
               text-align: center;
               padding: 8px;
               box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 30px rgba(255, 68, 68, 0.6);
