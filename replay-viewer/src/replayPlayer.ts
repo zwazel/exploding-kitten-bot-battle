@@ -181,7 +181,7 @@ export class ReplayPlayer {
     }
 
     this.playbackState.currentEventIndex = targetIndex;
-    // Fire and forget - main.ts will handle the update
+    // Notify callbacks - main.ts will handle rendering the event and updating the UI
     this.notifyCurrentEvent();
     this.notifyStateChange();
   }
