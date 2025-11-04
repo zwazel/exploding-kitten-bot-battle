@@ -4,6 +4,33 @@
 
 This is a Python-based simulation of the "Exploding Kittens" card game where autonomous bots compete against each other. The project serves as an educational platform for students to create and test game-playing AI strategies.
 
+## Getting Started: Read All Markdown Files
+
+**IMPORTANT:** When you start working on any issue or task in this repository, you should ALWAYS:
+
+1. **Search for all markdown files** in the repository using:
+   ```bash
+   find . -type f -name "*.md"
+   ```
+
+2. **Read ALL markdown files** you find, as they contain crucial information and context:
+   - `README.md` - Complete game rules, API documentation, and examples
+   - `CONTRIBUTING.md` - Detailed bot creation guide with strategies
+   - `.github/copilot-instructions.md` - These instructions (you're reading them now!)
+   - `replay-viewer/README.md` - Replay viewer documentation and features
+   - `replay-viewer/QUICKSTART.md` - Quick start guide for the replay viewer
+   - Any other markdown files that may have been added to the repository
+
+3. **Use this information** to understand:
+   - Project structure and organization
+   - Coding standards and conventions
+   - Game rules and mechanics
+   - Testing requirements
+   - Development workflows
+   - Domain-specific knowledge
+
+**Why this matters:** Markdown files in this repository contain essential context that will help you make informed decisions, avoid breaking existing functionality, and follow established patterns. Reading them upfront saves time and prevents mistakes.
+
 ## Repository Structure
 
 ```
