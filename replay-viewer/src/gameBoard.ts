@@ -250,6 +250,7 @@ export class GameBoard {
       playerArea.innerHTML = `
         <div style="color: #44ff44; font-weight: bold; margin-bottom: 4px; text-align: center;">${this.escapeHtml(name)}</div>
         <div id="turns-${name}" style="color: #ffa500; font-size: 0.9rem; text-align: center; margin-bottom: 4px;">Turns: <span id="turns-count-${name}">-</span></div>
+        <div id="cards-${name}" style="color: #4db8ff; font-size: 0.9rem; text-align: center; margin-bottom: 4px;">Cards: <span id="cards-count-${name}">0</span></div>
         <div id="hand-${name}" class="player-hand" data-rotation="0" style="position: relative; min-height: 150px;"></div>
       `;
 
@@ -445,6 +446,16 @@ export class GameBoard {
     const turnsCountElement = this.container.querySelector(`#turns-count-${playerName}`) as HTMLElement;
     if (turnsCountElement) {
       turnsCountElement.textContent = turnsRemaining.toString();
+    }
+  }
+
+  /**
+   * Update the cards in hand display for a player
+   */
+  updatePlayerCards(playerName: string, cardCount: number): void {
+    const cardsCountElement = this.container.querySelector(`#cards-count-${playerName}`) as HTMLElement;
+    if (cardsCountElement) {
+      cardsCountElement.textContent = cardCount.toString();
     }
   }
 
