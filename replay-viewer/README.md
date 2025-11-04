@@ -95,8 +95,14 @@ replay-viewer/
 │   ├── replayPlayer.ts  # Replay playback logic
 │   ├── renderer.ts      # UI rendering and visualization
 │   └── style.css        # Application styles
+├── tests/               # Playwright tests
+│   ├── fixtures/        # Test data files
+│   ├── basic-ui.spec.ts
+│   ├── file-upload.spec.ts
+│   └── playback-controls.spec.ts
 ├── public/              # Static assets
 ├── index.html           # HTML entry point
+├── playwright.config.ts # Playwright configuration
 ├── vite.config.ts       # Vite configuration
 ├── tsconfig.json        # TypeScript configuration
 └── package.json         # Dependencies and scripts
@@ -107,6 +113,52 @@ replay-viewer/
 - **TypeScript**: Type-safe JavaScript
 - **Vite**: Fast build tool and dev server
 - **Vanilla JS/CSS**: No framework dependencies for simplicity and performance
+- **Playwright**: End-to-end testing framework
+
+## Testing
+
+The replay viewer includes automated tests using Playwright.
+
+### Running Tests
+
+Run all tests:
+
+```bash
+npm test
+```
+
+Run tests with UI mode (interactive):
+
+```bash
+npm run test:ui
+```
+
+Run tests in headed mode (see the browser):
+
+```bash
+npm run test:headed
+```
+
+### Test Structure
+
+Tests are located in the `tests/` directory:
+
+```
+tests/
+├── fixtures/
+│   └── test_replay.json  # Sample replay file for testing
+├── basic-ui.spec.ts      # Tests for basic UI elements
+├── file-upload.spec.ts   # Tests for file upload functionality
+└── playback-controls.spec.ts  # Tests for playback controls
+```
+
+### Continuous Integration
+
+Tests run automatically on:
+- Pull requests to the main branch
+- Commits to the main branch
+
+The test workflow is defined in `.github/workflows/test-replay-viewer.yml`.
 
 ## Deployment
 
