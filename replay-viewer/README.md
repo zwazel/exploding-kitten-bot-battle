@@ -149,8 +149,61 @@ tests/
 │   └── test_replay.json  # Sample replay file for testing
 ├── basic-ui.spec.ts      # Tests for basic UI elements
 ├── file-upload.spec.ts   # Tests for file upload functionality
-└── playback-controls.spec.ts  # Tests for playback controls
+├── playback-controls.spec.ts  # Tests for playback controls
+└── agent-jump.spec.ts    # Tests for hidden jump-to-step feature
 ```
+
+### Hidden Jump-to-Step Feature (For Automated Testing)
+
+The replay viewer includes a hidden feature for automated testing and agents that allows jumping forward to specific events without animations. This is useful for:
+
+- Testing specific game states quickly
+- Validating UI behavior at different points in the replay
+- Debugging issues at specific event indices
+
+**Accessing the Feature:**
+
+The jump feature is implemented as a hidden input field with ID `agent-jump-to-event` and data-testid `agent-jump-to-event`.
+
+```typescript
+// In Playwright tests
+const jumpInput = page.getByTestId('agent-jump-to-event');
+
+// Jump to event index 50
+await jumpInput.evaluate((el: HTMLInputElement) => {
+  el.value = '50';
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+await page.waitForTimeout(500);
+```
+
+**Important Constraints:**
+
+- **Forward-only**: Can only jump to future events, not backward (prevents state inconsistencies)
+- **Bounds checking**: Target index must be within valid range (0 to events.length - 1)
+- **Pauses playback**: Automatically pauses if currently playing
+- **No animations**: Events are processed but animations are skipped for speed
+
+**Use Cases:**
+
+```typescript
+// Pseudo-code for illustration only. See above for actual usage via input field and event dispatch.
+// Jump to a specific turn to test turn mechanics
+await jumpToEvent(50);
+
+// Skip to near the end to test game-over behavior
+const totalEvents = getTotalEventCount();
+await jumpToEvent(totalEvents - 5);
+
+// Quickly validate state at multiple points
+for (const checkpoint of [10, 25, 50, 75]) {
+  await jumpToEvent(checkpoint);
+  await validateGameState();
+}
+```
+
+This feature is intentionally hidden from the UI to prevent user confusion and is only accessible via automated testing tools.
 
 ### Continuous Integration
 

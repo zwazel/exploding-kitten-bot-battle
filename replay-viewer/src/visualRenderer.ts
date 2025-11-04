@@ -282,6 +282,19 @@ export class VisualRenderer {
   }
 
   /**
+   * Process events silently without animations
+   * Used for fast-forwarding during jumps
+   * @param events - Array of events to process
+   * @param startIndex - Absolute index of the first event in the replay (for unique ID generation)
+   */
+  processEventsSilently(events: ReplayEvent[], startIndex: number = 0): void {
+    // Pass absolute event indices to ensure unique card IDs across multiple jumps
+    for (let i = 0; i < events.length; i++) {
+      this.animationController.processEventSilently(events[i], startIndex + i);
+    }
+  }
+
+  /**
    * Helper delay function
    */
   private delay(ms: number): Promise<void> {

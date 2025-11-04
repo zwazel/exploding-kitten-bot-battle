@@ -2,7 +2,7 @@
  * Animation controller for game events
  */
 
-import type { CardType, NopeEvent } from "./types";
+import type { CardType, NopeEvent, ReplayEvent } from "./types";
 import { GameBoard } from "./gameBoard";
 
 /**
@@ -464,5 +464,210 @@ export class AnimationController {
     this.currentPlayer = null;
     this.explodingKittenCardId = null;
     this.gameBoard.clearCards();
+  }
+
+  /**
+   * Process event state updates without animations
+   * Used for fast-forwarding through events during jump
+   * @param event - The event to process
+   * @param eventIndex - Optional index to help generate unique card IDs when processing batches
+   */
+  processEventSilently(event: ReplayEvent, eventIndex: number = 0): void {
+    switch (event.type) {
+      case "turn_start":
+        // Update current player state
+        if (this.currentPlayer) {
+          this.gameBoard.highlightPlayer(this.currentPlayer, false);
+        }
+        this.currentPlayer = event.player;
+        this.gameBoard.highlightPlayer(event.player, true);
+        this.gameBoard.updateDeckCount(event.cards_in_deck);
+        break;
+
+      case "card_draw":
+        // Add card to player's hand state
+        const playerHand = this.playerHands.get(event.player) || [];
+        const cardId = `${event.player}-draw-${eventIndex}-${playerHand.length}`;
+        const handPos = this.gameBoard.getPlayerHandPosition(event.player, playerHand.length, playerHand.length + 1);
+        this.gameBoard.createCard(event.card, handPos, cardId);
+        playerHand.push(cardId);
+        this.playerHands.set(event.player, playerHand);
+        break;
+
+      case "card_play":
+        // Remove card from player's hand state
+        this.removeCardFromHand(event.player, event.card);
+        this.gameBoard.addToDiscardPile(event.card);
+        break;
+
+      case "combo_play":
+        // Remove multiple cards from player's hand
+        if (event.cards) {
+          event.cards.forEach((cardType: CardType) => {
+            this.removeCardFromHand(event.player, cardType);
+            this.gameBoard.addToDiscardPile(cardType);
+          });
+        }
+        break;
+
+      case "player_elimination":
+        // Mark player as eliminated
+        this.gameBoard.eliminatePlayer(event.player);
+        const eliminatedHand = this.playerHands.get(event.player) || [];
+        eliminatedHand.forEach(id => this.gameBoard.removeCard(id));
+        this.playerHands.set(event.player, []);
+        break;
+
+      case "exploding_kitten_draw":
+        // Track exploding kitten if player has defuse
+        if (event.had_defuse) {
+          const hand = this.playerHands.get(event.player) || [];
+          const ektCardId = `${event.player}-ekt-${eventIndex}-${hand.length}`;
+          const handPos = this.gameBoard.getPlayerHandPosition(event.player, hand.length, hand.length + 1);
+          this.gameBoard.createCard("EXPLODING_KITTEN", handPos, ektCardId);
+          hand.push(ektCardId);
+          this.playerHands.set(event.player, hand);
+          this.explodingKittenCardId = ektCardId;
+        }
+        break;
+
+      case "defuse":
+        // Remove exploding kitten from hand
+        if (this.explodingKittenCardId) {
+          const hand = this.playerHands.get(event.player) || [];
+          const index = hand.indexOf(this.explodingKittenCardId);
+          if (index !== -1) {
+            hand.splice(index, 1);
+            this.playerHands.set(event.player, hand);
+            this.gameBoard.removeCard(this.explodingKittenCardId);
+          }
+          this.explodingKittenCardId = null;
+        }
+        // Also remove defuse card
+        this.removeCardFromHand(event.player, "DEFUSE");
+        break;
+
+      case "discard_take":
+        // Add card from discard to player's hand
+        const dtHand = this.playerHands.get(event.player) || [];
+        const dtCardId = `${event.player}-discard_take-${eventIndex}-${dtHand.length}`;
+        const dtHandPos = this.gameBoard.getPlayerHandPosition(event.player, dtHand.length, dtHand.length + 1);
+        this.gameBoard.createCard(event.card, dtHandPos, dtCardId);
+        dtHand.push(dtCardId);
+        this.playerHands.set(event.player, dtHand);
+        break;
+
+      case "card_steal":
+        // Transfer the specific stolen card from victim to thief
+        const victimHand = this.playerHands.get(event.victim) || [];
+        if (victimHand.length > 0) {
+          let stolenCardId: string | undefined;
+          
+          // If the replay specifies which card was stolen, find and remove that card
+          if (event.stolen_card) {
+            // Find a card of the stolen type in victim's hand
+            const cardIndex = victimHand.findIndex(cardId => {
+              const cardEl = this.gameBoard.getCardElement(cardId);
+              if (!cardEl) {
+                throw new Error(
+                  `[AnimationController] getCardElement(${cardId}) returned null/undefined during card_steal. Victim: ${event.victim}, Thief: ${event.thief}, Looking for card type: ${event.stolen_card}, Event index: ${eventIndex}`
+                );
+              }
+              return cardEl.cardType === event.stolen_card;
+            });
+            
+            if (cardIndex !== -1) {
+              stolenCardId = victimHand.splice(cardIndex, 1)[0];
+            }
+          }
+          
+          // Fallback: if no specific card was found, take the first card
+          if (!stolenCardId && victimHand.length > 0) {
+            stolenCardId = victimHand.splice(0, 1)[0];
+          }
+          
+          if (stolenCardId) {
+            const stolenCardElement = this.gameBoard.getCardElement(stolenCardId);
+            this.playerHands.set(event.victim, victimHand);
+            
+            // Add to thief's hand
+            const thiefHand = this.playerHands.get(event.thief) || [];
+            const thiefHandPos = this.gameBoard.getPlayerHandPosition(event.thief, thiefHand.length, thiefHand.length + 1);
+            
+            // Move card instantly to new position
+            if (stolenCardElement) {
+              stolenCardElement.element.style.left = `${thiefHandPos.x}px`;
+              stolenCardElement.element.style.top = `${thiefHandPos.y}px`;
+            }
+            
+            thiefHand.push(stolenCardId);
+            this.playerHands.set(event.thief, thiefHand);
+          }
+        }
+        break;
+
+      case "card_request":
+        // Move specific card from target to requester if successful
+        if (event.success) {
+          const targetHand = this.playerHands.get(event.target) || [];
+          const cardIndex = this.findCardIndexByType(targetHand, event.requested_card);
+          
+          if (cardIndex !== -1) {
+            const requestedCardId = targetHand[cardIndex];
+            const requestedCardElement = this.gameBoard.getCardElement(requestedCardId);
+            targetHand.splice(cardIndex, 1);
+            this.playerHands.set(event.target, targetHand);
+            
+            // Add to requester's hand
+            const requesterHand = this.playerHands.get(event.requester) || [];
+            const requesterHandPos = this.gameBoard.getPlayerHandPosition(event.requester, requesterHand.length, requesterHand.length + 1);
+            
+            // Move card instantly to new position
+            if (requestedCardElement) {
+              requestedCardElement.element.style.left = `${requesterHandPos.x}px`;
+              requestedCardElement.element.style.top = `${requesterHandPos.y}px`;
+            }
+            
+            requesterHand.push(requestedCardId);
+            this.playerHands.set(event.requester, requesterHand);
+          }
+        }
+        break;
+
+      case "favor":
+        // Note: The actual card transfer happens via card_steal event that follows
+        // This event just indicates the favor was played, no state change needed here
+        break;
+
+      case "game_end":
+        this.clearHighlight();
+        break;
+
+      // Other events don't affect visual state
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Helper to remove a card of specific type from player's hand
+   */
+  private removeCardFromHand(playerName: string, cardType: CardType): void {
+    const playerHand = this.playerHands.get(playerName) || [];
+    const cardIndex = this.findCardIndexByType(playerHand, cardType);
+    
+    if (cardIndex !== -1) {
+      const cardId = playerHand[cardIndex];
+      playerHand.splice(cardIndex, 1);
+      this.playerHands.set(playerName, playerHand);
+      this.gameBoard.removeCard(cardId);
+    } else if (playerHand.length > 0) {
+      // Determinism violation: card type not found in hand
+      console.warn(
+        `[Determinism violation] Tried to remove card of type ${cardType} from ${playerName}'s hand, but no such card was found. Hand: [${playerHand.join(", ")}]`
+      );
+      // Optionally, throw an error to enforce strict determinism:
+      // throw new Error(`[Determinism violation] Tried to remove card of type ${cardType} from ${playerName}'s hand, but no such card was found.`);
+    }
   }
 }
