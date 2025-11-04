@@ -443,6 +443,16 @@ When adding a new bot:
 
 The project includes a TypeScript-based web application for visualizing game replays:
 
+### Core Principle: Deterministic Playback
+**CRITICAL:** The replay viewer must be fully deterministic and always 100% follow what the replay file contains. The replay viewer does NOT make any decisions whatsoever and must always stay in perfect sync with the actual replay file. There should be NO random decisions, NO deviations, and NO desynchronization in the frontend/replay viewer.
+
+- ✅ **DO:** Read and render events exactly as recorded in the replay file
+- ✅ **DO:** Maintain perfect synchronization with the replay data
+- ✅ **DO:** Display game state transitions exactly as they occurred
+- ❌ **DO NOT:** Make any decisions or choices about game logic
+- ❌ **DO NOT:** Add any randomness or non-deterministic behavior
+- ❌ **DO NOT:** Simulate or predict any game behavior not in the replay file
+
 ### Purpose
 - Visualize game replays with animations and interactive controls
 - Analyze bot strategies and game flow
