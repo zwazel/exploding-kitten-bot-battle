@@ -235,6 +235,9 @@ class ReplayApp {
         return;
       }
 
+      // Update last event index for next comparison
+      this.lastEventIndex = eventIndex;
+
       // Calculate deck size at this point
       let deckSize = 33; // Default starting size
       const setupEvent = replayData.events.find(e => e.type === "game_setup");
@@ -259,9 +262,6 @@ class ReplayApp {
       
       // Update event counter
       this.updateEventCounter(eventIndex, replayData.events.length);
-      
-      // Update last event index
-      this.lastEventIndex = eventIndex;
     } finally {
       this.isProcessingEvent = false;
     }

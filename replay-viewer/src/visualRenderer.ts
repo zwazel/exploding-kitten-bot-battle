@@ -324,8 +324,7 @@ export class VisualRenderer {
     // Process all events to rebuild the game state
     let currentPlayer: string | null = null;
     
-    for (let i = 0; i < events.length; i++) {
-      const event = events[i];
+    for (const event of events) {
       this.updateEventDisplay(event);
       
       // Process events without animations to quickly rebuild state
