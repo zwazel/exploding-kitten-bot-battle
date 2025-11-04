@@ -222,7 +222,7 @@ class ReplayApp {
     // Process all events from current+1 to target (inclusive) silently
     // This includes the target event to save time by not animating it
     const startIndex = currentState.currentEventIndex + 1;
-    const eventsToProcess = replayData.events.slice(startIndex, targetEventIndex + 1);
+    const eventsToProcess = replayData.events.slice(startIndex, targetEventIndex + 1); // slice end is exclusive, so +1 to include targetEventIndex
     
     if (eventsToProcess.length > 0) {
       this.renderer.processEventsSilently(eventsToProcess);
