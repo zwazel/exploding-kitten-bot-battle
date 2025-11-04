@@ -142,16 +142,16 @@ export class ReplayPlayer {
   }
 
   /**
-   * Step forward one event (synchronous version for manual stepping)
+   * Step forward one event (async version for manual stepping)
    * Note: This is called from main.ts which already handles waiting for animations
    */
-  stepForward(): void {
+  async stepForward(): Promise<void> {
     if (!this.replayData) return;
 
     if (this.playbackState.currentEventIndex < this.replayData.events.length - 1) {
       this.playbackState.currentEventIndex++;
-      // Fire and forget - main.ts waits for animations before calling this
-      this.notifyCurrentEvent();
+      // Wait for event callbacks to complete before returning
+      await this.notifyCurrentEvent();
       this.notifyStateChange();
     } else {
       // Reached the end

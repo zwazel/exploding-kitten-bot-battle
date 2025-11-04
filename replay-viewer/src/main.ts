@@ -120,10 +120,6 @@ class ReplayApp {
       this.player.loadReplay(data);
       await this.renderer.renderGameSetup(data);
 
-      // Show controls and update UI
-      document.querySelector<HTMLDivElement>("#playback-controls")!.style.display = "flex";
-      document.querySelector<HTMLSpanElement>("#file-name")!.textContent = file.name;
-
       // Update event counter
       this.updateEventCounter(0, data.events.length);
 
@@ -132,6 +128,10 @@ class ReplayApp {
       if (firstEvent) {
         await this.updateDisplay(0);
       }
+
+      // Show controls and update UI AFTER initial event is processed
+      document.querySelector<HTMLDivElement>("#playback-controls")!.style.display = "flex";
+      document.querySelector<HTMLSpanElement>("#file-name")!.textContent = file.name;
     } catch (error) {
       alert(`Error loading replay file: ${error}`);
       console.error("Error loading replay:", error);
@@ -168,6 +168,8 @@ class ReplayApp {
   }
 
   private async stepForward(): Promise<void> {
+    const stepButton = document.querySelector<HTMLButtonElement>("#btn-step-forward")!;
+    
     // Wait for any ongoing animations to complete
     if (this.isProcessingEvent) {
       return; // Don't step if already processing an event
@@ -178,7 +180,16 @@ class ReplayApp {
       await this.delay(50);
     }
     
-    this.player.stepForward();
+    // Disable button during processing
+    stepButton.disabled = true;
+    try {
+      await this.player.stepForward();
+      // Small delay to ensure DOM updates are complete
+      await this.delay(10);
+    } finally {
+      // Re-enable button after processing completes
+      stepButton.disabled = false;
+    }
   }
 
   /**
@@ -252,15 +263,26 @@ class ReplayApp {
   }
 
   private async updateDisplay(eventIndex: number): Promise<void> {
-    if (this.isProcessingEvent) return;
+    // Set processing flag - if already processing, wait for it to complete
+    while (this.isProcessingEvent) {
+      await this.delay(10);
+    }
     
     this.isProcessingEvent = true;
+    let shouldUpdateCounter = false;
+    
     try {
       const replayData = this.player.getReplayData();
-      if (!replayData) return;
+      if (!replayData) {
+        console.warn('[updateDisplay] No replay data available');
+        return;
+      }
 
       const event = replayData.events[eventIndex];
-      if (!event) return;
+      if (!event) {
+        console.warn(`[updateDisplay] No event at index ${eventIndex}`);
+        return;
+      }
 
       // Calculate deck size at this point
       let deckSize = 33; // Default starting size
@@ -280,10 +302,21 @@ class ReplayApp {
       // Render the event with animation
       await this.renderer.renderEvent(event, deckSize);
       
-      // Update event counter
-      this.updateEventCounter(eventIndex, replayData.events.length);
+      // Only update counter if we successfully rendered
+      shouldUpdateCounter = true;
+    } catch (error) {
+      console.error('[updateDisplay] Error rendering event:', error);
     } finally {
       this.isProcessingEvent = false;
+      
+      // Update event counter AFTER clearing the processing flag
+      // Only update if we successfully processed the event
+      if (shouldUpdateCounter) {
+        const replayData = this.player.getReplayData();
+        if (replayData) {
+          this.updateEventCounter(eventIndex, replayData.events.length);
+        }
+      }
     }
   }
 
@@ -294,7 +327,10 @@ class ReplayApp {
   }
 
   private updateEventCounter(current: number, total: number): void {
-    document.querySelector("#event-counter")!.textContent = `Event: ${current + 1} / ${total}`;
+    const counter = document.querySelector("#event-counter")!;
+    counter.textContent = `Event: ${current + 1} / ${total}`;
+    // Add data attribute for debugging
+    counter.setAttribute('data-current-index', String(current));
   }
 
   private delay(ms: number): Promise<void> {
