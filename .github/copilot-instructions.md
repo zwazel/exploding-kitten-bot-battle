@@ -45,12 +45,66 @@ exploding-kitten-bot-battle/
 - **Dependencies:** No external runtime dependencies (pure Python standard library)
 
 ### Testing
-Always run tests before and after making changes:
+
+**IMPORTANT: Always run relevant tests before and after making changes. Only run tests for the parts of the codebase you're modifying.**
+
+#### Python Tests
+Run Python tests when making changes to:
+- Python game engine code (`game/` directory)
+- Bot implementations (`bots/` directory)
+- Main game entry point (`main.py`)
+- Test files (`tests/` directory)
+- Any other Python files
+
 ```bash
+# Run all Python tests
 python3 -m unittest tests.test_game -v
 ```
 
+**When to add new Python tests:**
+- When adding new features to the game engine
+- When fixing bugs (add regression tests)
+- When adding new card types or game mechanics
+- When modifying bot behavior or adding new bot methods
+
 All existing tests must pass. Do not break existing tests.
+
+#### TypeScript/Playwright Tests
+Run Playwright tests when making changes to:
+- Replay viewer code (`replay-viewer/src/` directory)
+- Replay viewer UI (`replay-viewer/index.html`)
+- Replay viewer configuration (`replay-viewer/vite.config.ts`, `replay-viewer/playwright.config.ts`)
+- Test files (`replay-viewer/tests/` directory)
+- Any other TypeScript/JavaScript files in the replay viewer
+
+```bash
+# Install dependencies (first time only)
+cd replay-viewer
+npm install
+
+# Install Playwright browsers (first time only)
+npx playwright install --with-deps chromium
+
+# Run Playwright tests
+npm test
+
+# Run tests in UI mode for debugging
+npm run test:ui
+
+# Run tests in headed mode (see browser)
+npm run test:headed
+```
+
+**When to add new Playwright tests:**
+- When adding new UI features to the replay viewer
+- When fixing UI bugs (add regression tests)
+- When adding new playback controls or visualizations
+- When modifying replay file loading or parsing
+
+**Note:** Do NOT run tests for parts of the codebase you haven't modified. For example:
+- If you only changed Python code, only run Python tests
+- If you only changed TypeScript code, only run Playwright tests
+- If you changed both, run both test suites
 
 ### Running the Game
 ```bash
@@ -432,8 +486,12 @@ When making changes to the replay viewer:
 When assisting with this repository:
 1. **You can modify any part** of the codebase (game engine, replay viewer, Bot interface, etc.)
 2. **Backwards compatibility** is not required - feel free to make breaking changes
-3. **Always test** with `python3 -m unittest tests.test_game -v` before committing
-4. **Update tests** when you change functionality
+3. **Test intelligently based on changes:**
+   - Python changes → Run `python3 -m unittest tests.test_game -v`
+   - TypeScript/replay-viewer changes → Run `cd replay-viewer && npm test` (after `npm install`)
+   - Both changed → Run both test suites
+   - **ONLY** run tests for the parts you modified
+4. **Add new tests** when adding features or fixing bugs (Python or Playwright tests as appropriate)
 5. **Generate replay files** with `python3 main.py --test --replay <filename>.json` to test replay viewer
 6. **Never commit** `replay-viewer/dist/` directory (auto-generated)
 7. **Student-facing docs** (README.md, CONTRIBUTING.md) explain rules for students creating bots
