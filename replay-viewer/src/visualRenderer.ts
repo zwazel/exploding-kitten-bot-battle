@@ -2,7 +2,7 @@
  * Visual game renderer with animations
  */
 
-import type { ReplayData, ReplayEvent } from "./types";
+import type { ReplayData, ReplayEvent, CardType } from "./types";
 import { GameBoard } from "./gameBoard";
 import { AnimationController } from "./animationController";
 import { CARD_COLORS } from "./cardConfig";
@@ -12,6 +12,7 @@ export class VisualRenderer {
   private gameBoard: GameBoard;
   private animationController: AnimationController;
   private isAnimating = false;
+  private deckCardCounts: Map<CardType, number> = new Map();
 
   constructor(container: HTMLElement) {
     this.container = container;
