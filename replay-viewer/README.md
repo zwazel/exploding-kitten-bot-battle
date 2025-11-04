@@ -188,6 +188,7 @@ await page.waitForTimeout(500);
 **Use Cases:**
 
 ```typescript
+// Pseudo-code for illustration only. See above for actual usage via input field and event dispatch.
 // Jump to a specific turn to test turn mechanics
 await jumpToEvent(50);
 
