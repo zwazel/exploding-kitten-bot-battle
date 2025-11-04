@@ -18,6 +18,8 @@ jobs:
   test:
     timeout-minutes: 10
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: replay-viewer
