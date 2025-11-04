@@ -248,6 +248,34 @@ export class AnimationController {
    * Animate nope card play with showoff effect for chains
    */
   async animateNope(event: any): Promise<void> {
+    const playerName = event.player;
+    const playerHand = this.playerHands.get(playerName) || [];
+    
+    // Find the NOPE card in the player's hand
+    const nopeCardIndex = this.findCardIndexByType(playerHand, "NOPE");
+    let nopeCardId: string | undefined;
+    
+    if (nopeCardIndex === -1) {
+      console.warn(`NOPE card not found in ${playerName}'s hand, using first card as fallback`);
+      // Fallback: use first card if nope not found
+      if (playerHand.length > 0) {
+        nopeCardId = playerHand.shift();
+      }
+    } else {
+      // Remove the nope card from the hand
+      nopeCardId = playerHand[nopeCardIndex];
+      playerHand.splice(nopeCardIndex, 1);
+    }
+    
+    if (nopeCardId) {
+      this.playerHands.set(playerName, playerHand);
+      
+      // Animate nope card to discard pile
+      const discardPos = this.gameBoard.getDiscardPosition();
+      await this.gameBoard.moveCard(nopeCardId, { ...discardPos, rotation: 0, zIndex: 10 }, 500);
+      await this.delay(200);
+    }
+    
     // Show nope animation with the original action and the noping player
     const originalAction = event.original_action || "an action";
     const targetPlayer = event.target_player || "someone";
@@ -260,6 +288,15 @@ export class AnimationController {
     
     await this.delay(1500);
     await this.gameBoard.hideNopeAnimation();
+    
+    // Add nope card to discard pile and remove from board
+    if (nopeCardId) {
+      this.gameBoard.addToDiscardPile("NOPE");
+      this.gameBoard.removeCard(nopeCardId);
+    }
+    
+    // Reorganize remaining cards in hand
+    await this.reorganizePlayerHand(playerName);
   }
 
   /**
