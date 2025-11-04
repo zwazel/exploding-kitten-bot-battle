@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import path from 'path';
+import * as path from 'path';
 
 test.describe('Replay Viewer - File Upload', () => {
   test('should load a replay file and show playback controls', async ({ page }) => {
