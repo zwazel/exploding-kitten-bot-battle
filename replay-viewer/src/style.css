@@ -220,23 +220,69 @@ header h1 {
   margin-top: 2rem;
 }
 
-.event-display {
+/* Event History */
+.event-history {
   margin-bottom: 2rem;
 }
 
-.event-display h3 {
+.event-history h3 {
   color: #888;
   margin-bottom: 0.5rem;
   font-size: 1.2rem;
 }
 
-.event-content {
+.history-content {
   background: #0f0f0f;
-  padding: 1.5rem;
+  padding: 0.5rem;
   border-radius: 6px;
-  border-left: 4px solid #646cff;
-  font-size: 1.1rem;
-  font-weight: 500;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.history-event-entry {
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  background: #1a1a1a;
+  border-radius: 4px;
+  border-left: 3px solid #646cff;
+  transition: background 0.2s;
+}
+
+.history-event-entry:hover {
+  background: #252525;
+}
+
+.history-event-entry:last-child {
+  margin-bottom: 0;
+}
+
+.history-event-number {
+  color: #888;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.history-event-text {
+  color: #ccc;
+}
+
+/* Custom scrollbar for history */
+.history-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.history-content::-webkit-scrollbar-track {
+  background: #0f0f0f;
+  border-radius: 4px;
+}
+
+.history-content::-webkit-scrollbar-thumb {
+  background: #646cff;
+  border-radius: 4px;
+}
+
+.history-content::-webkit-scrollbar-thumb:hover {
+  background: #535bf2;
 }
 
 /* Players Display */
@@ -372,17 +418,17 @@ header h1 {
     margin-bottom: 0.5rem !important;
   }
   
-  #event-display {
+  #event-history {
     padding: 0.5rem !important;
     margin-bottom: 0 !important;
   }
   
-  #event-display h3 {
+  #event-history h3 {
     margin: 0 0 0.25rem 0 !important;
     font-size: 1rem !important;
   }
   
-  #event-content {
+  .history-content {
     padding: 0.5rem !important;
   }
 }
