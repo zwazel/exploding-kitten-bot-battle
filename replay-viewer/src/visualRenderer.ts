@@ -36,6 +36,7 @@ export class VisualRenderer {
           
           <!-- Visual game board -->
           <div id="visual-board">
+            </div>
           </div>
         </div>
         
