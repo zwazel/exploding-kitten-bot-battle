@@ -48,10 +48,20 @@ export class VisualRenderer {
           </div>
         </div>
         
-        <!-- Color legend sidebar -->
-        <div id="color-legend" style="width: 200px; background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333; height: fit-content; position: sticky; top: 1rem;">
-          <h3 style="color: #646cff; margin: 0 0 1rem 0; font-size: 1rem;">Card Colors</h3>
-          <div id="legend-items" style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <!-- Sidebar -->
+        <div style="width: 200px; display: flex; flex-direction: column; gap: 1rem;">
+          <!-- Card tracker -->
+          <div id="card-tracker" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333;">
+            <h3 style="color: #646cff; margin: 0 0 1rem 0; font-size: 1rem;">Cards in Deck</h3>
+            <div id="card-counts" style="display: flex; flex-direction: column; gap: 0.25rem;">
+            </div>
+          </div>
+          
+          <!-- Color legend -->
+          <div id="color-legend" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333; height: fit-content; position: sticky; top: 1rem;">
+            <h3 style="color: #646cff; margin: 0 0 1rem 0; font-size: 1rem;">Card Colors</h3>
+            <div id="legend-items" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            </div>
           </div>
         </div>
       </div>
@@ -79,6 +89,107 @@ export class VisualRenderer {
     }).join('');
 
     legendItems.innerHTML = items;
+  }
+
+  /**
+   * Initialize deck card counts from game setup
+   */
+  private initializeDeckCardCounts(setupEvent: any): void {
+    // Default card counts for a standard deck
+    const defaultCounts: Record<string, number> = {
+      "DEFUSE": 6,
+      "SKIP": 4,
+      "SEE_THE_FUTURE": 5,
+      "SHUFFLE": 4,
+      "FAVOR": 4,
+      "ATTACK": 4,
+      "NOPE": 5,
+      "TACOCAT": 4,
+      "CATTERMELON": 4,
+      "HAIRY_POTATO_CAT": 4,
+      "BEARD_CAT": 4,
+      "RAINBOW_RALPHING_CAT": 4,
+    };
+
+    // Initialize with default counts
+    this.deckCardCounts.clear();
+    for (const [cardType, count] of Object.entries(defaultCounts)) {
+      this.deckCardCounts.set(cardType as CardType, count);
+    }
+
+    // Add exploding kittens (num_players - 1)
+    const numPlayers = setupEvent.play_order.length;
+    this.deckCardCounts.set("EXPLODING_KITTEN" as CardType, numPlayers - 1);
+
+    // Subtract cards that are in initial hands
+    for (const playerHand of Object.values(setupEvent.initial_hands)) {
+      for (const card of playerHand as CardType[]) {
+        const currentCount = this.deckCardCounts.get(card) || 0;
+        this.deckCardCounts.set(card, currentCount - 1);
+      }
+    }
+
+    // Render the initial counts
+    this.renderCardCounts();
+  }
+
+  /**
+   * Update deck card counts based on an event
+   */
+  private updateDeckCardCounts(event: ReplayEvent): void {
+    if (event.type === "card_draw") {
+      // Card was drawn from deck
+      const currentCount = this.deckCardCounts.get(event.card) || 0;
+      this.deckCardCounts.set(event.card, Math.max(0, currentCount - 1));
+      this.renderCardCounts();
+    } else if (event.type === "exploding_kitten_draw") {
+      // Exploding kitten was drawn
+      const currentCount = this.deckCardCounts.get("EXPLODING_KITTEN" as CardType) || 0;
+      this.deckCardCounts.set("EXPLODING_KITTEN" as CardType, Math.max(0, currentCount - 1));
+      this.renderCardCounts();
+    } else if (event.type === "defuse") {
+      // Exploding kitten was put back into deck
+      const currentCount = this.deckCardCounts.get("EXPLODING_KITTEN" as CardType) || 0;
+      this.deckCardCounts.set("EXPLODING_KITTEN" as CardType, currentCount + 1);
+      this.renderCardCounts();
+    }
+  }
+
+  /**
+   * Render the card counts in the UI
+   */
+  private renderCardCounts(): void {
+    const cardCountsEl = document.querySelector("#card-counts") as HTMLElement;
+    if (!cardCountsEl) return;
+
+    // Sort cards by count (descending) then by name
+    const sortedCards = Array.from(this.deckCardCounts.entries())
+      .filter(([_, count]) => count > 0)
+      .sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0].localeCompare(b[0]);
+      });
+
+    if (sortedCards.length === 0) {
+      cardCountsEl.innerHTML = '<div style="color: #888; font-size: 0.75rem;">Deck empty</div>';
+      return;
+    }
+
+    const html = sortedCards.map(([cardType, count]) => {
+      const displayName = cardType.replace(/_/g, " ");
+      const color = CARD_COLORS[cardType] || "#666";
+      return `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
+            <div style="width: 12px; height: 12px; background: ${color}; border: 1px solid #333; border-radius: 2px; flex-shrink: 0;"></div>
+            <div style="color: #ccc; font-size: 0.7rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.escapeHtml(displayName)}">${this.escapeHtml(displayName)}</div>
+          </div>
+          <div style="color: #fff; font-size: 0.75rem; font-weight: bold; flex-shrink: 0;">${count}</div>
+        </div>
+      `;
+    }).join('');
+
+    cardCountsEl.innerHTML = html;
   }
 
   /**
@@ -110,6 +221,9 @@ export class VisualRenderer {
         setupEvent.initial_hands
       );
       
+      // Initialize deck card counts
+      this.initializeDeckCardCounts(setupEvent);
+      
       // Find the first card to be drawn from the deck
       let firstCardToDraw: CardType | null = null;
       for (let i = 1; i < replayData.events.length; i++) {
@@ -135,6 +249,9 @@ export class VisualRenderer {
 
     // Update event display
     this.updateEventDisplay(event);
+
+    // Update deck card counts
+    this.updateDeckCardCounts(event);
 
     // Animate based on event type
     try {
@@ -354,5 +471,7 @@ export class VisualRenderer {
    */
   resetGameState(): void {
     this.animationController.reset();
+    this.deckCardCounts.clear();
+    this.renderCardCounts();
   }
 }
