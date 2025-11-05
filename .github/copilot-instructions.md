@@ -73,7 +73,7 @@ exploding-kitten-bot-battle/
 
 ### Testing
 
-**IMPORTANT: Always run relevant tests before and after making changes. Only run tests for the parts of the codebase you're modifying.**
+**CRITICAL: Always run relevant tests before and after making changes. Only run tests for the parts of the codebase you're modifying.**
 
 #### Python Tests
 Run Python tests when making changes to:
@@ -88,13 +88,15 @@ Run Python tests when making changes to:
 python3 -m unittest tests.test_game -v
 ```
 
-**When to add new Python tests:**
-- When adding new features to the game engine
-- When fixing bugs (add regression tests)
-- When adding new card types or game mechanics
-- When modifying bot behavior or adding new bot methods
+**REQUIRED: You MUST add new Python tests when:**
+- ✅ **Adding new features** to the game engine → Add tests that validate the new feature works correctly
+- ✅ **Fixing bugs** → Add regression tests that would have caught the bug
+- ✅ **Adding new card types or game mechanics** → Add comprehensive tests for the new card type or mechanic
+- ✅ **Modifying bot behavior or adding new bot methods** → Add tests to verify the modified/new behavior
+- ✅ **Changing any game logic** → Add tests to ensure the change works as expected
+- ✅ **Modifying the Bot base class** → Add tests to verify the interface changes work correctly
 
-All existing tests must pass. Do not break existing tests.
+**All existing tests must pass. Do not break existing tests. If a test needs to change due to your modifications, update it accordingly.**
 
 #### TypeScript/Playwright Tests
 Run Playwright tests when making changes to:
@@ -122,11 +124,15 @@ npm run test:ui
 npm run test:headed
 ```
 
-**When to add new Playwright tests:**
-- When adding new UI features to the replay viewer
-- When fixing UI bugs (add regression tests)
-- When adding new playback controls or visualizations
-- When modifying replay file loading or parsing
+**REQUIRED: You MUST add new Playwright tests when:**
+- ✅ **Adding new UI features** to the replay viewer → Add tests that validate the feature works in the browser
+- ✅ **Fixing UI bugs** → Add regression tests that would have caught the bug
+- ✅ **Adding new playback controls or visualizations** → Add tests to verify the controls work correctly
+- ✅ **Modifying replay file loading or parsing** → Add tests with sample replay files to ensure parsing works
+- ✅ **Changing any UI rendering logic** → Add tests to verify the visual output is correct
+- ✅ **Adding new user interactions** (clicks, keyboard shortcuts, etc.) → Add tests to verify interactions work
+
+**All existing Playwright tests must pass. Do not break existing tests. If a test needs to change due to your modifications, update it accordingly.**
 
 **Note:** Do NOT run tests for parts of the codebase you haven't modified. For example:
 - If you only changed Python code, only run Python tests
@@ -605,7 +611,11 @@ When assisting with this repository:
    - TypeScript/replay-viewer changes → Run `cd replay-viewer && npm test` (after `npm install`)
    - Both changed → Run both test suites
    - **ONLY** run tests for the parts you modified
-4. **Add new tests** when adding features or fixing bugs (Python or Playwright tests as appropriate)
+4. **CRITICAL: You MUST add new tests** when adding features or fixing bugs:
+   - Python changes → Add Python unit tests in `tests/` directory
+   - TypeScript/replay-viewer changes → Add Playwright tests in `replay-viewer/tests/` directory
+   - **Never** make code changes without corresponding test coverage
+   - Tests should validate your changes work correctly and prevent regressions
 5. **Generate replay files** with `python3 main.py --test --replay <filename>.json` to test replay viewer
 6. **Never commit** `replay-viewer/dist/` directory (auto-generated)
 7. **Student-facing docs** (README.md, CONTRIBUTING.md) explain rules for students creating bots
