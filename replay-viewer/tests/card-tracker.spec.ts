@@ -1,16 +1,20 @@
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 test('card tracker displays and updates', async ({ page }) => {
   // Start the dev server first
-  await page.goto('http://localhost:5173');
+  await page.goto('/');
   
   // Wait for the page to load
   await expect(page.locator('h1')).toContainText('Exploding Kittens Replay Viewer');
   
   // Upload the replay file
+  const filePath = path.join(__dirname, 'fixtures', 'test_replay.json');
   const fileInput = page.locator('#file-input');
-  await fileInput.setInputFiles('/tmp/test_replay.json');
+  await fileInput.setInputFiles(filePath);
   
   // Wait for the replay to load
   await page.waitForTimeout(2000);
@@ -24,7 +28,8 @@ test('card tracker displays and updates', async ({ page }) => {
   await expect(cardCounts).toBeVisible();
   
   // Take a screenshot of the initial state
-  await page.screenshot({ path: '/tmp/card-tracker-initial.png', fullPage: true });
+  const screenshotDir = path.join(__dirname, '..', 'test-results');
+  await page.screenshot({ path: path.join(screenshotDir, 'card-tracker-initial.png'), fullPage: true });
   
   // Step forward a few times
   const stepButton = page.locator('#btn-step-forward');
@@ -36,5 +41,5 @@ test('card tracker displays and updates', async ({ page }) => {
   await page.waitForTimeout(1000);
   
   // Take a screenshot after stepping
-  await page.screenshot({ path: '/tmp/card-tracker-after-steps.png', fullPage: true });
+  await page.screenshot({ path: path.join(screenshotDir, 'card-tracker-after-steps.png'), fullPage: true });
 });

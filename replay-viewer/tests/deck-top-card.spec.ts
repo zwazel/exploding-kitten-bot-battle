@@ -41,7 +41,7 @@ test.describe('Deck Top Card Display', () => {
     const initialDeckContent = await deckPile.textContent();
     
     // Click step forward to advance through card draw event
-    const stepButton = page.locator('button:has-text("Step Forward")');
+    const stepButton = page.locator('#btn-step-forward');
     await expect(stepButton).toBeVisible();
     
     // Step forward multiple times to get to a card_draw event
@@ -71,7 +71,7 @@ test.describe('Deck Top Card Display', () => {
     await page.waitForSelector('#deck-pile', { timeout: 5000 });
     
     const deckPile = page.locator('#deck-pile');
-    const stepButton = page.locator('button:has-text("Step Forward")');
+    const stepButton = page.locator('#btn-step-forward');
     
     // Step through events looking for a shuffle event
     for (let i = 0; i < 20; i++) {
@@ -101,7 +101,7 @@ test.describe('Deck Top Card Display', () => {
     await page.waitForSelector('#deck-pile', { timeout: 5000 });
     
     const deckPile = page.locator('#deck-pile');
-    const stepButton = page.locator('button:has-text("Step Forward")');
+    const stepButton = page.locator('#btn-step-forward');
     
     // Step through events looking for a defuse event
     for (let i = 0; i < 50; i++) {
