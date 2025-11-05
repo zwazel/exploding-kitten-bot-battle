@@ -51,7 +51,7 @@ export class AnimationController {
   /**
    * Animate turn start
    */
-  async animateTurnStart(playerName: string, deckSize: number, turnsRemaining: number): Promise<void> {
+  async animateTurnStart(playerName: string, deckSize: number, turnsRemaining: number, nextCardToDraw: CardType | null = null): Promise<void> {
     // Unhighlight previous player and reset their turn counter
     if (this.currentPlayer) {
       this.gameBoard.highlightPlayer(this.currentPlayer, false);
@@ -61,7 +61,7 @@ export class AnimationController {
     // Highlight current player
     this.currentPlayer = playerName;
     this.gameBoard.highlightPlayer(playerName, true);
-    this.gameBoard.updateDeckCount(deckSize);
+    this.gameBoard.updateDeckTopCard(nextCardToDraw, deckSize);
     this.gameBoard.updatePlayerTurns(playerName, turnsRemaining);
     
     // Update cards in hand for current player
@@ -704,7 +704,7 @@ export class AnimationController {
         }
         this.currentPlayer = event.player;
         this.gameBoard.highlightPlayer(event.player, true);
-        this.gameBoard.updateDeckCount(event.cards_in_deck);
+        this.gameBoard.updateDeckTopCard(null, event.cards_in_deck);
         this.gameBoard.updatePlayerTurns(event.player, event.turns_remaining);
         
         // Update cards in hand for current player

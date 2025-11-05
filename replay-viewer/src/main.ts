@@ -6,7 +6,7 @@
 import "./style.css";
 import { ReplayPlayer } from "./replayPlayer";
 import { VisualRenderer } from "./visualRenderer";
-import type { ReplayData } from "./types";
+import type { ReplayData, CardType } from "./types";
 
 class ReplayApp {
   private player: ReplayPlayer;
@@ -293,8 +293,21 @@ class ReplayApp {
         }
       }
 
+      // Find the next card to be drawn (look ahead for next card_draw or exploding_kitten_draw event)
+      let nextCardToDraw: CardType | null = null;
+      for (let i = eventIndex + 1; i < replayData.events.length; i++) {
+        const e = replayData.events[i];
+        if (e.type === "card_draw") {
+          nextCardToDraw = e.card as CardType;
+          break;
+        } else if (e.type === "exploding_kitten_draw") {
+          nextCardToDraw = "EXPLODING_KITTEN" as CardType;
+          break;
+        }
+      }
+
       // Render the event with animation
-      await this.renderer.renderEvent(event, deckSize);
+      await this.renderer.renderEvent(event, deckSize, nextCardToDraw);
       
       // Only update counter if we successfully rendered
       shouldUpdateCounter = true;
