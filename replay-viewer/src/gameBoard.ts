@@ -46,27 +46,83 @@ export class GameBoard {
    */
   private initializeBoard(): void {
     this.container.innerHTML = `
-      <div class="game-board" style="position: relative; width: ${this.boardWidth}px; height: ${this.boardHeight}px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; overflow: visible;">
-        <!-- Deck and discard pile area -->
-        <div class="center-area" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
-          <div id="deck-pile" class="card-pile" style="position: absolute; left: -150px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-            <span style="color: #888; font-size: 14px;">DECK</span>
+      <div class="game-board-wrapper" style="width: 100%; display: flex; justify-content: center; align-items: center;">
+        <div class="game-board" style="position: relative; width: ${this.boardWidth}px; height: ${this.boardHeight}px; background: #1a1a1a; border-radius: 12px; overflow: visible; transform-origin: center center;">
+          <!-- Deck and discard pile area -->
+          <div class="center-area" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+            <div id="deck-pile" class="card-pile" style="position: absolute; left: -150px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+              <span style="color: #888; font-size: 14px;">DECK</span>
+            </div>
+            <div id="discard-pile" class="card-pile" style="position: absolute; left: 0px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+              <span style="color: #888; font-size: 14px;">DISCARD</span>
+            </div>
           </div>
-          <div id="discard-pile" class="card-pile" style="position: absolute; left: 0px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-            <span style="color: #888; font-size: 14px;">DISCARD</span>
-          </div>
-        </div>
 
-        <!-- Player areas (positioned around the table) -->
-        <div id="player-areas" style="position: absolute; width: 100%; height: 100%;"></div>
-        
-        <!-- Cards container for animations -->
-        <div id="cards-container" style="position: absolute; width: 100%; height: 100%; pointer-events: auto;"></div>
-        
-        <!-- Center display for special cards (See Future, Exploding Kitten, etc) -->
-        <div id="center-display" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; z-index: 1000;"></div>
+          <!-- Player areas (positioned around the table) -->
+          <div id="player-areas" style="position: absolute; width: 100%; height: 100%;"></div>
+          
+          <!-- Cards container for animations -->
+          <div id="cards-container" style="position: absolute; width: 100%; height: 100%; pointer-events: auto;"></div>
+          
+          <!-- Center display for special cards (See Future, Exploding Kitten, etc) -->
+          <div id="center-display" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; z-index: 1000;"></div>
+        </div>
       </div>
     `;
+    
+    // Apply responsive scaling after board is created
+    this.applyResponsiveScaling();
+    
+    // Re-apply scaling on window resize
+    window.addEventListener('resize', () => this.applyResponsiveScaling());
+  }
+  
+  /**
+   * Apply responsive scaling to fit the board within the viewport
+   */
+  private applyResponsiveScaling(): void {
+    const board = this.container.querySelector('.game-board') as HTMLElement;
+    const wrapper = this.container.querySelector('.game-board-wrapper') as HTMLElement;
+    if (!board || !wrapper) return;
+    
+    // Get available space (accounting for padding and margins)
+    const containerRect = this.container.getBoundingClientRect();
+    const availableWidth = containerRect.width;
+    
+    // Calculate scale to fit width (with some padding)
+    const padding = 40; // 20px on each side
+    const maxWidth = availableWidth - padding;
+    
+    // Calculate scale based on width
+    const scaleX = maxWidth / this.boardWidth;
+    
+    // For laptop screens (1366x768 and similar), also consider viewport height
+    // Reserve space for header (~70px), controls (~90px), game info (~60px), current event (~80px), legend (~120px)
+    // That leaves roughly 348px for the board on a 768px screen
+    const viewportHeight = window.innerHeight;
+    if (viewportHeight <= 900) {
+      // On smaller screens, target max 320px for the board height to fit everything without scrolling
+      const targetMaxHeight = 320;
+      const scaleY = targetMaxHeight / this.boardHeight;
+      const scale = Math.min(1, scaleX, scaleY);
+      
+      // Apply scale transform
+      board.style.transform = `scale(${scale})`;
+      
+      // Adjust wrapper height to account for scaled content
+      const scaledHeight = this.boardHeight * scale;
+      wrapper.style.height = `${scaledHeight}px`;
+    } else {
+      // On larger screens, just scale by width
+      const scale = Math.min(1, scaleX);
+      
+      // Apply scale transform
+      board.style.transform = `scale(${scale})`;
+      
+      // Adjust wrapper height to account for scaled content
+      const scaledHeight = this.boardHeight * scale;
+      wrapper.style.height = `${scaledHeight}px`;
+    }
   }
 
   /**
