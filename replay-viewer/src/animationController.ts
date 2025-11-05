@@ -42,6 +42,9 @@ export class AnimationController {
         this.gameBoard.createCard(cardType, position, cardId);
         this.playerHands.get(playerName)!.push(cardId);
       });
+      
+      // Update initial cards counter
+      this.gameBoard.updatePlayerCards(playerName, hand.length);
     });
   }
 
@@ -49,9 +52,10 @@ export class AnimationController {
    * Animate turn start
    */
   async animateTurnStart(playerName: string, deckSize: number, turnsRemaining: number): Promise<void> {
-    // Unhighlight previous player
+    // Unhighlight previous player and reset their turn counter
     if (this.currentPlayer) {
       this.gameBoard.highlightPlayer(this.currentPlayer, false);
+      this.gameBoard.updatePlayerTurns(this.currentPlayer, 0);
     }
 
     // Highlight current player
@@ -59,6 +63,10 @@ export class AnimationController {
     this.gameBoard.highlightPlayer(playerName, true);
     this.gameBoard.updateDeckCount(deckSize);
     this.gameBoard.updatePlayerTurns(playerName, turnsRemaining);
+    
+    // Update cards in hand for current player
+    const playerHand = this.playerHands.get(playerName) || [];
+    this.gameBoard.updatePlayerCards(playerName, playerHand.length);
 
     await this.delay(300);
   }
@@ -83,6 +91,9 @@ export class AnimationController {
     // Add to player's hand and reorganize
     playerHand.push(cardId);
     this.playerHands.set(playerName, playerHand);
+    
+    // Update cards counter
+    this.gameBoard.updatePlayerCards(playerName, playerHand.length);
     
     // Reorganize hand with new card count
     await this.reorganizePlayerHand(playerName);
@@ -112,6 +123,9 @@ export class AnimationController {
     if (!cardId) return;
 
     this.playerHands.set(playerName, playerHand);
+    
+    // Update cards counter
+    this.gameBoard.updatePlayerCards(playerName, playerHand.length);
 
     const discardPos = this.gameBoard.getDiscardPosition();
     
@@ -159,6 +173,9 @@ export class AnimationController {
       this.gameBoard.removeCard(cardId);
     }
     this.playerHands.set(playerName, []);
+    
+    // Update cards counter
+    this.gameBoard.updatePlayerCards(playerName, 0);
 
     await this.delay(500);
   }
@@ -283,6 +300,9 @@ export class AnimationController {
     if (nopeCardId) {
       this.playerHands.set(playerName, playerHand);
       
+      // Update cards counter
+      this.gameBoard.updatePlayerCards(playerName, playerHand.length);
+      
       // Animate nope card to discard pile
       const discardPos = this.gameBoard.getDiscardPosition();
       await this.gameBoard.moveCard(nopeCardId, { ...discardPos, rotation: 0, zIndex: 10 }, 500);
@@ -367,6 +387,9 @@ export class AnimationController {
     
     if (defuseCardId) {
       this.playerHands.set(playerName, playerHand);
+      
+      // Update cards counter
+      this.gameBoard.updatePlayerCards(playerName, playerHand.length);
 
       // Animate defuse card to center
       await this.gameBoard.moveCard(defuseCardId, {
@@ -429,6 +452,9 @@ export class AnimationController {
     // Add to player's hand
     playerHand.push(cardId);
     this.playerHands.set(playerName, playerHand);
+    
+    // Update cards counter
+    this.gameBoard.updatePlayerCards(playerName, playerHand.length);
     
     // Reorganize hand
     await this.reorganizePlayerHand(playerName);
@@ -596,10 +622,16 @@ export class AnimationController {
         // Update current player state
         if (this.currentPlayer) {
           this.gameBoard.highlightPlayer(this.currentPlayer, false);
+          this.gameBoard.updatePlayerTurns(this.currentPlayer, 0);
         }
         this.currentPlayer = event.player;
         this.gameBoard.highlightPlayer(event.player, true);
         this.gameBoard.updateDeckCount(event.cards_in_deck);
+        this.gameBoard.updatePlayerTurns(event.player, event.turns_remaining);
+        
+        // Update cards in hand for current player
+        const currentPlayerHand = this.playerHands.get(event.player) || [];
+        this.gameBoard.updatePlayerCards(event.player, currentPlayerHand.length);
         break;
 
       case "card_draw":
@@ -610,12 +642,15 @@ export class AnimationController {
         this.gameBoard.createCard(event.card, handPos, cardId);
         playerHand.push(cardId);
         this.playerHands.set(event.player, playerHand);
+        this.gameBoard.updatePlayerCards(event.player, playerHand.length);
         break;
 
       case "card_play":
         // Remove card from player's hand state
         this.removeCardFromHand(event.player, event.card);
         this.gameBoard.addToDiscardPile(event.card);
+        const playHand = this.playerHands.get(event.player) || [];
+        this.gameBoard.updatePlayerCards(event.player, playHand.length);
         break;
 
       case "combo_play":
@@ -625,6 +660,8 @@ export class AnimationController {
             this.removeCardFromHand(event.player, cardType);
             this.gameBoard.addToDiscardPile(cardType);
           });
+          const comboHand = this.playerHands.get(event.player) || [];
+          this.gameBoard.updatePlayerCards(event.player, comboHand.length);
         }
         break;
 
@@ -634,6 +671,7 @@ export class AnimationController {
         const eliminatedHand = this.playerHands.get(event.player) || [];
         eliminatedHand.forEach(id => this.gameBoard.removeCard(id));
         this.playerHands.set(event.player, []);
+        this.gameBoard.updatePlayerCards(event.player, 0);
         break;
 
       case "exploding_kitten_draw":
@@ -645,6 +683,7 @@ export class AnimationController {
           this.gameBoard.createCard("EXPLODING_KITTEN", handPos, ektCardId);
           hand.push(ektCardId);
           this.playerHands.set(event.player, hand);
+          this.gameBoard.updatePlayerCards(event.player, hand.length);
           this.explodingKittenCardId = ektCardId;
         }
         break;
@@ -663,6 +702,8 @@ export class AnimationController {
         }
         // Also remove defuse card
         this.removeCardFromHand(event.player, "DEFUSE");
+        const defuseHand = this.playerHands.get(event.player) || [];
+        this.gameBoard.updatePlayerCards(event.player, defuseHand.length);
         break;
 
       case "discard_take":
@@ -673,6 +714,7 @@ export class AnimationController {
         this.gameBoard.createCard(event.card, dtHandPos, dtCardId);
         dtHand.push(dtCardId);
         this.playerHands.set(event.player, dtHand);
+        this.gameBoard.updatePlayerCards(event.player, dtHand.length);
         break;
 
       case "card_steal":
@@ -707,6 +749,7 @@ export class AnimationController {
           if (stolenCardId) {
             const stolenCardElement = this.gameBoard.getCardElement(stolenCardId);
             this.playerHands.set(event.victim, victimHand);
+            this.gameBoard.updatePlayerCards(event.victim, victimHand.length);
             
             // Add to thief's hand
             const thiefHand = this.playerHands.get(event.thief) || [];
@@ -720,6 +763,7 @@ export class AnimationController {
             
             thiefHand.push(stolenCardId);
             this.playerHands.set(event.thief, thiefHand);
+            this.gameBoard.updatePlayerCards(event.thief, thiefHand.length);
           }
         }
         break;
@@ -735,6 +779,7 @@ export class AnimationController {
             const requestedCardElement = this.gameBoard.getCardElement(requestedCardId);
             targetHand.splice(cardIndex, 1);
             this.playerHands.set(event.target, targetHand);
+            this.gameBoard.updatePlayerCards(event.target, targetHand.length);
             
             // Add to requester's hand
             const requesterHand = this.playerHands.get(event.requester) || [];
@@ -748,6 +793,7 @@ export class AnimationController {
             
             requesterHand.push(requestedCardId);
             this.playerHands.set(event.requester, requesterHand);
+            this.gameBoard.updatePlayerCards(event.requester, requesterHand.length);
           }
         }
         break;
