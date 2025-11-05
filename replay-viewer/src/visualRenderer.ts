@@ -224,20 +224,9 @@ export class VisualRenderer {
       // Initialize deck card counts
       this.initializeDeckCardCounts(setupEvent);
       
-      // Find the first card to be drawn from the deck
-      let firstCardToDraw: CardType | null = null;
-      for (let i = 1; i < replayData.events.length; i++) {
-        const e = replayData.events[i];
-        if (e.type === "card_draw") {
-          firstCardToDraw = e.card as CardType;
-          break;
-        } else if (e.type === "exploding_kitten_draw") {
-          firstCardToDraw = "EXPLODING_KITTEN" as CardType;
-          break;
-        }
-      }
-      
-      this.gameBoard.updateDeckTopCard(firstCardToDraw, setupEvent.deck_size);
+      // Use the top_card from the setup event if available
+      const topCard = setupEvent.top_card || null;
+      this.gameBoard.updateDeckTopCard(topCard, setupEvent.deck_size);
     }
   }
 
@@ -261,6 +250,10 @@ export class VisualRenderer {
           break;
 
         case "card_draw":
+          // Update deck top card immediately before animation starts
+          if (event.top_card) {
+            this.gameBoard.updateDeckTopCard(event.top_card, deckSize - 1);
+          }
           await this.animationController.animateCardDraw(event.player, event.card);
           break;
 
@@ -287,6 +280,10 @@ export class VisualRenderer {
           break;
 
         case "defuse":
+          // Update deck top card immediately before animation starts
+          if (event.top_card) {
+            this.gameBoard.updateDeckTopCard(event.top_card, deckSize);
+          }
           await this.animationController.animateDefuse(event.player, event.insert_position);
           break;
 
@@ -296,6 +293,10 @@ export class VisualRenderer {
 
         case "shuffle":
           await this.animationController.animateShuffle();
+          // Update deck top card immediately after shuffle animation
+          if (event.top_card) {
+            this.gameBoard.updateDeckTopCard(event.top_card, deckSize);
+          }
           break;
 
         case "player_elimination":
