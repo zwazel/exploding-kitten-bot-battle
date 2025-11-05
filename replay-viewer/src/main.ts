@@ -6,13 +6,14 @@
 import "./style.css";
 import { ReplayPlayer } from "./replayPlayer";
 import { VisualRenderer } from "./visualRenderer";
-import type { ReplayData } from "./types";
+import type { ReplayData, CardType } from "./types";
 
 class ReplayApp {
   private player: ReplayPlayer;
   private renderer!: VisualRenderer;
   private fileInput: HTMLInputElement | null = null;
   private isProcessingEvent = false;
+  private readonly MAX_EVENT_PROCESSING_TIMEOUT_MS = 5000;
 
   constructor() {
     this.player = new ReplayPlayer();
@@ -52,6 +53,9 @@ class ReplayApp {
             <div class="event-progress">
               <span id="event-counter">Event: 0 / 0</span>
             </div>
+            
+            <!-- Hidden jump control for automated testing/agents only -->
+            <input type="hidden" id="agent-jump-to-event" data-testid="agent-jump-to-event" value="0" />
           </div>
         </div>
         
@@ -84,6 +88,16 @@ class ReplayApp {
       document.querySelector("#speed-display")!.textContent = `${speed.toFixed(1)}x`;
     });
 
+    // Hidden agent jump control - only listens to input event (not MutationObserver)
+    // MutationObserver won't detect programmatic value property changes, only attribute changes
+    // IMPORTANT: When setting the value of this input programmatically (e.g., in tests),
+    // you must also dispatch an input event:
+    // agentJumpInput.value = "42";
+    // agentJumpInput.dispatchEvent(new Event('input', { bubbles: true }));
+    // This ensures the application responds to the change as expected.
+    const agentJumpInput = document.querySelector<HTMLInputElement>("#agent-jump-to-event")!;
+    agentJumpInput.addEventListener("input", () => this.handleAgentJump());
+
     // Player callbacks
     this.player.onEventChange(async (_event, index) => {
       await this.updateDisplay(index);
@@ -106,10 +120,6 @@ class ReplayApp {
       this.player.loadReplay(data);
       await this.renderer.renderGameSetup(data);
 
-      // Show controls and update UI
-      document.querySelector<HTMLDivElement>("#playback-controls")!.style.display = "flex";
-      document.querySelector<HTMLSpanElement>("#file-name")!.textContent = file.name;
-
       // Update event counter
       this.updateEventCounter(0, data.events.length);
 
@@ -118,6 +128,10 @@ class ReplayApp {
       if (firstEvent) {
         await this.updateDisplay(0);
       }
+
+      // Show controls and update UI AFTER initial event is processed
+      document.querySelector<HTMLDivElement>("#playback-controls")!.style.display = "flex";
+      document.querySelector<HTMLSpanElement>("#file-name")!.textContent = file.name;
     } catch (error) {
       alert(`Error loading replay file: ${error}`);
       console.error("Error loading replay:", error);
@@ -154,6 +168,8 @@ class ReplayApp {
   }
 
   private async stepForward(): Promise<void> {
+    const stepButton = document.querySelector<HTMLButtonElement>("#btn-step-forward")!;
+    
     // Wait for any ongoing animations to complete
     if (this.isProcessingEvent) {
       return; // Don't step if already processing an event
@@ -164,13 +180,97 @@ class ReplayApp {
       await this.delay(50);
     }
     
-    this.player.stepForward();
+    // Disable button during processing
+    stepButton.disabled = true;
+    try {
+      await this.player.stepForward();
+      // Small delay to ensure DOM updates are complete
+      await this.delay(10);
+    } finally {
+      // Re-enable button after processing completes
+      stepButton.disabled = false;
+    }
+  }
+
+  /**
+   * Handle agent jump to event (hidden feature for automated testing)
+   * Processes all intermediate events AND target event silently to maintain state consistency
+   * This saves time by skipping all animations including the target event
+   */
+  private async handleAgentJump(): Promise<void> {
+    const agentJumpInput = document.querySelector<HTMLInputElement>("#agent-jump-to-event")!;
+    const targetEventIndex = parseInt(agentJumpInput.value, 10);
+    
+    if (isNaN(targetEventIndex)) return;
+
+    const currentState = this.player.getPlaybackState();
+    const replayData = this.player.getReplayData();
+    
+    if (!replayData) return;
+
+    // Validate forward-only jump
+    if (targetEventIndex <= currentState.currentEventIndex) {
+      console.warn(`Agent jump: Cannot jump backward. Current: ${currentState.currentEventIndex}, Target: ${targetEventIndex}`);
+      return;
+    }
+
+    // Validate bounds
+    const maxIndex = replayData.events.length - 1;
+    if (targetEventIndex > maxIndex) {
+      console.warn(`Agent jump: Target ${targetEventIndex} exceeds max ${maxIndex}`);
+      return;
+    }
+
+    // Pause playback if playing
+    if (currentState.isPlaying) {
+      this.player.pause();
+    }
+
+    // Wait for any ongoing event processing, with a timeout to prevent infinite loop
+    const pollIntervalMs = 50;
+    let waitedMs = 0;
+    while (this.isProcessingEvent) {
+      if (waitedMs >= this.MAX_EVENT_PROCESSING_TIMEOUT_MS) {
+        throw new Error("Timeout waiting for previous event processing to complete (isProcessingEvent stuck true).");
+      }
+      await this.delay(pollIntervalMs);
+      waitedMs += pollIntervalMs;
+    }
+
+    // Set flag to prevent event callback from rendering during jump
+    this.isProcessingEvent = true;
+
+    try {
+      // Process all events from current+1 to target (inclusive) silently
+      // This includes the target event to save time by not animating it
+      const startIndex = currentState.currentEventIndex + 1;
+      const eventsToProcess = replayData.events.slice(startIndex, targetEventIndex + 1); // slice(start, end) is exclusive of end, so +1 to include targetEventIndex
+      
+      if (eventsToProcess.length > 0) {
+        // Pass the absolute start index to ensure unique card IDs across multiple jumps
+        this.renderer.processEventsSilently(eventsToProcess, startIndex);
+      }
+
+      // Now jump to the target event using the player's method
+      // The event has already been processed silently, so this just updates the index
+      this.player.jumpToEvent(targetEventIndex);
+      
+      // Manually update the event counter since we prevented the render callback
+      this.updateEventCounter(targetEventIndex, replayData.events.length);
+    } finally {
+      this.isProcessingEvent = false;
+    }
   }
 
   private async updateDisplay(eventIndex: number): Promise<void> {
-    if (this.isProcessingEvent) return;
+    // Set processing flag - if already processing, wait for it to complete
+    while (this.isProcessingEvent) {
+      await this.delay(10);
+    }
     
     this.isProcessingEvent = true;
+    let shouldUpdateCounter = false;
+    
     try {
       const replayData = this.player.getReplayData();
       if (!replayData) return;
@@ -193,13 +293,37 @@ class ReplayApp {
         }
       }
 
+      // Find the next card to be drawn (look ahead for next card_draw or exploding_kitten_draw event)
+      let nextCardToDraw: CardType | null = null;
+      for (let i = eventIndex + 1; i < replayData.events.length; i++) {
+        const e = replayData.events[i];
+        if (e.type === "card_draw") {
+          nextCardToDraw = e.card as CardType;
+          break;
+        } else if (e.type === "exploding_kitten_draw") {
+          nextCardToDraw = "EXPLODING_KITTEN" as CardType;
+          break;
+        }
+      }
+
       // Render the event with animation
-      await this.renderer.renderEvent(event, deckSize);
+      await this.renderer.renderEvent(event, deckSize, nextCardToDraw);
       
-      // Update event counter
-      this.updateEventCounter(eventIndex, replayData.events.length);
+      // Only update counter if we successfully rendered
+      shouldUpdateCounter = true;
+    } catch (error) {
+      console.error('[updateDisplay] Error rendering event:', error);
     } finally {
       this.isProcessingEvent = false;
+      
+      // Update event counter AFTER clearing the processing flag
+      // Only update if we successfully processed the event
+      if (shouldUpdateCounter) {
+        const replayData = this.player.getReplayData();
+        if (replayData) {
+          this.updateEventCounter(eventIndex, replayData.events.length);
+        }
+      }
     }
   }
 
@@ -210,7 +334,10 @@ class ReplayApp {
   }
 
   private updateEventCounter(current: number, total: number): void {
-    document.querySelector("#event-counter")!.textContent = `Event: ${current + 1} / ${total}`;
+    const counter = document.querySelector("#event-counter")!;
+    counter.textContent = `Event: ${current + 1} / ${total}`;
+    // Add data attribute for debugging
+    counter.setAttribute('data-current-index', String(current));
   }
 
   private delay(ms: number): Promise<void> {

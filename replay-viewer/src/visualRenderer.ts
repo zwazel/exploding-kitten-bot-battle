@@ -36,7 +36,7 @@ export class VisualRenderer {
           </div>
           
           <!-- Visual game board -->
-          <div id="visual-board" style="min-height: 800px;">
+          <div id="visual-board">
           </div>
           
           <!-- Current event display -->
@@ -109,14 +109,28 @@ export class VisualRenderer {
         setupEvent.play_order,
         setupEvent.initial_hands
       );
-      this.gameBoard.updateDeckCount(setupEvent.deck_size);
+      
+      // Find the first card to be drawn from the deck
+      let firstCardToDraw: CardType | null = null;
+      for (let i = 1; i < replayData.events.length; i++) {
+        const e = replayData.events[i];
+        if (e.type === "card_draw") {
+          firstCardToDraw = e.card as CardType;
+          break;
+        } else if (e.type === "exploding_kitten_draw") {
+          firstCardToDraw = "EXPLODING_KITTEN" as CardType;
+          break;
+        }
+      }
+      
+      this.gameBoard.updateDeckTopCard(firstCardToDraw, setupEvent.deck_size);
     }
   }
 
   /**
    * Render a single event with animation
    */
-  async renderEvent(event: ReplayEvent, deckSize: number): Promise<void> {
+  async renderEvent(event: ReplayEvent, deckSize: number, nextCardToDraw: CardType | null = null): Promise<void> {
     this.isAnimating = true;
 
     // Update event display
@@ -126,7 +140,7 @@ export class VisualRenderer {
     try {
       switch (event.type) {
         case "turn_start":
-          await this.animationController.animateTurnStart(event.player, deckSize);
+          await this.animationController.animateTurnStart(event.player, deckSize, event.turns_remaining, nextCardToDraw);
           break;
 
         case "card_draw":
@@ -169,6 +183,31 @@ export class VisualRenderer {
 
         case "player_elimination":
           await this.animationController.animateElimination(event.player);
+          break;
+
+        case "card_steal":
+          // Show card steal animation
+          await this.animationController.animateCardSteal(
+            event.thief,
+            event.victim,
+            event.stolen_card,
+            event.context
+          );
+          break;
+
+        case "card_request":
+          // Show card request animation (3-of-a-kind)
+          await this.animationController.animateCardRequest(
+            event.requester,
+            event.target,
+            event.requested_card,
+            event.success
+          );
+          break;
+
+        case "favor":
+          // Skip favor animation - it will be shown with the card_steal event that follows
+          await this.delay(100);
           break;
 
         case "game_end":
@@ -280,6 +319,19 @@ export class VisualRenderer {
    */
   getIsAnimating(): boolean {
     return this.isAnimating;
+  }
+
+  /**
+   * Process events silently without animations
+   * Used for fast-forwarding during jumps
+   * @param events - Array of events to process
+   * @param startIndex - Absolute index of the first event in the replay (for unique ID generation)
+   */
+  processEventsSilently(events: ReplayEvent[], startIndex: number = 0): void {
+    // Pass absolute event indices to ensure unique card IDs across multiple jumps
+    for (let i = 0; i < events.length; i++) {
+      this.animationController.processEventSilently(events[i], startIndex + i);
+    }
   }
 
   /**

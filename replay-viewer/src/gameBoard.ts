@@ -28,9 +28,13 @@ export class GameBoard {
   private cardElements: Map<string, CardElement> = new Map();
   private discardPileStack: CardType[] = []; // Track discard pile cards
 
-  // Board positions
-  private deckPosition: Position = { x: 500, y: 350 };
-  private discardPosition: Position = { x: 650, y: 350 };
+  // Board positions (centered on the 1200x800 board)
+  // Deck and discard piles are in a centered container
+  // Deck: left -150px from center (600px), top -60px from center (400px), 100x140px box
+  // Discard: left 0px from center, top -60px from center, 100x140px box
+  // Position for card top-left corner to center it on the pile (card is 80x112):
+  private deckPosition: Position = { x: 460, y: 354 };
+  private discardPosition: Position = { x: 610, y: 354 };
   
   constructor(container: HTMLElement) {
     this.container = container;
@@ -42,27 +46,83 @@ export class GameBoard {
    */
   private initializeBoard(): void {
     this.container.innerHTML = `
-      <div class="game-board" style="position: relative; width: ${this.boardWidth}px; height: ${this.boardHeight}px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; overflow: visible;">
-        <!-- Deck and discard pile area -->
-        <div class="center-area" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
-          <div id="deck-pile" class="card-pile" style="position: absolute; left: -150px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-            <span style="color: #888; font-size: 14px;">DECK</span>
+      <div class="game-board-wrapper" style="width: 100%; display: flex; justify-content: center; align-items: center;">
+        <div class="game-board" style="position: relative; width: ${this.boardWidth}px; height: ${this.boardHeight}px; background: #1a1a1a; border-radius: 12px; overflow: visible; transform-origin: center center;">
+          <!-- Deck and discard pile area -->
+          <div class="center-area" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+            <div id="deck-pile" class="card-pile" style="position: absolute; left: -150px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+              <span style="color: #888; font-size: 14px;">DECK</span>
+            </div>
+            <div id="discard-pile" class="card-pile" style="position: absolute; left: 0px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+              <span style="color: #888; font-size: 14px;">DISCARD</span>
+            </div>
           </div>
-          <div id="discard-pile" class="card-pile" style="position: absolute; left: 0px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-            <span style="color: #888; font-size: 14px;">DISCARD</span>
-          </div>
-        </div>
 
-        <!-- Player areas (positioned around the table) -->
-        <div id="player-areas" style="position: absolute; width: 100%; height: 100%;"></div>
-        
-        <!-- Cards container for animations -->
-        <div id="cards-container" style="position: absolute; width: 100%; height: 100%; pointer-events: auto;"></div>
-        
-        <!-- Center display for special cards (See Future, Exploding Kitten, etc) -->
-        <div id="center-display" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; z-index: 1000;"></div>
+          <!-- Player areas (positioned around the table) -->
+          <div id="player-areas" style="position: absolute; width: 100%; height: 100%;"></div>
+          
+          <!-- Cards container for animations -->
+          <div id="cards-container" style="position: absolute; width: 100%; height: 100%; pointer-events: auto;"></div>
+          
+          <!-- Center display for special cards (See Future, Exploding Kitten, etc) -->
+          <div id="center-display" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; z-index: 1000;"></div>
+        </div>
       </div>
     `;
+    
+    // Apply responsive scaling after board is created
+    this.applyResponsiveScaling();
+    
+    // Re-apply scaling on window resize
+    window.addEventListener('resize', () => this.applyResponsiveScaling());
+  }
+  
+  /**
+   * Apply responsive scaling to fit the board within the viewport
+   */
+  private applyResponsiveScaling(): void {
+    const board = this.container.querySelector('.game-board') as HTMLElement;
+    const wrapper = this.container.querySelector('.game-board-wrapper') as HTMLElement;
+    if (!board || !wrapper) return;
+    
+    // Get available space (accounting for padding and margins)
+    const containerRect = this.container.getBoundingClientRect();
+    const availableWidth = containerRect.width;
+    
+    // Calculate scale to fit width (with some padding)
+    const padding = 40; // 20px on each side
+    const maxWidth = availableWidth - padding;
+    
+    // Calculate scale based on width
+    const scaleX = maxWidth / this.boardWidth;
+    
+    // For laptop screens (1366x768 and similar), also consider viewport height
+    // Reserve space for header (~70px), controls (~90px), game info (~60px), current event (~80px), legend (~120px)
+    // That leaves roughly 348px for the board on a 768px screen
+    const viewportHeight = window.innerHeight;
+    if (viewportHeight <= 900) {
+      // On smaller screens, target max 320px for the board height to fit everything without scrolling
+      const targetMaxHeight = 320;
+      const scaleY = targetMaxHeight / this.boardHeight;
+      const scale = Math.min(1, scaleX, scaleY);
+      
+      // Apply scale transform
+      board.style.transform = `scale(${scale})`;
+      
+      // Adjust wrapper height to account for scaled content
+      const scaledHeight = this.boardHeight * scale;
+      wrapper.style.height = `${scaledHeight}px`;
+    } else {
+      // On larger screens, just scale by width
+      const scale = Math.min(1, scaleX);
+      
+      // Apply scale transform
+      board.style.transform = `scale(${scale})`;
+      
+      // Adjust wrapper height to account for scaled content
+      const scaledHeight = this.boardHeight * scale;
+      wrapper.style.height = `${scaledHeight}px`;
+    }
   }
 
   /**
@@ -73,11 +133,45 @@ export class GameBoard {
   }
 
   /**
+   * Calculate text color based on background color luminance
+   * Returns white for dark backgrounds, black for light backgrounds
+   * Uses simplified relative luminance calculation (ITU-R BT.601)
+   */
+  private getTextColor(backgroundColor: string): string {
+    // Remove # if present
+    let hex = backgroundColor.replace('#', '');
+    
+    // Handle 3-character shorthand (e.g., 'fff' -> 'ffffff')
+    if (hex.length === 3) {
+      hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    
+    // Validate hex format
+    if (hex.length !== 6 || !/^[0-9A-Fa-f]{6}$/.test(hex)) {
+      // Default to black text for invalid colors
+      return '#000';
+    }
+    
+    // Convert hex to RGB
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    // Calculate relative luminance using simplified formula
+    // This is a common approximation that works well for basic contrast detection
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    // Use white text for dark backgrounds (luminance < 0.5), black for light
+    return luminance < 0.5 ? '#fff' : '#000';
+  }
+
+  /**
    * Create a card element
    */
   createCard(cardType: CardType, position: Position, id?: string): CardElement {
     const cardId = id || `card-${Date.now()}-${Math.random()}`;
     const color = this.getCardColor(cardType);
+    const textColor = this.getTextColor(color);
     const cardName = cardType.replace(/_/g, " ");
 
     const card = document.createElement("div");
@@ -97,7 +191,7 @@ export class GameBoard {
       justify-content: center;
       font-size: 10px;
       font-weight: bold;
-      color: #000;
+      color: ${textColor};
       text-align: center;
       padding: 4px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
@@ -158,6 +252,13 @@ export class GameBoard {
   }
 
   /**
+   * Get a card element by ID
+   */
+  getCardElement(cardId: string): CardElement | undefined {
+    return this.cardElements.get(cardId);
+  }
+
+  /**
    * Remove a card from the board
    */
   removeCard(cardId: string): void {
@@ -204,6 +305,8 @@ export class GameBoard {
 
       playerArea.innerHTML = `
         <div style="color: #44ff44; font-weight: bold; margin-bottom: 4px; text-align: center;">${this.escapeHtml(name)}</div>
+        <div id="turns-${name}" style="color: #ffa500; font-size: 0.9rem; text-align: center; margin-bottom: 4px;">Turns: <span id="turns-count-${name}">-</span></div>
+        <div id="cards-${name}" style="color: #4db8ff; font-size: 0.9rem; text-align: center; margin-bottom: 4px;">Cards: <span id="cards-count-${name}">0</span></div>
         <div id="hand-${name}" class="player-hand" data-rotation="0" style="position: relative; min-height: 150px;"></div>
       `;
 
@@ -272,6 +375,63 @@ export class GameBoard {
   }
 
   /**
+   * Update deck to show the top card (next card to be drawn)
+   */
+  updateDeckTopCard(topCard: CardType | null, count: number): void {
+    const deck = this.container.querySelector("#deck-pile") as HTMLElement;
+    if (!deck) return;
+
+    // Ensure count is a safe integer
+    const safeCount = Math.max(0, Math.floor(count));
+
+    if (topCard === null || safeCount === 0) {
+      // No cards left or unknown top card - show empty deck
+      deck.innerHTML = `<span style="color: #888; font-size: 14px;">DECK<br/>${safeCount}</span>`;
+      return;
+    }
+
+    // Show the top card
+    const color = this.getCardColor(topCard);
+    const textColor = this.getTextColor(color);
+    const cardName = topCard.replace(/_/g, " ");
+    
+    deck.innerHTML = `
+      <div style="
+        width: 90px;
+        height: 130px;
+        background: ${color};
+        border: 2px solid #333;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        font-weight: bold;
+        color: ${textColor};
+        text-align: center;
+        padding: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        position: relative;
+      ">
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+          ${this.escapeHtml(cardName)}
+        </div>
+        <div style="
+          position: absolute;
+          bottom: 4px;
+          right: 4px;
+          background: rgba(0,0,0,0.7);
+          color: white;
+          padding: 2px 4px;
+          border-radius: 3px;
+          font-size: 8px;
+        ">${safeCount}</div>
+      </div>
+    `;
+  }
+
+  /**
    * Add a card to the discard pile stack
    */
   addToDiscardPile(cardType: CardType): void {
@@ -305,6 +465,7 @@ export class GameBoard {
     // Show the top card (last in stack)
     const topCard = this.discardPileStack[this.discardPileStack.length - 1];
     const color = this.getCardColor(topCard);
+    const textColor = this.getTextColor(color);
     const cardName = topCard.replace(/_/g, " ");
     
     discardPile.innerHTML = `
@@ -320,7 +481,7 @@ export class GameBoard {
         justify-content: center;
         font-size: 9px;
         font-weight: bold;
-        color: #000;
+        color: ${textColor};
         text-align: center;
         padding: 4px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
@@ -361,6 +522,10 @@ export class GameBoard {
   highlightPlayer(playerName: string, highlight: boolean): void {
     const playerArea = this.container.querySelector(`#player-${playerName}`) as HTMLElement;
     if (playerArea) {
+      // Check if player is already eliminated (don't change their styling)
+      const isEliminated = playerArea.style.opacity === "0.5";
+      if (isEliminated) return;
+      
       if (highlight) {
         playerArea.style.borderColor = "#ffff44";
         playerArea.style.background = "rgba(255, 255, 0, 0.2)";
@@ -380,8 +545,30 @@ export class GameBoard {
     const playerArea = this.container.querySelector(`#player-${playerName}`) as HTMLElement;
     if (playerArea) {
       playerArea.style.borderColor = "#ff4444";
-      playerArea.style.background = "rgba(255, 0, 0, 0.1)";
+      playerArea.style.background = "rgba(255, 0, 0, 0.2)";
       playerArea.style.opacity = "0.5";
+      // Store eliminated state as data attribute
+      playerArea.setAttribute("data-eliminated", "true");
+    }
+  }
+
+  /**
+   * Update the turns remaining display for a player
+   */
+  updatePlayerTurns(playerName: string, turnsRemaining: number): void {
+    const turnsCountElement = this.container.querySelector(`#turns-count-${playerName}`) as HTMLElement;
+    if (turnsCountElement) {
+      turnsCountElement.textContent = turnsRemaining.toString();
+    }
+  }
+
+  /**
+   * Update the cards in hand display for a player
+   */
+  updatePlayerCards(playerName: string, cardCount: number): void {
+    const cardsCountElement = this.container.querySelector(`#cards-count-${playerName}`) as HTMLElement;
+    if (cardsCountElement) {
+      cardsCountElement.textContent = cardCount.toString();
     }
   }
 
@@ -404,6 +591,7 @@ export class GameBoard {
     // Create card elements
     const cardElements = cards.map((cardType, index) => {
       const color = this.getCardColor(cardType);
+      const textColor = this.getTextColor(color);
       const cardName = cardType.replace(/_/g, " ");
       const offset = (index - (cards.length - 1) / 2) * 110; // Space cards horizontally
       
@@ -421,7 +609,7 @@ export class GameBoard {
           justify-content: center;
           font-size: 10px;
           font-weight: bold;
-          color: #000;
+          color: ${textColor};
           text-align: center;
           padding: 4px;
           box-shadow: 0 4px 16px rgba(0,0,0,0.6);
@@ -639,7 +827,7 @@ export class GameBoard {
               justify-content: center;
               font-size: 18px;
               font-weight: bold;
-              color: #000;
+              color: ${this.getTextColor(this.getCardColor("NOPE"))};
               text-align: center;
               padding: 8px;
               box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 30px rgba(255, 68, 68, 0.6);
