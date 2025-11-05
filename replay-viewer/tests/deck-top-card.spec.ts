@@ -122,4 +122,67 @@ test.describe('Deck Top Card Display', () => {
       await page.waitForTimeout(100);
     }
   });
+
+  test('should NOT update deck top card during shuffle card play, only after shuffle event', async ({ page }) => {
+    await page.goto('/');
+    
+    // Load the test replay file (simple-game.json contains shuffle events)
+    const filePath = path.join(__dirname, 'fixtures', 'simple-game.json');
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles(filePath);
+    
+    // Wait for the game to be loaded
+    await page.waitForSelector('#deck-pile', { timeout: 5000 });
+    
+    const deckPile = page.locator('#deck-pile');
+    const stepButton = page.locator('#btn-step-forward');
+    const eventContent = page.locator('#event-content');
+    
+    // Step through events to reach the shuffle sequence:
+    // Event 0: game_setup
+    // Event 1: turn_start turn=1
+    // Event 2: card_draw (draws BEARD_CAT, top_card becomes EXPLODING_KITTEN)
+    // Event 3: turn_start turn=2
+    // Event 4: card_play SHUFFLE
+    // Event 5: shuffle (top_card becomes RAINBOW_RALPHING_CAT)
+    
+    // Step to event 2 (card_draw)
+    await stepButton.click();
+    await page.waitForTimeout(100);
+    await stepButton.click();
+    await page.waitForTimeout(100);
+    
+    // Step to event 3 (turn_start for turn 2)
+    await stepButton.click();
+    await page.waitForTimeout(100);
+    
+    // At event 3, deck should show EXPLODING_KITTEN (from previous card draw)
+    let deckContent = await deckPile.textContent();
+    expect(deckContent).toContain('EXPLODING KITTEN');
+    
+    // Step to event 4 (card_play SHUFFLE)
+    await stepButton.click();
+    await page.waitForTimeout(100);
+    
+    // Verify we're at the shuffle card play event
+    let eventText = await eventContent.textContent();
+    expect(eventText).toContain('played SHUFFLE');
+    
+    // Deck should STILL show EXPLODING_KITTEN (not changed yet)
+    deckContent = await deckPile.textContent();
+    expect(deckContent).toContain('EXPLODING KITTEN');
+    
+    // Step to event 5 (shuffle event)
+    await stepButton.click();
+    await page.waitForTimeout(100);
+    
+    // Verify we're at the shuffle event
+    eventText = await eventContent.textContent();
+    expect(eventText).toContain('shuffled the deck');
+    
+    // NOW the deck should show the new top card (RAINBOW_RALPHING_CAT)
+    deckContent = await deckPile.textContent();
+    expect(deckContent).toContain('RAINBOW RALPHING CAT');
+    expect(deckContent).not.toContain('EXPLODING KITTEN');
+  });
 });

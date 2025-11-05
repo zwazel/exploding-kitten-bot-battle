@@ -693,8 +693,9 @@ export class AnimationController {
    * Used for fast-forwarding through events during jump
    * @param event - The event to process
    * @param eventIndex - Optional index to help generate unique card IDs when processing batches
+   * @param currentTopCard - The current top card of the deck (tracked across events)
    */
-  processEventSilently(event: ReplayEvent, eventIndex: number = 0): void {
+  processEventSilently(event: ReplayEvent, eventIndex: number = 0, currentTopCard: CardType | null = null): CardType | null {
     switch (event.type) {
       case "turn_start":
         // Update current player state
@@ -704,7 +705,9 @@ export class AnimationController {
         }
         this.currentPlayer = event.player;
         this.gameBoard.highlightPlayer(event.player, true);
-        this.gameBoard.updateDeckTopCard(null, event.cards_in_deck);
+        // Use the tracked top card instead of null to maintain consistency during shuffle events
+        // This ensures the deck shows the correct top card when stepping through events
+        this.gameBoard.updateDeckTopCard(currentTopCard, event.cards_in_deck);
         this.gameBoard.updatePlayerTurns(event.player, event.turns_remaining);
         
         // Update cards in hand for current player
@@ -721,6 +724,10 @@ export class AnimationController {
         playerHand.push(cardId);
         this.playerHands.set(event.player, playerHand);
         this.gameBoard.updatePlayerCards(event.player, playerHand.length);
+        // Update top card from the event
+        if (event.top_card) {
+          currentTopCard = event.top_card as CardType;
+        }
         break;
 
       case "card_play":
@@ -782,6 +789,17 @@ export class AnimationController {
         this.removeCardFromHand(event.player, "DEFUSE");
         const defuseHand = this.playerHands.get(event.player) || [];
         this.gameBoard.updatePlayerCards(event.player, defuseHand.length);
+        // Update top card from the event
+        if (event.top_card) {
+          currentTopCard = event.top_card as CardType;
+        }
+        break;
+
+      case "shuffle":
+        // Update top card from the event (shuffle changes the top card)
+        if (event.top_card) {
+          currentTopCard = event.top_card as CardType;
+        }
         break;
 
       case "discard_take":
@@ -889,6 +907,9 @@ export class AnimationController {
       default:
         break;
     }
+    
+    // Return the updated top card
+    return currentTopCard;
   }
 
   /**
