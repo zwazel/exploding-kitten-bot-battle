@@ -249,6 +249,8 @@ class ReplayApp {
 
     // Set flag to prevent event callback from rendering during jump
     this.isProcessingEvent = true;
+    let targetReached = false;
+    let targetIndex = targetEventIndex;
 
     try {
       // Process all events from current+1 to target (inclusive) silently
@@ -265,11 +267,15 @@ class ReplayApp {
       // The event has already been processed silently, so this just updates the index
       this.player.jumpToEvent(targetEventIndex);
       
-      // Manually update the event counter since we prevented the render callback
-      this.updateEventCounter(targetEventIndex, replayData.events.length);
-      this.updateHistory(targetEventIndex);
+      targetReached = true;
     } finally {
       this.isProcessingEvent = false;
+      
+      // Update UI only if we successfully reached the target event
+      if (targetReached) {
+        this.updateEventCounter(targetIndex, replayData.events.length);
+        this.updateHistory(targetIndex);
+      }
     }
   }
 
