@@ -258,11 +258,18 @@ class ReplayApp {
         const eventEntry = document.createElement('div');
         eventEntry.className = 'history-event-entry';
         
-        eventEntry.innerHTML = `
-          <div class="history-event-number">Event ${i + 1}</div>
-          <div class="history-event-text">${this.formatEvent(event)}</div>
-        `;
-
+        // Create event number div
+        const eventNumber = document.createElement('div');
+        eventNumber.className = 'history-event-number';
+        eventNumber.textContent = `Event ${i + 1}`;
+        
+        // Create event text div
+        const eventText = document.createElement('div');
+        eventText.className = 'history-event-text';
+        eventText.innerHTML = this.formatEvent(event); // Safe: formatEvent escapes all user input
+        
+        eventEntry.appendChild(eventNumber);
+        eventEntry.appendChild(eventText);
         historyContent.appendChild(eventEntry);
       }
     }
