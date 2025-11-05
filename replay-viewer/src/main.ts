@@ -175,6 +175,26 @@ class ReplayApp {
       return;
     }
     
+    // Validate preconditions before setting processing flag
+    const currentState = this.player.getPlaybackState();
+    const replayData = this.player.getReplayData();
+    
+    if (!replayData) return;
+    
+    const nextEventIndex = currentState.currentEventIndex + 1;
+    
+    // Check if we can step forward
+    if (nextEventIndex >= replayData.events.length) {
+      // Already at the end
+      return;
+    }
+    
+    // Validate that the jump will succeed (forward-only jumping)
+    if (nextEventIndex <= currentState.currentEventIndex) {
+      console.warn(`stepForward: Invalid jump. Current: ${currentState.currentEventIndex}, Next: ${nextEventIndex}`);
+      return;
+    }
+    
     // Disable button during processing
     stepButton.disabled = true;
     
@@ -182,24 +202,12 @@ class ReplayApp {
     this.isProcessingEvent = true;
     
     try {
-      const currentState = this.player.getPlaybackState();
-      const replayData = this.player.getReplayData();
-      
-      if (!replayData) return;
-      
-      const nextEventIndex = currentState.currentEventIndex + 1;
-      
-      // Check if we can step forward
-      if (nextEventIndex >= replayData.events.length) {
-        // Already at the end
-        return;
-      }
-      
       // Process the next event silently (without animations)
       const nextEvent = replayData.events[nextEventIndex];
       this.renderer.processEventsSilently([nextEvent], nextEventIndex);
       
       // Update player state to the next event
+      // This is guaranteed to succeed because we validated above
       this.player.jumpToEvent(nextEventIndex);
       
       // Manually update the event counter since we bypassed the normal event callback
