@@ -1150,6 +1150,52 @@ class TestReplayRecorder(unittest.TestCase):
         self.assertEqual(recorder.events[1]["type"], "defuse")
         self.assertEqual(recorder.events[1]["insert_position"], 5)
     
+    def test_replay_recorder_top_card_in_events(self):
+        """Test that top_card field is recorded in relevant events."""
+        from game import ReplayRecorder
+        recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
+        
+        # Test game_setup with top_card
+        recorder.record_game_setup(20, 7, ["Bot1", "Bot2"], top_card=CardType.SKIP)
+        self.assertEqual(recorder.events[0]["type"], "game_setup")
+        self.assertEqual(recorder.events[0]["top_card"], "SKIP")
+        
+        # Test card_draw with top_card
+        recorder.record_card_draw("Bot1", CardType.DEFUSE, top_card=CardType.NOPE)
+        self.assertEqual(recorder.events[1]["type"], "card_draw")
+        self.assertEqual(recorder.events[1]["card"], "DEFUSE")
+        self.assertEqual(recorder.events[1]["top_card"], "NOPE")
+        
+        # Test shuffle with top_card
+        recorder.record_shuffle("Bot1", top_card=CardType.ATTACK)
+        self.assertEqual(recorder.events[2]["type"], "shuffle")
+        self.assertEqual(recorder.events[2]["top_card"], "ATTACK")
+        
+        # Test defuse with top_card
+        recorder.record_defuse("Bot1", 3, top_card=CardType.EXPLODING_KITTEN)
+        self.assertEqual(recorder.events[3]["type"], "defuse")
+        self.assertEqual(recorder.events[3]["insert_position"], 3)
+        self.assertEqual(recorder.events[3]["top_card"], "EXPLODING_KITTEN")
+    
+    def test_replay_recorder_top_card_optional(self):
+        """Test that top_card is optional in events."""
+        from game import ReplayRecorder
+        recorder = ReplayRecorder(["Bot1", "Bot2"], enabled=True)
+        
+        # Test events without top_card (should still work)
+        recorder.record_game_setup(20, 7, ["Bot1", "Bot2"])
+        recorder.record_card_draw("Bot1", CardType.DEFUSE)
+        recorder.record_shuffle("Bot1")
+        recorder.record_defuse("Bot1", 3)
+        
+        # All events should be recorded successfully
+        self.assertEqual(len(recorder.events), 4)
+        # top_card should not be in events that don't provide it
+        self.assertNotIn("top_card", recorder.events[0])
+        self.assertNotIn("top_card", recorder.events[1])
+        self.assertNotIn("top_card", recorder.events[2])
+        self.assertNotIn("top_card", recorder.events[3])
+    
     def test_replay_recorder_player_elimination(self):
         """Test recording player elimination."""
         from game import ReplayRecorder
