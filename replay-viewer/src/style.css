@@ -256,6 +256,16 @@ header h1 {
   margin-bottom: 0;
 }
 
+.history-event-number {
+  color: #888;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.history-event-text {
+  color: #ccc;
+}
+
 /* Custom scrollbar for history */
 .history-content::-webkit-scrollbar {
   width: 8px;

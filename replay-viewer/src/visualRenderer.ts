@@ -236,9 +236,6 @@ export class VisualRenderer {
   async renderEvent(event: ReplayEvent, deckSize: number, nextCardToDraw: CardType | null = null): Promise<void> {
     this.isAnimating = true;
 
-    // Update event display
-    this.updateEventDisplay(event);
-
     // Update deck card counts
     this.updateDeckCardCounts(event);
 
@@ -340,87 +337,6 @@ export class VisualRenderer {
     } finally {
       this.isAnimating = false;
     }
-  }
-
-  /**
-   * Update event display text
-   */
-  private updateEventDisplay(event: ReplayEvent): void {
-    const eventContent = document.querySelector("#event-content") as HTMLElement;
-    if (eventContent) {
-      eventContent.innerHTML = this.formatEvent(event);
-    }
-  }
-
-  /**
-   * Format event for display
-   */
-  private formatEvent(event: ReplayEvent): string {
-    switch (event.type) {
-      case "game_setup":
-        return `🎮 Game started with ${event.play_order.length} players`;
-      
-      case "turn_start":
-        return `🔄 Turn ${event.turn_number}: ${this.escapeHtml(event.player)}'s turn (${event.cards_in_deck} cards in deck)`;
-      
-      case "card_play":
-        return `🃏 ${this.escapeHtml(event.player)} played ${this.formatCardName(event.card)}`;
-      
-      case "combo_play":
-        const cards = event.cards.map((c) => this.formatCardName(c)).join(", ");
-        return `🎲 ${this.escapeHtml(event.player)} played ${event.combo_type} combo: [${cards}]${event.target ? ` targeting ${this.escapeHtml(event.target)}` : ""}`;
-      
-      case "nope":
-        const nopeTarget = event.target_player ? ` ${this.escapeHtml(event.target_player)}'s` : '';
-        const origAction = event.original_action ? ` ${this.formatCardName(event.original_action)}` : '';
-        return `🚫 ${this.escapeHtml(event.player)} played NOPE on${nopeTarget}${origAction}`;
-      
-      case "card_draw":
-        return `📥 ${this.escapeHtml(event.player)} drew ${this.formatCardName(event.card)}`;
-      
-      case "exploding_kitten_draw":
-        return `💣 ${this.escapeHtml(event.player)} drew an EXPLODING KITTEN! ${event.had_defuse ? "(has Defuse)" : "(NO DEFUSE!)"}`;
-      
-      case "defuse":
-        return `🛡️ ${this.escapeHtml(event.player)} defused and inserted kitten at position ${event.insert_position}`;
-      
-      case "player_elimination":
-        return `💀 ${this.escapeHtml(event.player)} was eliminated!`;
-      
-      case "see_future":
-        const seenCards = Array.isArray(event.cards_seen) 
-          ? event.cards_seen.map((c) => this.formatCardName(c)).join(", ")
-          : `${event.cards_seen} cards`;
-        return `🔮 ${this.escapeHtml(event.player)} used See the Future: [${seenCards}]`;
-      
-      case "shuffle":
-        return `🔀 ${this.escapeHtml(event.player)} shuffled the deck`;
-      
-      case "favor":
-        return `🤝 ${this.escapeHtml(event.player)} played Favor on ${this.escapeHtml(event.target)}`;
-      
-      case "card_steal":
-        return `🎯 ${this.escapeHtml(event.thief)} stole a card from ${this.escapeHtml(event.victim)} (${this.escapeHtml(event.context)})`;
-      
-      case "card_request":
-        return `📢 ${this.escapeHtml(event.requester)} requested ${this.formatCardName(event.requested_card)} from ${this.escapeHtml(event.target)}: ${event.success ? "✅ Success" : "❌ Failed"}`;
-      
-      case "discard_take":
-        return `♻️ ${this.escapeHtml(event.player)} took ${this.formatCardName(event.card)} from discard`;
-      
-      case "game_end":
-        return `🏆 Game Over! Winner: ${event.winner ? this.escapeHtml(event.winner) : "None"}`;
-      
-      default:
-        return `Unknown event: ${(event as any).type}`;
-    }
-  }
-
-  /**
-   * Format card name for display
-   */
-  private formatCardName(card: string): string {
-    return card.replace(/_/g, " ");
   }
 
   /**

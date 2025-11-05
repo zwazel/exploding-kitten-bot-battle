@@ -257,11 +257,10 @@ class ReplayApp {
       if (event) {
         const eventEntry = document.createElement('div');
         eventEntry.className = 'history-event-entry';
-        eventEntry.style.cssText = 'padding: 0.75rem; margin-bottom: 0.5rem; background: #1a1a1a; border-radius: 4px; border-left: 3px solid #646cff;';
         
         eventEntry.innerHTML = `
-          <div style="color: #888; font-size: 0.8rem; margin-bottom: 0.25rem;">Event ${i + 1}</div>
-          <div style="color: #ccc;">${this.formatEvent(event)}</div>
+          <div class="history-event-number">Event ${i + 1}</div>
+          <div class="history-event-text">${this.formatEvent(event)}</div>
         `;
 
         historyContent.appendChild(eventEntry);
