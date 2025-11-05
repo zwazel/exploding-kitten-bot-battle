@@ -170,24 +170,54 @@ class ReplayApp {
   private async stepForward(): Promise<void> {
     const stepButton = document.querySelector<HTMLButtonElement>("#btn-step-forward")!;
     
-    // Wait for any ongoing animations to complete
+    // Don't step if already processing an event
     if (this.isProcessingEvent) {
-      return; // Don't step if already processing an event
+      return;
     }
     
-    // Wait for renderer animations to complete
-    while (this.renderer.getIsAnimating()) {
-      await this.delay(50);
+    // Validate preconditions before setting processing flag
+    const currentState = this.player.getPlaybackState();
+    const replayData = this.player.getReplayData();
+    
+    if (!replayData) return;
+    
+    const nextEventIndex = currentState.currentEventIndex + 1;
+    
+    // Check if we can step forward
+    if (nextEventIndex >= replayData.events.length) {
+      // Already at the end
+      return;
+    }
+    
+    // Validate that the jump will succeed (forward-only jumping)
+    if (nextEventIndex <= currentState.currentEventIndex) {
+      console.warn(`stepForward: Invalid jump. Current: ${currentState.currentEventIndex}, Next: ${nextEventIndex}`);
+      return;
     }
     
     // Disable button during processing
     stepButton.disabled = true;
+    
+    // Set processing flag to prevent concurrent operations
+    this.isProcessingEvent = true;
+    
     try {
-      await this.player.stepForward();
+      // Process the next event silently (without animations)
+      const nextEvent = replayData.events[nextEventIndex];
+      this.renderer.processEventsSilently([nextEvent], nextEventIndex);
+      
+      // Update player state to the next event
+      // This is guaranteed to succeed because we validated above
+      this.player.jumpToEvent(nextEventIndex);
+      
+      // Manually update the event counter since we bypassed the normal event callback
+      this.updateEventCounter(nextEventIndex, replayData.events.length);
+      
       // Small delay to ensure DOM updates are complete
       await this.delay(10);
     } finally {
-      // Re-enable button after processing completes
+      // Clear processing flag and re-enable button
+      this.isProcessingEvent = false;
       stepButton.disabled = false;
     }
   }
