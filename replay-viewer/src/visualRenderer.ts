@@ -444,12 +444,53 @@ export class VisualRenderer {
    * Used for fast-forwarding during jumps
    * @param events - Array of events to process
    * @param startIndex - Absolute index of the first event in the replay (for unique ID generation)
+   * @param replayData - Full replay data to calculate initial top card
    */
-  processEventsSilently(events: ReplayEvent[], startIndex: number = 0): void {
+  processEventsSilently(events: ReplayEvent[], startIndex: number = 0, replayData: ReplayData | null = null): void {
+    // Calculate initial top card by looking at events before startIndex
+    let currentTopCard: CardType | null = null;
+    let deckSize = 33; // Default deck size
+    
+    if (replayData) {
+      // Get top card and deck size from game_setup
+      const setupEvent = replayData.events.find(e => e.type === "game_setup");
+      if (setupEvent && setupEvent.type === "game_setup") {
+        if (setupEvent.top_card) {
+          currentTopCard = setupEvent.top_card;
+        }
+        deckSize = setupEvent.deck_size;
+      }
+      
+      // Then look through events up to startIndex to find the most recent top_card update
+      // and calculate deck size
+      for (let i = 0; i < startIndex; i++) {
+        const e = replayData.events[i];
+        if ((e.type === "card_draw" || e.type === "defuse" || e.type === "shuffle") && e.top_card) {
+          currentTopCard = e.top_card as CardType;
+        }
+        if (e.type === "card_draw") {
+          deckSize--;
+        }
+      }
+    }
+    
     // Pass absolute event indices to ensure unique card IDs across multiple jumps
+    // Track the top card through the events
     for (let i = 0; i < events.length; i++) {
       const event = events[i];
-      this.animationController.processEventSilently(event, startIndex + i);
+      const previousTopCard = currentTopCard;
+      currentTopCard = this.animationController.processEventSilently(event, startIndex + i, currentTopCard);
+      
+      // Update deck size for card draws
+      if (event.type === "card_draw") {
+        deckSize--;
+      }
+      
+      // If the top card changed (shuffle, defuse, card_draw), update the deck display
+      if (currentTopCard !== previousTopCard || event.type === "shuffle" || event.type === "defuse" || event.type === "card_draw") {
+        this.gameBoard.updateDeckTopCard(currentTopCard, deckSize);
+      }
+      
       // Update deck card counts to keep the card tracker in sync
       this.updateDeckCardCounts(event);
     }

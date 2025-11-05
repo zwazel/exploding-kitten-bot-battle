@@ -6,7 +6,7 @@
 import "./style.css";
 import { ReplayPlayer } from "./replayPlayer";
 import { VisualRenderer } from "./visualRenderer";
-import type { ReplayData, CardType } from "./types";
+import type { ReplayData, CardType, ReplayEvent } from "./types";
 
 class ReplayApp {
   private player: ReplayPlayer;
@@ -217,11 +217,14 @@ class ReplayApp {
     try {
       // Process the next event silently (without animations)
       const nextEvent = replayData.events[nextEventIndex];
-      this.renderer.processEventsSilently([nextEvent], nextEventIndex);
+      this.renderer.processEventsSilently([nextEvent], nextEventIndex, replayData);
       
       // Update player state to the next event
       // This is guaranteed to succeed because we validated above
       this.player.jumpToEvent(nextEventIndex);
+      
+      // Update the event display to show the current event
+      this.updateEventDisplay(nextEvent);
       
       // Manually update the event counter since we bypassed the normal event callback
       this.updateEventCounter(nextEventIndex, replayData.events.length);
@@ -233,6 +236,96 @@ class ReplayApp {
       this.isProcessingEvent = false;
       stepButton.disabled = false;
     }
+  }
+
+  /**
+   * Update the event display to show the current event
+   */
+  private updateEventDisplay(event: ReplayEvent): void {
+    const eventContent = document.querySelector("#event-content") as HTMLElement;
+    if (eventContent) {
+      eventContent.innerHTML = this.formatEvent(event);
+    }
+  }
+
+  /**
+   * Format event for display (same as visualRenderer)
+   */
+  private formatEvent(event: ReplayEvent): string {
+    switch (event.type) {
+      case "game_setup":
+        return `🎮 Game started with ${event.play_order.length} players`;
+      
+      case "turn_start":
+        return `🔄 Turn ${event.turn_number}: ${this.escapeHtml(event.player)}'s turn (${event.cards_in_deck} cards in deck)`;
+      
+      case "card_play":
+        return `🃏 ${this.escapeHtml(event.player)} played ${this.formatCardName(event.card)}`;
+      
+      case "combo_play":
+        const cards = event.cards.map((c: CardType) => this.formatCardName(c)).join(", ");
+        return `🎲 ${this.escapeHtml(event.player)} played ${event.combo_type} combo: [${cards}]${event.target ? ` targeting ${this.escapeHtml(event.target)}` : ""}`;
+      
+      case "nope":
+        const nopeTarget = event.target_player ? ` ${this.escapeHtml(event.target_player)}'s` : '';
+        const origAction = event.original_action ? ` ${this.formatCardName(event.original_action)}` : '';
+        return `🚫 ${this.escapeHtml(event.player)} played NOPE on${nopeTarget}${origAction}`;
+      
+      case "card_draw":
+        return `📥 ${this.escapeHtml(event.player)} drew ${this.formatCardName(event.card)}`;
+      
+      case "exploding_kitten_draw":
+        return `💣 ${this.escapeHtml(event.player)} drew an EXPLODING KITTEN! ${event.had_defuse ? "(has Defuse)" : "(NO DEFUSE!)"}`;
+      
+      case "defuse":
+        return `🛡️ ${this.escapeHtml(event.player)} defused and inserted kitten at position ${event.insert_position}`;
+      
+      case "player_elimination":
+        return `💀 ${this.escapeHtml(event.player)} was eliminated!`;
+      
+      case "see_future":
+        const seenCards = Array.isArray(event.cards_seen) 
+          ? event.cards_seen.map((c: CardType) => this.formatCardName(c)).join(", ")
+          : `${event.cards_seen} cards`;
+        return `🔮 ${this.escapeHtml(event.player)} used See the Future: [${seenCards}]`;
+      
+      case "shuffle":
+        return `🔀 ${this.escapeHtml(event.player)} shuffled the deck`;
+      
+      case "favor":
+        return `🤝 ${this.escapeHtml(event.player)} played Favor on ${this.escapeHtml(event.target)}`;
+      
+      case "card_steal":
+        return `🎯 ${this.escapeHtml(event.thief)} stole a card from ${this.escapeHtml(event.victim)} (${this.escapeHtml(event.context)})`;
+      
+      case "card_request":
+        return `📢 ${this.escapeHtml(event.requester)} requested ${this.formatCardName(event.requested_card)} from ${this.escapeHtml(event.target)}: ${event.success ? "✅ Success" : "❌ Failed"}`;
+      
+      case "discard_take":
+        return `♻️ ${this.escapeHtml(event.player)} took ${this.formatCardName(event.card)} from discard`;
+      
+      case "game_end":
+        return `🏆 Game Over! Winner: ${event.winner ? this.escapeHtml(event.winner) : "None"}`;
+      
+      default:
+        return `Unknown event: ${(event as any).type}`;
+    }
+  }
+
+  /**
+   * Format card name for display
+   */
+  private formatCardName(card: string): string {
+    return card.replace(/_/g, " ");
+  }
+
+  /**
+   * Escape HTML to prevent XSS
+   */
+  private escapeHtml(text: string): string {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   /**
@@ -291,7 +384,7 @@ class ReplayApp {
       
       if (eventsToProcess.length > 0) {
         // Pass the absolute start index to ensure unique card IDs across multiple jumps
-        this.renderer.processEventsSilently(eventsToProcess, startIndex);
+        this.renderer.processEventsSilently(eventsToProcess, startIndex, replayData);
       }
 
       // Now jump to the target event using the player's method
