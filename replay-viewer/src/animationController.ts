@@ -484,8 +484,6 @@ export class AnimationController {
     
     // Now animate the actual card movement from victim to thief
     if (stolenCardId) {
-      this.playerHands.set(victim, victimHand);
-      
       // Get thief's hand and calculate new position
       const thiefHand = this.playerHands.get(thief) || [];
       const handIndex = thiefHand.length;
@@ -493,6 +491,9 @@ export class AnimationController {
       
       // Animate card to thief's hand
       await this.gameBoard.moveCard(stolenCardId, thiefHandPos, 500);
+      
+      // Update victim's hand state only after the card has been animated away
+      this.playerHands.set(victim, victimHand);
       
       // Add to thief's hand
       thiefHand.push(stolenCardId);
@@ -519,7 +520,6 @@ export class AnimationController {
       
       if (cardIndex !== -1) {
         requestedCardId = targetHand.splice(cardIndex, 1)[0];
-        this.playerHands.set(target, targetHand);
       }
       
       // Show successful transfer animation
@@ -541,6 +541,9 @@ export class AnimationController {
         
         // Animate card to requester's hand
         await this.gameBoard.moveCard(requestedCardId, requesterHandPos, 500);
+        
+        // Update target's hand state only after the card has been animated away
+        this.playerHands.set(target, targetHand);
         
         // Add to requester's hand
         requesterHand.push(requestedCardId);
