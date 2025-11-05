@@ -568,7 +568,7 @@ class GameEngine:
         # Notify bots (they don't know which specific card, just that a card was stolen)
         self._notify_all_bots(GameAction(ActionType.CARD_STEAL, bot.name, target=target.name))
         if self.replay_recorder:
-            self.replay_recorder.record_card_steal(bot.name, target.name, "2-of-a-kind")
+            self.replay_recorder.record_card_steal(bot.name, target.name, "2-of-a-kind", stolen_card.card_type)
     
     def _execute_3_of_a_kind_with_target(self, bot: Bot, target: Bot) -> None:
         """Execute 3-of-a-kind combo with pre-selected target: request specific card type."""
@@ -749,7 +749,7 @@ class GameEngine:
                 # Show full details in user-facing logs (bots don't get this info in GameState)
                 self._log(f"  → {target.name} gives {card_to_give} to {bot.name}")
                 if self.replay_recorder:
-                    self.replay_recorder.record_card_steal(bot.name, target.name, "favor")
+                    self.replay_recorder.record_card_steal(bot.name, target.name, "favor", card_to_give.card_type)
             else:
                 self._log(f"  ERROR: {target.name} tried to give invalid card")
         except Exception as e:

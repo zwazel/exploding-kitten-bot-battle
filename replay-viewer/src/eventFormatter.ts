@@ -26,7 +26,7 @@ function formatCard(card: CardType): string {
 /**
  * Format a replay event into a human-readable description
  */
-export function formatEvent(event: ReplayEvent, index: number): string {
+export function formatEvent(event: ReplayEvent): string {
   const escaped = (text: string) => escapeHtml(text);
 
   switch (event.type) {
@@ -48,14 +48,12 @@ export function formatEvent(event: ReplayEvent, index: number): string {
       )}</em>`;
 
     case "combo_play":
-      const cards = event.cards.map(formatCard).join(", ");
       const target = event.target ? ` targeting ${escaped(event.target)}` : "";
       return `${escaped(event.player)} plays <strong>${
         event.combo_type
       }</strong> combo${target}`;
 
     case "nope":
-      const originalAction = event.original_action || event.action;
       const targetPlayer = event.target_player
         ? ` from ${escaped(event.target_player)}`
         : "";

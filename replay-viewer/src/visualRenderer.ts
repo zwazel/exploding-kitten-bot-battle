@@ -2,7 +2,7 @@
  * Visual game renderer with animations
  */
 
-import type { ReplayData, ReplayEvent } from "./types";
+import type { ReplayData, ReplayEvent, CardType } from "./types";
 import { GameBoard } from "./gameBoard";
 import { AnimationController } from "./animationController";
 import { CARD_COLORS } from "./cardConfig";
@@ -35,15 +35,7 @@ export class VisualRenderer {
           </div>
           
           <!-- Visual game board -->
-          <div id="visual-board" style="min-height: 800px;">
-          </div>
-          
-          <!-- Current event display -->
-          <div id="event-display" class="event-display" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333;">
-            <h3 style="color: #888; margin: 0 0 0.5rem 0;">Current Event</h3>
-            <div id="event-content" class="event-content" style="padding: 1rem; background: #0f0f0f; border-radius: 6px; border-left: 4px solid #646cff;">
-              <em style="color: #888;">No event</em>
-            </div>
+          <div id="visual-board">
           </div>
         </div>
         
@@ -108,24 +100,35 @@ export class VisualRenderer {
         setupEvent.play_order,
         setupEvent.initial_hands
       );
-      this.gameBoard.updateDeckCount(setupEvent.deck_size);
+      
+      // Find the first card to be drawn from the deck
+      let firstCardToDraw: CardType | null = null;
+      for (let i = 1; i < replayData.events.length; i++) {
+        const e = replayData.events[i];
+        if (e.type === "card_draw") {
+          firstCardToDraw = e.card as CardType;
+          break;
+        } else if (e.type === "exploding_kitten_draw") {
+          firstCardToDraw = "EXPLODING_KITTEN" as CardType;
+          break;
+        }
+      }
+      
+      this.gameBoard.updateDeckTopCard(firstCardToDraw, setupEvent.deck_size);
     }
   }
 
   /**
    * Render a single event with animation
    */
-  async renderEvent(event: ReplayEvent, deckSize: number): Promise<void> {
+  async renderEvent(event: ReplayEvent, deckSize: number, nextCardToDraw: CardType | null = null): Promise<void> {
     this.isAnimating = true;
-
-    // Update event display
-    this.updateEventDisplay(event);
 
     // Animate based on event type
     try {
       switch (event.type) {
         case "turn_start":
-          await this.animationController.animateTurnStart(event.player, deckSize);
+          await this.animationController.animateTurnStart(event.player, deckSize, event.turns_remaining, nextCardToDraw);
           break;
 
         case "card_draw":
@@ -170,6 +173,31 @@ export class VisualRenderer {
           await this.animationController.animateElimination(event.player);
           break;
 
+        case "card_steal":
+          // Show card steal animation
+          await this.animationController.animateCardSteal(
+            event.thief,
+            event.victim,
+            event.stolen_card,
+            event.context
+          );
+          break;
+
+        case "card_request":
+          // Show card request animation (3-of-a-kind)
+          await this.animationController.animateCardRequest(
+            event.requester,
+            event.target,
+            event.requested_card,
+            event.success
+          );
+          break;
+
+        case "favor":
+          // Skip favor animation - it will be shown with the card_steal event that follows
+          await this.delay(100);
+          break;
+
         case "game_end":
           this.animationController.clearHighlight();
           break;
@@ -182,87 +210,6 @@ export class VisualRenderer {
     } finally {
       this.isAnimating = false;
     }
-  }
-
-  /**
-   * Update event display text
-   */
-  private updateEventDisplay(event: ReplayEvent): void {
-    const eventContent = document.querySelector("#event-content") as HTMLElement;
-    if (eventContent) {
-      eventContent.innerHTML = this.formatEvent(event);
-    }
-  }
-
-  /**
-   * Format event for display
-   */
-  private formatEvent(event: ReplayEvent): string {
-    switch (event.type) {
-      case "game_setup":
-        return `🎮 Game started with ${event.play_order.length} players`;
-      
-      case "turn_start":
-        return `🔄 Turn ${event.turn_number}: ${this.escapeHtml(event.player)}'s turn (${event.cards_in_deck} cards in deck)`;
-      
-      case "card_play":
-        return `🃏 ${this.escapeHtml(event.player)} played ${this.formatCardName(event.card)}`;
-      
-      case "combo_play":
-        const cards = event.cards.map((c) => this.formatCardName(c)).join(", ");
-        return `🎲 ${this.escapeHtml(event.player)} played ${event.combo_type} combo: [${cards}]${event.target ? ` targeting ${this.escapeHtml(event.target)}` : ""}`;
-      
-      case "nope":
-        const nopeTarget = event.target_player ? ` ${this.escapeHtml(event.target_player)}'s` : '';
-        const origAction = event.original_action ? ` ${this.formatCardName(event.original_action)}` : '';
-        return `🚫 ${this.escapeHtml(event.player)} played NOPE on${nopeTarget}${origAction}`;
-      
-      case "card_draw":
-        return `📥 ${this.escapeHtml(event.player)} drew ${this.formatCardName(event.card)}`;
-      
-      case "exploding_kitten_draw":
-        return `💣 ${this.escapeHtml(event.player)} drew an EXPLODING KITTEN! ${event.had_defuse ? "(has Defuse)" : "(NO DEFUSE!)"}`;
-      
-      case "defuse":
-        return `🛡️ ${this.escapeHtml(event.player)} defused and inserted kitten at position ${event.insert_position}`;
-      
-      case "player_elimination":
-        return `💀 ${this.escapeHtml(event.player)} was eliminated!`;
-      
-      case "see_future":
-        const seenCards = Array.isArray(event.cards_seen) 
-          ? event.cards_seen.map((c) => this.formatCardName(c)).join(", ")
-          : `${event.cards_seen} cards`;
-        return `🔮 ${this.escapeHtml(event.player)} used See the Future: [${seenCards}]`;
-      
-      case "shuffle":
-        return `🔀 ${this.escapeHtml(event.player)} shuffled the deck`;
-      
-      case "favor":
-        return `🤝 ${this.escapeHtml(event.player)} played Favor on ${this.escapeHtml(event.target)}`;
-      
-      case "card_steal":
-        return `🎯 ${this.escapeHtml(event.thief)} stole a card from ${this.escapeHtml(event.victim)} (${this.escapeHtml(event.context)})`;
-      
-      case "card_request":
-        return `📢 ${this.escapeHtml(event.requester)} requested ${this.formatCardName(event.requested_card)} from ${this.escapeHtml(event.target)}: ${event.success ? "✅ Success" : "❌ Failed"}`;
-      
-      case "discard_take":
-        return `♻️ ${this.escapeHtml(event.player)} took ${this.formatCardName(event.card)} from discard`;
-      
-      case "game_end":
-        return `🏆 Game Over! Winner: ${event.winner ? this.escapeHtml(event.winner) : "None"}`;
-      
-      default:
-        return `Unknown event: ${(event as any).type}`;
-    }
-  }
-
-  /**
-   * Format card name for display
-   */
-  private formatCardName(card: string): string {
-    return card.replace(/_/g, " ");
   }
 
   /**
@@ -279,6 +226,19 @@ export class VisualRenderer {
    */
   getIsAnimating(): boolean {
     return this.isAnimating;
+  }
+
+  /**
+   * Process events silently without animations
+   * Used for fast-forwarding during jumps
+   * @param events - Array of events to process
+   * @param startIndex - Absolute index of the first event in the replay (for unique ID generation)
+   */
+  processEventsSilently(events: ReplayEvent[], startIndex: number = 0): void {
+    // Pass absolute event indices to ensure unique card IDs across multiple jumps
+    for (let i = 0; i < events.length; i++) {
+      this.animationController.processEventSilently(events[i], startIndex + i);
+    }
   }
 
   /**
