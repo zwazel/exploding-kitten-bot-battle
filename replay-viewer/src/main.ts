@@ -170,13 +170,26 @@ class ReplayApp {
   private async stepForward(): Promise<void> {
     const stepButton = document.querySelector<HTMLButtonElement>("#btn-step-forward")!;
     
-    // Don't step if already processing an event
+    // Check if replay is currently playing
+    const currentState = this.player.getPlaybackState();
+    const wasPlaying = currentState.isPlaying;
+    
+    // If playing, pause it first and wait for current animation to finish
+    if (wasPlaying) {
+      this.player.pause();
+      
+      // Wait for any ongoing animation to complete
+      while (this.isProcessingEvent) {
+        await this.delay(50);
+      }
+    }
+    
+    // Don't step if already processing an event (after waiting above)
     if (this.isProcessingEvent) {
       return;
     }
     
     // Validate preconditions before setting processing flag
-    const currentState = this.player.getPlaybackState();
     const replayData = this.player.getReplayData();
     
     if (!replayData) return;
