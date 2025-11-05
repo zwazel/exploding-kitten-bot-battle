@@ -447,13 +447,9 @@ export class SpecialEventAnimator {
       const color = this.getCardColor(cardType);
       const textColor = this.getTextColor(color);
       const cardName = this.formatCardName(cardType);
-      const offset = (index - (config.cards.length - 1) / 2) * 110;
       
       return `
         <div class="showcase-card" style="
-          position: absolute;
-          left: calc(50% + ${offset}px);
-          transform: translateX(-50%);
           width: 90px;
           height: 130px;
           background: ${color};
@@ -471,6 +467,7 @@ export class SpecialEventAnimator {
           animation: showcaseCardAppear 0.3s ease forwards;
           animation-delay: ${index * 0.1}s;
           opacity: 0;
+          margin: 0 5px;
         ">${this.escapeHtml(cardName)}</div>
       `;
     }).join('');
@@ -535,9 +532,11 @@ export class SpecialEventAnimator {
             font-size: 14px;
           ">${this.escapeHtml(config.subtitle)}</p>
         ` : ''}
-        <div style="position: relative; height: 140px; width: 100%; display: flex; justify-content: center; align-items: center;">
+        <div style="position: relative; height: 140px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 0;">
           ${explosionHTML}
-          ${cardElements}
+          <div style="display: flex; justify-content: center; align-items: center; gap: 10px; position: relative; z-index: 1;">
+            ${cardElements}
+          </div>
         </div>
       </div>
     `;
