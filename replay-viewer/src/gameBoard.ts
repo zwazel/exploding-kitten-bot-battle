@@ -325,9 +325,12 @@ export class GameBoard {
     const deck = this.container.querySelector("#deck-pile") as HTMLElement;
     if (!deck) return;
 
-    if (topCard === null || count === 0) {
+    // Ensure count is a safe integer
+    const safeCount = Math.max(0, Math.floor(count));
+
+    if (topCard === null || safeCount === 0) {
       // No cards left or unknown top card - show empty deck
-      deck.innerHTML = `<span style="color: #888; font-size: 14px;">DECK<br/>${count}</span>`;
+      deck.innerHTML = `<span style="color: #888; font-size: 14px;">DECK<br/>${safeCount}</span>`;
       return;
     }
 
@@ -367,7 +370,7 @@ export class GameBoard {
           padding: 2px 4px;
           border-radius: 3px;
           font-size: 8px;
-        ">${count}</div>
+        ">${safeCount}</div>
       </div>
     `;
   }
