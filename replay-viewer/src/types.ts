@@ -29,6 +29,7 @@ export interface GameSetupEvent {
   initial_hand_size: number;
   play_order: string[];
   initial_hands: Record<string, CardType[]>;
+  top_card?: CardType;
 }
 
 export interface TurnStartEvent {
@@ -70,6 +71,7 @@ export interface CardDrawEvent {
   turn_number: number;
   player: string;
   card: CardType;
+  top_card?: CardType;
 }
 
 export interface ExplodingKittenDrawEvent {
@@ -84,6 +86,7 @@ export interface DefuseEvent {
   turn_number: number;
   player: string;
   insert_position: number;
+  top_card?: CardType;
 }
 
 export interface PlayerEliminationEvent {
@@ -103,6 +106,7 @@ export interface ShuffleEvent {
   type: "shuffle";
   turn_number: number;
   player: string;
+  top_card?: CardType;
 }
 
 export interface FavorEvent {
