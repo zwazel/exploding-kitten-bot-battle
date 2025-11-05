@@ -2,7 +2,7 @@
  * Visual game renderer with animations
  */
 
-import type { ReplayData, ReplayEvent } from "./types";
+import type { ReplayData, ReplayEvent, CardType } from "./types";
 import { GameBoard } from "./gameBoard";
 import { AnimationController } from "./animationController";
 import { CARD_COLORS } from "./cardConfig";
@@ -108,14 +108,28 @@ export class VisualRenderer {
         setupEvent.play_order,
         setupEvent.initial_hands
       );
-      this.gameBoard.updateDeckCount(setupEvent.deck_size);
+      
+      // Find the first card to be drawn from the deck
+      let firstCardToDraw: CardType | null = null;
+      for (let i = 1; i < replayData.events.length; i++) {
+        const e = replayData.events[i];
+        if (e.type === "card_draw") {
+          firstCardToDraw = e.card as CardType;
+          break;
+        } else if (e.type === "exploding_kitten_draw") {
+          firstCardToDraw = "EXPLODING_KITTEN" as CardType;
+          break;
+        }
+      }
+      
+      this.gameBoard.updateDeckTopCard(firstCardToDraw, setupEvent.deck_size);
     }
   }
 
   /**
    * Render a single event with animation
    */
-  async renderEvent(event: ReplayEvent, deckSize: number): Promise<void> {
+  async renderEvent(event: ReplayEvent, deckSize: number, nextCardToDraw: CardType | null = null): Promise<void> {
     this.isAnimating = true;
 
     // Update event display
@@ -125,7 +139,7 @@ export class VisualRenderer {
     try {
       switch (event.type) {
         case "turn_start":
-          await this.animationController.animateTurnStart(event.player, deckSize, event.turns_remaining);
+          await this.animationController.animateTurnStart(event.player, deckSize, event.turns_remaining, nextCardToDraw);
           break;
 
         case "card_draw":

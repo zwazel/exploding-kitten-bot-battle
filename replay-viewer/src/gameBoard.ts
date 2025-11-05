@@ -375,6 +375,63 @@ export class GameBoard {
   }
 
   /**
+   * Update deck to show the top card (next card to be drawn)
+   */
+  updateDeckTopCard(topCard: CardType | null, count: number): void {
+    const deck = this.container.querySelector("#deck-pile") as HTMLElement;
+    if (!deck) return;
+
+    // Ensure count is a safe integer
+    const safeCount = Math.max(0, Math.floor(count));
+
+    if (topCard === null || safeCount === 0) {
+      // No cards left or unknown top card - show empty deck
+      deck.innerHTML = `<span style="color: #888; font-size: 14px;">DECK<br/>${safeCount}</span>`;
+      return;
+    }
+
+    // Show the top card
+    const color = this.getCardColor(topCard);
+    const textColor = this.getTextColor(color);
+    const cardName = topCard.replace(/_/g, " ");
+    
+    deck.innerHTML = `
+      <div style="
+        width: 90px;
+        height: 130px;
+        background: ${color};
+        border: 2px solid #333;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        font-weight: bold;
+        color: ${textColor};
+        text-align: center;
+        padding: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        position: relative;
+      ">
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+          ${this.escapeHtml(cardName)}
+        </div>
+        <div style="
+          position: absolute;
+          bottom: 4px;
+          right: 4px;
+          background: rgba(0,0,0,0.7);
+          color: white;
+          padding: 2px 4px;
+          border-radius: 3px;
+          font-size: 8px;
+        ">${safeCount}</div>
+      </div>
+    `;
+  }
+
+  /**
    * Add a card to the discard pile stack
    */
   addToDiscardPile(cardType: CardType): void {
