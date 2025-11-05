@@ -126,7 +126,7 @@ test.describe('Deck Top Card Display', () => {
   test('should NOT update deck top card during shuffle card play, only after shuffle event', async ({ page }) => {
     await page.goto('/');
     
-    // Load the test replay file with shuffle events
+    // Load the test replay file (simple-game.json contains shuffle events)
     const filePath = path.join(__dirname, 'fixtures', 'simple-game.json');
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(filePath);

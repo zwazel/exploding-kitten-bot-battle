@@ -705,7 +705,8 @@ export class AnimationController {
         }
         this.currentPlayer = event.player;
         this.gameBoard.highlightPlayer(event.player, true);
-        // Use the tracked top card instead of null
+        // Use the tracked top card instead of null to maintain consistency during shuffle events
+        // This ensures the deck shows the correct top card when stepping through events
         this.gameBoard.updateDeckTopCard(currentTopCard, event.cards_in_deck);
         this.gameBoard.updatePlayerTurns(event.player, event.turns_remaining);
         

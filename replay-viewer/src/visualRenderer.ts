@@ -487,7 +487,8 @@ export class VisualRenderer {
       }
       
       // If the top card changed (shuffle, defuse, card_draw), update the deck display
-      if (currentTopCard !== previousTopCard || event.type === "shuffle" || event.type === "defuse" || event.type === "card_draw") {
+      // Check specific event types first to optimize performance
+      if (event.type === "shuffle" || event.type === "defuse" || event.type === "card_draw" || currentTopCard !== previousTopCard) {
         this.gameBoard.updateDeckTopCard(currentTopCard, deckSize);
       }
       
