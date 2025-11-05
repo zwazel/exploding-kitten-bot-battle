@@ -223,8 +223,8 @@ class ReplayApp {
       // This is guaranteed to succeed because we validated above
       this.player.jumpToEvent(nextEventIndex);
       
-      // Update the event display to show the current event
-      this.updateEventDisplay(nextEvent);
+      // Update the event history to show all events up to the current one
+      this.updateEventHistory(nextEventIndex);
       
       // Manually update the event counter since we bypassed the normal event callback
       this.updateEventCounter(nextEventIndex, replayData.events.length);
@@ -239,13 +239,37 @@ class ReplayApp {
   }
 
   /**
-   * Update the event display to show the current event
+   * Update the entire event history up to the current event
    */
-  private updateEventDisplay(event: ReplayEvent): void {
-    const eventContent = document.querySelector("#event-content") as HTMLElement;
-    if (eventContent) {
-      eventContent.innerHTML = this.formatEvent(event);
+  private updateEventHistory(currentEventIndex: number): void {
+    const historyContent = document.querySelector("#history-content") as HTMLElement;
+    if (!historyContent) return;
+
+    const replayData = this.player.getReplayData();
+    if (!replayData) return;
+
+    // Clear history
+    historyContent.innerHTML = '';
+
+    // Add all events from 0 to currentEventIndex in reverse order (newest at top)
+    for (let i = currentEventIndex; i >= 0; i--) {
+      const event = replayData.events[i];
+      if (event) {
+        const eventEntry = document.createElement('div');
+        eventEntry.className = 'history-event-entry';
+        eventEntry.style.cssText = 'padding: 0.75rem; margin-bottom: 0.5rem; background: #1a1a1a; border-radius: 4px; border-left: 3px solid #646cff;';
+        
+        eventEntry.innerHTML = `
+          <div style="color: #888; font-size: 0.8rem; margin-bottom: 0.25rem;">Event ${i + 1}</div>
+          <div style="color: #ccc;">${this.formatEvent(event)}</div>
+        `;
+
+        historyContent.appendChild(eventEntry);
+      }
     }
+
+    // Scroll to top to show the latest event
+    historyContent.scrollTop = 0;
   }
 
   /**
@@ -391,6 +415,9 @@ class ReplayApp {
       // The event has already been processed silently, so this just updates the index
       this.player.jumpToEvent(targetEventIndex);
       
+      // Update the event history to show all events up to the current one
+      this.updateEventHistory(targetEventIndex);
+      
       // Manually update the event counter since we prevented the render callback
       this.updateEventCounter(targetEventIndex, replayData.events.length);
     } finally {
@@ -466,6 +493,9 @@ class ReplayApp {
 
       // Render the event with animation
       await this.renderer.renderEvent(event, deckSize, nextCardToDraw);
+      
+      // Update the event history to show all events up to the current one
+      this.updateEventHistory(eventIndex);
       
       // Only update counter if we successfully rendered
       shouldUpdateCounter = true;

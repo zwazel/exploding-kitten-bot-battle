@@ -39,11 +39,11 @@ export class VisualRenderer {
           <div id="visual-board">
           </div>
           
-          <!-- Current event display -->
-          <div id="event-display" class="event-display" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333;">
-            <h3 style="color: #888; margin: 0 0 0.5rem 0;">Current Event</h3>
-            <div id="event-content" class="event-content" style="padding: 1rem; background: #0f0f0f; border-radius: 6px; border-left: 4px solid #646cff;">
-              <em style="color: #888;">No event</em>
+          <!-- Event History -->
+          <div id="event-history" class="event-history" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333;">
+            <h3 style="color: #888; margin: 0 0 0.5rem 0;">Event History</h3>
+            <div id="history-content" class="history-content" style="max-height: 300px; overflow-y: auto; background: #0f0f0f; border-radius: 6px; padding: 0.5rem;">
+              <em style="color: #888;">No events yet</em>
             </div>
           </div>
         </div>

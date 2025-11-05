@@ -75,7 +75,9 @@ test.describe('Deck Top Card Display', () => {
     
     // Step through events looking for a shuffle event
     for (let i = 0; i < 20; i++) {
-      const currentEventDisplay = await page.locator('#event-content').textContent();
+      // Get the latest event from history (first child of history-content)
+      const latestEvent = page.locator('#history-content .history-event-entry').first();
+      const currentEventDisplay = await latestEvent.textContent();
       
       if (currentEventDisplay && currentEventDisplay.includes('shuffled the deck')) {
         // We found a shuffle event, deck should show a top card
@@ -105,7 +107,9 @@ test.describe('Deck Top Card Display', () => {
     
     // Step through events looking for a defuse event
     for (let i = 0; i < 50; i++) {
-      const currentEventDisplay = await page.locator('#event-content').textContent();
+      // Get the latest event from history (first child of history-content)
+      const latestEvent = page.locator('#history-content .history-event-entry').first();
+      const currentEventDisplay = await latestEvent.textContent();
       
       if (currentEventDisplay && (currentEventDisplay.includes('Defused') || currentEventDisplay.includes('defuse'))) {
         // We found a defuse event, deck should show the top card
@@ -136,7 +140,7 @@ test.describe('Deck Top Card Display', () => {
     
     const deckPile = page.locator('#deck-pile');
     const stepButton = page.locator('#btn-step-forward');
-    const eventContent = page.locator('#event-content');
+    const latestEvent = page.locator('#history-content .history-event-entry').first();
     
     // Step through events to reach the shuffle sequence:
     // Event 0: game_setup
@@ -165,7 +169,7 @@ test.describe('Deck Top Card Display', () => {
     await page.waitForTimeout(100);
     
     // Verify we're at the shuffle card play event
-    let eventText = await eventContent.textContent();
+    let eventText = await latestEvent.textContent();
     expect(eventText).toContain('played SHUFFLE');
     
     // Deck should STILL show EXPLODING_KITTEN (not changed yet)
@@ -177,7 +181,7 @@ test.describe('Deck Top Card Display', () => {
     await page.waitForTimeout(100);
     
     // Verify we're at the shuffle event
-    eventText = await eventContent.textContent();
+    eventText = await latestEvent.textContent();
     expect(eventText).toContain('shuffled the deck');
     
     // NOW the deck should show the new top card (RAINBOW_RALPHING_CAT)
