@@ -336,8 +336,26 @@ class ReplayApp {
         }
       }
 
+      // Calculate the current top card by looking at previous events
+      let currentTopCard: CardType | null = null;
+      
+      // First, check if we're at or past game_setup (reuse setupEvent from above)
+      if (setupEvent && setupEvent.type === "game_setup" && setupEvent.top_card) {
+        currentTopCard = setupEvent.top_card;
+      }
+      
+      // Then, look through events up to current index to find the most recent top_card update
+      for (let i = 0; i <= eventIndex; i++) {
+        const e = replayData.events[i];
+        // Events that update the top card: card_draw, defuse, shuffle
+        if ((e.type === "card_draw" || e.type === "defuse" || e.type === "shuffle") && e.top_card) {
+          currentTopCard = e.top_card as CardType;
+        }
+      }
+
       // Find the next card to be drawn (look ahead for next card_draw or exploding_kitten_draw event)
-      let nextCardToDraw: CardType | null = null;
+      // Stop if we encounter a shuffle event, as the shuffle changes what the top card will be
+      let nextCardToDraw: CardType | null = currentTopCard; // Start with current top card
       for (let i = eventIndex + 1; i < replayData.events.length; i++) {
         const e = replayData.events[i];
         if (e.type === "card_draw") {
@@ -345,6 +363,10 @@ class ReplayApp {
           break;
         } else if (e.type === "exploding_kitten_draw") {
           nextCardToDraw = "EXPLODING_KITTEN" as CardType;
+          break;
+        } else if (e.type === "shuffle") {
+          // Stop looking ahead if there's a shuffle - keep the current top card
+          // Don't use the shuffle's top_card yet, as the shuffle hasn't happened
           break;
         }
       }
