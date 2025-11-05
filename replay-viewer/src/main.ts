@@ -267,6 +267,7 @@ class ReplayApp {
       
       // Manually update the event counter since we prevented the render callback
       this.updateEventCounter(targetEventIndex, replayData.events.length);
+      this.updateHistory(targetEventIndex);
     } finally {
       this.isProcessingEvent = false;
     }
