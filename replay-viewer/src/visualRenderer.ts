@@ -447,7 +447,10 @@ export class VisualRenderer {
   processEventsSilently(events: ReplayEvent[], startIndex: number = 0): void {
     // Pass absolute event indices to ensure unique card IDs across multiple jumps
     for (let i = 0; i < events.length; i++) {
-      this.animationController.processEventSilently(events[i], startIndex + i);
+      const event = events[i];
+      this.animationController.processEventSilently(event, startIndex + i);
+      // Update deck card counts to keep the card tracker in sync
+      this.updateDeckCardCounts(event);
     }
   }
 
