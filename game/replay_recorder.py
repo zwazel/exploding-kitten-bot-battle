@@ -34,7 +34,8 @@ class ReplayRecorder:
     
     def record_game_setup(self, deck_size: int, initial_hand_size: int, 
                          play_order: List[str], 
-                         initial_hands: Optional[Dict[str, List[str]]] = None) -> None:
+                         initial_hands: Optional[Dict[str, List[str]]] = None,
+                         top_card: Optional[CardType] = None) -> None:
         """Record initial game setup information."""
         if not self.enabled:
             return
@@ -48,6 +49,9 @@ class ReplayRecorder:
         
         if initial_hands:
             event["initial_hands"] = initial_hands
+        
+        if top_card:
+            event["top_card"] = top_card.name
         
         self.events.append(event)
     
@@ -121,17 +125,23 @@ class ReplayRecorder:
         
         self.events.append(event)
     
-    def record_card_draw(self, player_name: str, card_type: CardType) -> None:
+    def record_card_draw(self, player_name: str, card_type: CardType, 
+                        top_card: Optional[CardType] = None) -> None:
         """Record a card being drawn."""
         if not self.enabled:
             return
         
-        self.events.append({
+        event = {
             "type": "card_draw",
             "turn_number": self.turn_number,
             "player": player_name,
             "card": card_type.name
-        })
+        }
+        
+        if top_card:
+            event["top_card"] = top_card.name
+        
+        self.events.append(event)
     
     def record_exploding_kitten_draw(self, player_name: str, 
                                     had_defuse: bool) -> None:
@@ -146,17 +156,23 @@ class ReplayRecorder:
             "had_defuse": had_defuse
         })
     
-    def record_defuse(self, player_name: str, insert_position: int) -> None:
+    def record_defuse(self, player_name: str, insert_position: int,
+                     top_card: Optional[CardType] = None) -> None:
         """Record a player defusing an Exploding Kitten."""
         if not self.enabled:
             return
         
-        self.events.append({
+        event = {
             "type": "defuse",
             "turn_number": self.turn_number,
             "player": player_name,
             "insert_position": insert_position
-        })
+        }
+        
+        if top_card:
+            event["top_card"] = top_card.name
+        
+        self.events.append(event)
     
     def record_player_elimination(self, player_name: str) -> None:
         """Record a player being eliminated."""
@@ -181,16 +197,21 @@ class ReplayRecorder:
             "cards_seen": [card.card_type.name for card in cards]
         })
     
-    def record_shuffle(self, player_name: str) -> None:
+    def record_shuffle(self, player_name: str, top_card: Optional[CardType] = None) -> None:
         """Record deck being shuffled."""
         if not self.enabled:
             return
         
-        self.events.append({
+        event = {
             "type": "shuffle",
             "turn_number": self.turn_number,
             "player": player_name
-        })
+        }
+        
+        if top_card:
+            event["top_card"] = top_card.name
+        
+        self.events.append(event)
     
     def record_favor(self, player_name: str, target: str) -> None:
         """Record a Favor card being used."""

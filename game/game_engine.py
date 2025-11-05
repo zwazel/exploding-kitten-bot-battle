@@ -287,11 +287,19 @@ class GameEngine:
                 for bot in self.bots
             }
             
+            # Get top card if deck has cards
+            top_card = None
+            if self.deck.size() > 0:
+                top_cards = self.deck.peek(1)
+                if top_cards:
+                    top_card = top_cards[0].card_type
+            
             self.replay_recorder.record_game_setup(
                 deck_size=self.deck.size(),
                 initial_hand_size=INITIAL_HAND_SIZE,
                 play_order=[bot.name for bot in self.bots],
-                initial_hands=initial_hands
+                initial_hands=initial_hands,
+                top_card=top_card
             )
 
     def play_game(self) -> Optional[Bot]:
@@ -678,7 +686,13 @@ class GameEngine:
             self._log("  → Shuffle: Deck shuffled")
             self.deck.shuffle()
             if self.replay_recorder:
-                self.replay_recorder.record_shuffle(bot.name)
+                # Get the new top card after shuffle
+                top_card = None
+                if self.deck.size() > 0:
+                    top_cards = self.deck.peek(1)
+                    if top_cards:
+                        top_card = top_cards[0].card_type
+                self.replay_recorder.record_shuffle(bot.name, top_card)
             return True
         elif card.card_type == CardType.ATTACK:
             # Record card play before checking for nope
@@ -780,7 +794,13 @@ class GameEngine:
             self._log(f"  → Drew: {drawn_card}")
             bot.add_card(drawn_card)
             if self.replay_recorder:
-                self.replay_recorder.record_card_draw(bot.name, drawn_card.card_type)
+                # Get the new top card after drawing
+                top_card = None
+                if self.deck.size() > 0:
+                    top_cards = self.deck.peek(1)
+                    if top_cards:
+                        top_card = top_cards[0].card_type
+                self.replay_recorder.record_card_draw(bot.name, drawn_card.card_type, top_card)
             # Notify all bots about the draw (but not which card)
             self._notify_all_bots(GameAction(ActionType.CARD_DRAW, bot.name))
 
@@ -816,7 +836,13 @@ class GameEngine:
                 self._notify_all_bots(GameAction(ActionType.DEFUSE, bot.name))
                 self.game_state.was_last_card_exploding_kitten = True
                 if self.replay_recorder:
-                    self.replay_recorder.record_defuse(bot.name, position)
+                    # Get the new top card after inserting exploding kitten
+                    top_card = None
+                    if self.deck.size() > 0:
+                        top_cards = self.deck.peek(1)
+                        if top_cards:
+                            top_card = top_cards[0].card_type
+                    self.replay_recorder.record_defuse(bot.name, position, top_card)
             except Exception as e:
                 self._log(f"  ERROR: {bot.name} raised exception in handle_exploding_kitten: {e}")
                 # Default: put it back on top
@@ -826,7 +852,13 @@ class GameEngine:
                 self._notify_all_bots(GameAction(ActionType.DEFUSE, bot.name))
                 self.game_state.was_last_card_exploding_kitten = True
                 if self.replay_recorder:
-                    self.replay_recorder.record_defuse(bot.name, 0)
+                    # Get the new top card after inserting exploding kitten (should be the exploding kitten)
+                    top_card = None
+                    if self.deck.size() > 0:
+                        top_cards = self.deck.peek(1)
+                        if top_cards:
+                            top_card = top_cards[0].card_type
+                    self.replay_recorder.record_defuse(bot.name, 0, top_card)
         else:
             self._log(f"  💀 {bot.name} has no Defuse card and EXPLODES!")
             bot.alive = False
