@@ -178,6 +178,9 @@ class ReplayApp {
     // Disable button during processing
     stepButton.disabled = true;
     
+    // Set processing flag to prevent concurrent operations
+    this.isProcessingEvent = true;
+    
     try {
       const currentState = this.player.getPlaybackState();
       const replayData = this.player.getReplayData();
@@ -192,27 +195,21 @@ class ReplayApp {
         return;
       }
       
-      // Set processing flag to prevent concurrent operations
-      this.isProcessingEvent = true;
+      // Process the next event silently (without animations)
+      const nextEvent = replayData.events[nextEventIndex];
+      this.renderer.processEventsSilently([nextEvent], nextEventIndex);
       
-      try {
-        // Process the next event silently (without animations)
-        const nextEvent = replayData.events[nextEventIndex];
-        this.renderer.processEventsSilently([nextEvent], nextEventIndex);
-        
-        // Update player state to the next event
-        this.player.jumpToEvent(nextEventIndex);
-        
-        // Manually update the event counter
-        this.updateEventCounter(nextEventIndex, replayData.events.length);
-      } finally {
-        this.isProcessingEvent = false;
-      }
+      // Update player state to the next event
+      this.player.jumpToEvent(nextEventIndex);
+      
+      // Manually update the event counter since we bypassed the normal event callback
+      this.updateEventCounter(nextEventIndex, replayData.events.length);
       
       // Small delay to ensure DOM updates are complete
       await this.delay(10);
     } finally {
-      // Re-enable button after processing completes
+      // Clear processing flag and re-enable button
+      this.isProcessingEvent = false;
       stepButton.disabled = false;
     }
   }
