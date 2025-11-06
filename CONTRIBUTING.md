@@ -14,14 +14,14 @@ Thank you for your interest in creating a bot for the Exploding Kitten Bot Battl
 ```python
 """My awesome bot for Exploding Kittens."""
 
-from typing import Optional, List
-from game import Bot, GameState, Card, CardType
+from typing import Optional, List, Union
+from game import Bot, GameState, Card, CardType, TargetContext, GameAction
 
 
 class MyAwesomeBot(Bot):
     """Description of your bot's strategy."""
 
-    def play(self, state: GameState) -> Optional[Card]:
+    def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:
         """
         Decide which card to play.
         Called repeatedly until you return None.
@@ -55,6 +55,52 @@ class MyAwesomeBot(Bot):
         """
         # You could store this information in instance variables
         # for use in other methods
+        pass
+    
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: TargetContext) -> Optional[Bot]:
+        """
+        Choose a target for Favor or combo.
+        """
+        return alive_players[0] if alive_players else None
+    
+    def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
+        """
+        Choose a card to give away (for Favor).
+        """
+        return self.hand[0] if self.hand else None
+    
+    def choose_card_type(self, state: GameState) -> Optional[CardType]:
+        """
+        Request a specific card type (for 3-of-a-kind combo).
+        """
+        return CardType.DEFUSE
+    
+    def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
+        """
+        Choose a card from discard pile (for 5-unique combo).
+        """
+        return discard_pile[0] if discard_pile else None
+    
+    def should_play_nope(self, state: GameState, action: GameAction) -> bool:
+        """
+        Decide whether to nope an action.
+        
+        Args:
+            state: Current game state
+            action: The action being played (GameAction object with details)
+        """
+        return False
+    
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
+        """
+        Called when any action occurs in the game.
+        Track actions for better decision making.
+        
+        Args:
+            state: Current game state
+            action: The action that was played
+            actor: The bot who played the action
+        """
         pass
     
     def _is_deck_dangerous(self, state: GameState) -> bool:
@@ -138,6 +184,8 @@ def _calculate_explosion_risk(self, state: GameState) -> float:
 ### State Tracking
 
 ```python
+from game import Bot, GameState, Card, GameAction, ActionType
+
 class SmartBot(Bot):
     def __init__(self, name: str):
         super().__init__(name)
@@ -145,20 +193,26 @@ class SmartBot(Bot):
         self.known_top_cards = []
         self.actions_log = []  # Track all game actions
     
-    def on_action_played(self, state: GameState, action_description: str, actor: 'Bot') -> None:
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
         """
         Called whenever ANY action happens in the game.
         Override this to track game actions for better decision making.
+        
+        Args:
+            state: Current game state
+            action: The action that occurred (GameAction object)
+            actor: The bot who performed the action
         """
         # Store action for analysis
         self.actions_log.append({
-            'action': action_description,
+            'action_type': action.action_type,
+            'player': action.player,
             'actor': actor.name,
             'cards_left': state.cards_left_to_draw
         })
         
         # Track if someone drew an Exploding Kitten
-        if "drew an Exploding Kitten" in action_description:
+        if action.action_type == ActionType.EXPLODING_KITTEN_DRAW:
             # Someone hit a kitten - update your strategy
             pass
     
@@ -231,8 +285,11 @@ def play(self, state: GameState) -> Optional[Card]:
 
 ### Minimal Bot (Just Survives)
 ```python
+from typing import Optional, List, Union
+from game import Bot, GameState, Card, CardType, TargetContext, GameAction
+
 class MinimalBot(Bot):
-    def play(self, state: GameState) -> Optional[Card]:
+    def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:
         return None  # Never play cards
     
     def handle_exploding_kitten(self, state: GameState) -> int:
@@ -240,16 +297,37 @@ class MinimalBot(Bot):
     
     def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
         pass  # Ignore the information
+    
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: TargetContext) -> Optional[Bot]:
+        return alive_players[0] if alive_players else None
+    
+    def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
+        return self.hand[0] if self.hand else None
+    
+    def choose_card_type(self, state: GameState) -> Optional[CardType]:
+        return CardType.DEFUSE
+    
+    def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
+        return discard_pile[0] if discard_pile else None
+    
+    def should_play_nope(self, state: GameState, action: GameAction) -> bool:
+        return False  # Never nope
+    
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
+        pass  # Don't track actions
 ```
 
 ### Information-Based Bot
 ```python
+from typing import Optional, List, Union
+from game import Bot, GameState, Card, CardType, TargetContext, GameAction
+
 class InfoBot(Bot):
     def __init__(self, name: str):
         super().__init__(name)
         self.future_cards = []
     
-    def play(self, state: GameState) -> Optional[Card]:
+    def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:
         # Always use See the Future if available
         for card in self.hand:
             if card.card_type == CardType.SEE_THE_FUTURE:
@@ -268,6 +346,24 @@ class InfoBot(Bot):
     
     def see_the_future(self, state: GameState, top_three: List[Card]) -> None:
         self.future_cards = top_three.copy()
+    
+    def choose_target(self, state: GameState, alive_players: List[Bot], context: TargetContext) -> Optional[Bot]:
+        return alive_players[0] if alive_players else None
+    
+    def choose_card_from_hand(self, state: GameState) -> Optional[Card]:
+        return self.hand[0] if self.hand else None
+    
+    def choose_card_type(self, state: GameState) -> Optional[CardType]:
+        return CardType.DEFUSE
+    
+    def choose_from_discard(self, state: GameState, discard_pile: List[Card]) -> Optional[Card]:
+        return discard_pile[0] if discard_pile else None
+    
+    def should_play_nope(self, state: GameState, action: GameAction) -> bool:
+        return False
+    
+    def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
+        pass
 ```
 
 ## Debugging Tips
