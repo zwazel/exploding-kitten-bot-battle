@@ -71,12 +71,14 @@ class RandomBot(Bot):
         
         # Find 5-unique combo
         if len(self.hand) >= 5:
-            unique_types = [ct for ct in card_types.keys() if ct != CardType.DEFUSE]
+            unique_types = [ct for ct in card_types.keys() 
+                          if ct not in [CardType.DEFUSE, CardType.EXPLODING_KITTEN]]
             if len(unique_types) >= 5:
                 cards = []
                 used_types = set()
                 for card in self.hand:
-                    if card.card_type not in used_types and card.card_type != CardType.DEFUSE:
+                    if (card.card_type not in used_types and 
+                        card.card_type not in [CardType.DEFUSE, CardType.EXPLODING_KITTEN]):
                         cards.append(card)
                         used_types.add(card.card_type)
                         if len(cards) == 5:

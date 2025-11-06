@@ -307,7 +307,8 @@ class AggressiveBot(Bot):
                 self.opponent_defuse_count[actor.name] += 1
         
         # Reset seen cards when deck is shuffled
-        if action.action_type == ActionType.CARD_PLAY and action.card == CardType.SHUFFLE:
+        if (action.action_type == ActionType.CARD_PLAY and 
+            action.card is not None and action.card == CardType.SHUFFLE):
             self.seen_future_cards = []
         
         # Update seen cards when someone draws

@@ -31,7 +31,8 @@ class CautiousBot(Bot):
         - Always use See the Future to gather intel
         - Use Skip if high explosion risk or known danger ahead
         - Use Shuffle if an Exploding Kitten is near the top
-        - Only use defensive 2-of-a-kind combos in dire situations (very few cards and late game)
+        - Use 2-of-a-kind combos defensively to steal cards
+        - Use 3-of-a-kind combos to request valuable cards (but cautiously)
         """
         # Always use See the Future if we have it - information is key
         for card in self.hand:
@@ -68,14 +69,69 @@ class CautiousBot(Bot):
                 if card.card_type == CardType.SKIP:
                     return card
         
-        # VERY cautiously try defensive 2-of-a-kind combo ONLY in dire situations
-        # Only when we have very few cards (<=3) AND it's late game (<=2 bots)
-        if len(self.hand) <= 3 and state.alive_bots <= 2:
-            combo = self._try_defensive_combo()
+        # Try 3-of-a-kind combo to request valuable cards (but cautiously)
+        # Only when we have many cards to spare
+        if len(self.hand) >= 6:
+            combo = self._try_three_of_a_kind_combo()
+            if combo:
+                return combo
+        
+        # Try defensive 2-of-a-kind combo to steal cards from others
+        # Use when we have enough cards or in late game
+        if len(self.hand) >= 5 or state.alive_bots <= 2:
+            combo = self._try_two_of_a_kind_combo()
             if combo:
                 return combo
         
         # Don't play other cards unnecessarily - be cautious
+        return None
+    
+    def _try_three_of_a_kind_combo(self) -> Optional[List[Card]]:
+        """
+        Try to form a 3-of-a-kind combo (cautiously).
+        
+        Never uses DEFUSE or EXPLODING_KITTEN cards in combos.
+        
+        Returns:
+            List of 3 cards for combo, or None if not possible
+        """
+        card_types = Counter(c.card_type for c in self.hand)
+        
+        # Find 3-of-a-kind (excluding DEFUSE and EXPLODING_KITTEN)
+        for card_type, count in card_types.items():
+            if count >= 3 and card_type not in [CardType.DEFUSE, CardType.EXPLODING_KITTEN]:
+                cards = [c for c in self.hand if c.card_type == card_type][:3]
+                return cards
+        
+        return None
+    
+    def _try_two_of_a_kind_combo(self) -> Optional[List[Card]]:
+        """
+        Try to form a 2-of-a-kind combo (defensively).
+        
+        Prefers cat cards to preserve action cards.
+        Never uses DEFUSE or EXPLODING_KITTEN cards in combos.
+        
+        Returns:
+            List of 2 cards for combo, or None if not possible
+        """
+        card_types = Counter(c.card_type for c in self.hand)
+        
+        # Prefer cat cards for combos
+        cat_types = [CardType.TACOCAT, CardType.CATTERMELON, CardType.HAIRY_POTATO_CAT,
+                     CardType.BEARD_CAT, CardType.RAINBOW_RALPHING_CAT]
+        
+        for cat_type in cat_types:
+            if card_types.get(cat_type, 0) >= 2:
+                cards = [c for c in self.hand if c.card_type == cat_type][:2]
+                return cards
+        
+        # If no cat combos, try other cards (but not Defuse or Exploding Kitten)
+        for card_type, count in card_types.items():
+            if count >= 2 and card_type not in [CardType.DEFUSE, CardType.EXPLODING_KITTEN]:
+                cards = [c for c in self.hand if c.card_type == card_type][:2]
+                return cards
+        
         return None
     
     def _calculate_explosion_risk(self, state: GameState) -> float:
@@ -105,34 +161,6 @@ class CautiousBot(Bot):
         
         # Probability = remaining kittens / cards left
         return min(1.0, remaining_kittens / state.cards_left_to_draw)
-    
-    def _try_defensive_combo(self) -> Optional[List[Card]]:
-        """
-        Try to form a defensive 2-of-a-kind combo.
-        
-        Prefers cat cards for combos to preserve action cards.
-        
-        Returns:
-            List of 2 cards for combo, or None if no combo available
-        """
-        card_types = Counter(c.card_type for c in self.hand)
-        
-        # Prefer cat cards for combos
-        cat_types = [CardType.TACOCAT, CardType.CATTERMELON, CardType.HAIRY_POTATO_CAT,
-                     CardType.BEARD_CAT, CardType.RAINBOW_RALPHING_CAT]
-        
-        for cat_type in cat_types:
-            if card_types.get(cat_type, 0) >= 2:
-                cards = [c for c in self.hand if c.card_type == cat_type][:2]
-                return cards
-        
-        # If no cat combos, try other cards (but not Defuse or Exploding Kitten)
-        for card_type, count in card_types.items():
-            if count >= 2 and card_type not in [CardType.DEFUSE, CardType.EXPLODING_KITTEN]:
-                cards = [c for c in self.hand if c.card_type == card_type][:2]
-                return cards
-        
-        return None
 
     def handle_exploding_kitten(self, state: GameState) -> int:
         """
@@ -292,7 +320,8 @@ class CautiousBot(Bot):
                 self.seen_future_cards.pop(0)
         
         # Reset knowledge when deck is shuffled
-        if action.action_type == ActionType.CARD_PLAY and action.card == CardType.SHUFFLE:
+        if (action.action_type == ActionType.CARD_PLAY and 
+            action.card is not None and action.card == CardType.SHUFFLE):
             self.seen_future_cards = []
             self.known_top_position = 0
     
