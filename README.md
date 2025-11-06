@@ -56,17 +56,20 @@ You can play multiple cards of the same type (or 5 unique cards) to perform spec
 - **Effect**: Randomly steal a card from any target player
 - Can use any card type (2 Attacks, 2 Skips, 2 Tacocats, etc.)
 - Card effects do NOT trigger when played as combo
+- **Restriction**: Cannot use Defuse or Exploding Kitten cards in combos
 
 #### 3-of-a-Kind Combo
 - Play 3 cards of the exact same type
 - **Effect**: Request a specific card type from a target player
 - If target has that card type, they must give you one
 - If target doesn't have it, nothing happens
+- **Restriction**: Cannot use Defuse or Exploding Kitten cards in combos
 
 #### 5-Unique Cards Combo
 - Play 5 cards of different types
 - **Effect**: Take any card from the discard pile
 - Example: 1 Attack, 1 Skip, 1 Shuffle, 1 Tacocat, 1 Favor
+- **Restriction**: Cannot include Defuse or Exploding Kitten cards
 
 **Note**: All combos can be Noped by other players!
 

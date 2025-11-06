@@ -276,7 +276,24 @@ def play(self, state: GameState) -> Optional[Card]:
    - `state` parameter has valuable info
    - Use it to make informed decisions
 
-4. **Forgetting about edge cases**
+4. **Using Defuse or Exploding Kitten in combos**
+   - Defuse cards cannot be used in any combos
+   - Exploding Kitten cards cannot be used in any combos
+   - The game will reject such combos as invalid
+   
+   ```python
+   # ❌ BAD - Trying to combo with DEFUSE
+   defuse_cards = [c for c in self.hand if c.card_type == CardType.DEFUSE]
+   if len(defuse_cards) >= 2:
+       return defuse_cards[:2]  # Invalid combo!
+   
+   # ✅ GOOD - Only combo with valid cards
+   attack_cards = [c for c in self.hand if c.card_type == CardType.ATTACK]
+   if len(attack_cards) >= 2:
+       return attack_cards[:2]  # Valid combo
+   ```
+
+5. **Forgetting about edge cases**
    - What if deck is empty?
    - What if you have no playable cards?
    - What if you're the last player?
