@@ -56,17 +56,20 @@ You can play multiple cards of the same type (or 5 unique cards) to perform spec
 - **Effect**: Randomly steal a card from any target player
 - Can use any card type (2 Attacks, 2 Skips, 2 Tacocats, etc.)
 - Card effects do NOT trigger when played as combo
+- **Restriction**: Cannot use Defuse or Exploding Kitten cards in combos
 
 #### 3-of-a-Kind Combo
 - Play 3 cards of the exact same type
 - **Effect**: Request a specific card type from a target player
 - If target has that card type, they must give you one
 - If target doesn't have it, nothing happens
+- **Restriction**: Cannot use Defuse or Exploding Kitten cards in combos
 
 #### 5-Unique Cards Combo
 - Play 5 cards of different types
 - **Effect**: Take any card from the discard pile
 - Example: 1 Attack, 1 Skip, 1 Shuffle, 1 Tacocat, 1 Favor
+- **Restriction**: Cannot include Defuse or Exploding Kitten cards
 
 **Note**: All combos can be Noped by other players!
 
@@ -86,7 +89,7 @@ exploding-kitten-bot-battle/
 ├── game/               # Core game engine and logic
 │   ├── __init__.py
 │   ├── cards.py       # Card types and Card class
-│   ├── game_state.py  # GameState and CardCounts classes
+│   ├── game_state.py  # GameState class for game information
 │   ├── bot.py         # Base Bot class (inherit from this!)
 │   ├── deck.py        # Deck management
 │   ├── game_engine.py # Main game loop and logic
@@ -137,7 +140,7 @@ To create your own bot, follow these steps:
 2. **Import required classes**:
    ```python
    from typing import Optional, List, Union
-   from game import Bot, GameState, Card, CardType, TargetContext
+   from game import Bot, GameState, Card, CardType, TargetContext, GameAction
    ```
 
 3. **Inherit from the `Bot` class** and implement the required methods:
@@ -234,18 +237,30 @@ To create your own bot, follow these steps:
            """
            return discard_pile[0] if discard_pile else None
        
-       def should_play_nope(self, state: GameState, action_description: str) -> bool:
+       def should_play_nope(self, state: GameState, action: GameAction) -> bool:
            """
            Called when an action can be noped.
            
            Args:
                state: Current game state
-               action_description: Description of the action being played
+               action: The action being played (GameAction object with details)
                
            Returns:
                True if you want to play Nope, False otherwise
            """
            return False
+       
+       def on_action_played(self, state: GameState, action: GameAction, actor: 'Bot') -> None:
+           """
+           Called when any action occurs in the game.
+           
+           Args:
+               state: Current game state
+               action: The action that was played
+               actor: The bot who played the action
+           """
+           # Track game actions for better decision making
+           pass
    ```
 
 4. **Use the Bot API**:
@@ -607,7 +622,7 @@ See `replay-viewer/README.md` for detailed documentation.
 
 The `GameState` class contains all public information about the game:
 
-- `total_cards_in_deck: CardCounts` - Original card counts in the deck
+- `initial_card_counts: Dict[CardType, int]` - Original card counts by type at game start
 - `cards_left_to_draw: int` - Number of cards remaining in the deck
 - `was_last_card_exploding_kitten: bool` - True if last drawn Exploding Kitten was returned to deck
 - `history_of_played_cards: List[Card]` - All cards that have been played
@@ -644,8 +659,17 @@ All bots must inherit from `Bot` and implement:
 7. `choose_from_discard(state: GameState, discard_pile: List[Card]) -> Optional[Card]`
    - Called for 5-unique combo to pick a card from discard pile
 
-8. `should_play_nope(state: GameState, action_description: str) -> bool`
-   - Called when an action can be noped
+8. `should_play_nope(state: GameState, action: GameAction) -> bool`
+   - Called when another player's action can be noped
+   - `action` is a GameAction object containing action details (action_type, card, actor, target, etc.)
+   - Return True to play Nope, False otherwise
+
+9. `on_action_played(state: GameState, action: GameAction, actor: Bot) -> None`
+   - Called when ANY action occurs in the game (for all bots)
+   - `action` is a GameAction object containing action details (action_type, card, actor, target, etc.)
+   - `actor` is the Bot who performed the action
+   - Use to track game state, opponent behavior, and game history
+   - Can simply `pass` if you don't need to track actions
 
 ### Type-Safe Enums
 
