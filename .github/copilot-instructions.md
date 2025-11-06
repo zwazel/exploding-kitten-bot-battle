@@ -151,15 +151,19 @@ python3 main.py --test
 python3 main.py --test --replay game_replay.json
 
 # Statistics mode (run multiple games and collect statistics)
+# Display in console only
+python3 main.py --stats --runs 100
+
+# Or save to file
 python3 main.py --stats statistics.json --runs 100
 ```
 
 ### Statistics Mode
 The statistics mode runs multiple games to evaluate bot performance:
-- **Flag:** `--stats <filename>`
+- **Flag:** `--stats [filename]` (filename is optional)
 - **Runs:** `--runs <number>` (default: 100)
 - **Incompatible with:** `--replay` (cannot use both)
-- **Output:** JSON file with comprehensive statistics and console summary
+- **Output:** Console summary, and optionally a JSON file if filename provided
 
 **Statistics Tracked:**
 - Win count and win rate per bot
@@ -169,6 +173,10 @@ The statistics mode runs multiple games to evaluate bot performance:
 
 **Example:**
 ```bash
+# Display statistics in console only
+python3 main.py --stats --runs 200
+
+# Save statistics to a file
 python3 main.py --stats results.json --runs 200
 ```
 

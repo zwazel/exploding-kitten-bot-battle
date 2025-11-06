@@ -1411,6 +1411,112 @@ class TestStatistics(unittest.TestCase):
         self.assertEqual(sorted(placement_numbers), [1, 2, 3])
 
 
+class TestStatisticsMode(unittest.TestCase):
+    """Test statistics mode functionality from main.py."""
+    
+    def setUp(self):
+        """Set up test bots."""
+        self.bot1 = SimpleBot("TestBot1")
+        self.bot2 = SimpleBot("TestBot2")
+        self.bot3 = SimpleBot("TestBot3")
+        self.bots = [self.bot1, self.bot2, self.bot3]
+    
+    def test_statistics_mode_without_file(self):
+        """Test running statistics mode without saving to file."""
+        import main
+        import io
+        import sys
+        
+        # Capture stdout to verify console output
+        captured_output = io.StringIO()
+        original_stdout = sys.stdout
+        
+        try:
+            sys.stdout = captured_output
+            
+            # Run statistics mode without output file
+            main.run_statistics_mode(self.bots, num_runs=5, output_file=None)
+            
+            output = captured_output.getvalue()
+            
+            # Verify console output contains expected elements
+            self.assertIn("Running 5 games for statistics", output)
+            self.assertIn("STATISTICS SUMMARY", output)
+            self.assertIn("TestBot1", output)
+            self.assertIn("TestBot2", output)
+            self.assertIn("TestBot3", output)
+            self.assertIn("Wins:", output)
+            self.assertIn("Average Placement:", output)
+            
+            # Verify that no file save message appears
+            self.assertNotIn("Statistics saved to:", output)
+            
+        finally:
+            sys.stdout = original_stdout
+    
+    def test_statistics_mode_with_file(self):
+        """Test running statistics mode with file saving."""
+        import main
+        import io
+        import sys
+        import os
+        import json
+        import tempfile
+        
+        # Create a temporary file using mkstemp for cleaner handling
+        fd, temp_file = tempfile.mkstemp(suffix='.json')
+        os.close(fd)  # Close the file descriptor immediately
+        
+        try:
+            # Capture stdout
+            captured_output = io.StringIO()
+            original_stdout = sys.stdout
+            
+            try:
+                sys.stdout = captured_output
+                
+                # Run statistics mode with output file
+                main.run_statistics_mode(self.bots, num_runs=5, output_file=temp_file)
+                
+                output = captured_output.getvalue()
+                
+                # Verify console output
+                self.assertIn("Running 5 games for statistics", output)
+                self.assertIn("STATISTICS SUMMARY", output)
+                self.assertIn(f"Statistics saved to: {temp_file}", output)
+                
+            finally:
+                sys.stdout = original_stdout
+            
+            # Verify file was created and contains valid JSON
+            self.assertTrue(os.path.exists(temp_file))
+            
+            with open(temp_file, 'r') as f:
+                data = json.load(f)
+            
+            # Verify JSON structure
+            self.assertEqual(data["total_games"], 5)
+            self.assertEqual(data["total_bots"], 3)
+            self.assertIn("TestBot1", data["bots"])
+            self.assertIn("TestBot2", data["bots"])
+            self.assertIn("TestBot3", data["bots"])
+            
+            # Verify bot statistics structure
+            for bot_name in ["TestBot1", "TestBot2", "TestBot3"]:
+                bot_stats = data["bots"][bot_name]
+                self.assertIn("wins", bot_stats)
+                self.assertIn("win_rate", bot_stats)
+                self.assertIn("average_placement", bot_stats)
+                self.assertIn("placement_counts", bot_stats)
+                self.assertIn("games_played", bot_stats)
+                self.assertEqual(bot_stats["games_played"], 5)
+            
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+
+
 if __name__ == '__main__':
     unittest.main()
 

@@ -305,6 +305,10 @@ This mode:
 ### Performance Testing with Statistics
 Evaluate your bot's performance over many games:
 ```bash
+# Display statistics in console only
+python3 main.py --stats --runs 100
+
+# Display statistics AND save to a file
 python3 main.py --stats my_bot_stats.json --runs 100
 ```
 
@@ -312,7 +316,8 @@ This mode:
 - Runs 100 games automatically (or specify with `--runs N`)
 - Minimal console output for speed
 - Shows progress every 10 games
-- Generates comprehensive statistics
+- Displays comprehensive statistics in the console
+- Optionally saves statistics to a JSON file (if filename provided)
 
 **Example output:**
 ```
@@ -345,10 +350,14 @@ Run statistics mode with multiple bots to compare strategies:
 ls bots/
 # MyBot.py  AggressiveBot.py  CautiousBot.py  RandomBot.py
 
+# Just display results
+python3 main.py --stats --runs 200
+
+# Or save to file for later analysis
 python3 main.py --stats comparison.json --runs 200
 ```
 
-The statistics file contains detailed JSON data for further analysis.
+When saved, the statistics file contains detailed JSON data for further analysis.
 
 ## Have Fun!
 
