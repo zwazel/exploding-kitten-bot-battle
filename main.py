@@ -109,11 +109,6 @@ def main() -> None:
     
     # Statistics mode
     if args.stats is not None:
-        # Validate that --parallel is only used with --stats
-        if args.parallel and args.stats is None:
-            print("Error: --parallel flag can only be used with --stats mode.")
-            sys.exit(1)
-        
         # args.stats is empty string when flag is used without filename, or a string with the filename
         output_file = args.stats if args.stats else None
         run_statistics_mode(bots, args.runs, output_file, parallel=args.parallel)
@@ -158,9 +153,8 @@ def _run_single_game(bot_info: List[Tuple[str, str]]) -> List[Tuple[str, int]]:
     Returns:
         List of (bot_name, placement) tuples for this game
     """
-    # Import bot classes from the bots directory
+    # Import bot classes from their module files
     bots = []
-    bot_dir = os.path.join(os.path.dirname(__file__), "bots")
     
     for module_path, bot_name in bot_info:
         # Load the module dynamically
@@ -232,9 +226,11 @@ def run_statistics_mode(bot_templates: List[Bot], num_runs: int, output_file: Op
         cpu_count = multiprocessing.cpu_count()
         with multiprocessing.Pool(processes=cpu_count) as pool:
             # Use imap_unordered for better progress tracking
-            results = []
+            # Chunksize: balance between overhead and distribution
+            # Use minimum of 50 to avoid excessive overhead, or games/cores if smaller
+            chunksize = max(1, min(50, num_runs // cpu_count))
             completed = 0
-            for placements in pool.imap_unordered(_run_single_game, work_items, chunksize=max(1, num_runs // (cpu_count * 4))):
+            for placements in pool.imap_unordered(_run_single_game, work_items, chunksize=chunksize):
                 stats.record_game(placements)
                 completed += 1
                 
