@@ -382,9 +382,13 @@ This ordering makes it easy to replay the game visually, showing each action as 
 
 ### Statistics Mode
 
-Run multiple games and generate comprehensive statistics to analyze bot performance:
+Run multiple games and analyze bot performance with comprehensive statistics:
 
 ```bash
+# Display statistics in console only
+python3 main.py --stats --runs 100
+
+# Display statistics AND save to a file
 python3 main.py --stats statistics.json --runs 100
 ```
 
@@ -392,8 +396,8 @@ python3 main.py --stats statistics.json --runs 100
 - Runs multiple games automatically (default: 100, customizable with `--runs`)
 - Minimal console output - only shows progress updates
 - Collects placement statistics for all bots
-- Generates detailed statistics JSON file
 - Displays summary statistics at the end
+- Optionally saves detailed statistics to a JSON file
 
 **Statistics Tracked:**
 - **Win Rate**: Percentage of games won by each bot
@@ -476,6 +480,7 @@ RandomBot:
 
 **Important Notes:**
 - `--stats` and `--replay` flags are **incompatible** (cannot use both simultaneously)
+- The filename argument for `--stats` is **optional** - omit it to only display results in console
 - Statistics mode automatically runs in silent mode (verbose=False) for performance
 - Each game uses fresh bot instances to ensure fair comparisons
 - Progress is displayed every 10 games to track completion

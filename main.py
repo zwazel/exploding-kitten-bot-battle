@@ -4,7 +4,7 @@ import os
 import sys
 import importlib.util
 import argparse
-from typing import List
+from typing import List, Optional
 from game import Bot, GameEngine, ReplayRecorder, GameStatistics
 
 
@@ -67,8 +67,8 @@ def main() -> None:
                        help='Run in test mode (auto-play without user input)')
     parser.add_argument('--replay', type=str, metavar='FILENAME',
                        help='Enable replay recording and save to specified file (e.g., replay.json)')
-    parser.add_argument('--stats', type=str, metavar='FILENAME',
-                       help='Run multiple games and save statistics to specified file (e.g., stats.json)')
+    parser.add_argument('--stats', nargs='?', const=True, type=str, metavar='FILENAME',
+                       help='Run multiple games and display statistics. Optionally save to file (e.g., stats.json)')
     parser.add_argument('--runs', type=int, default=100, metavar='N',
                        help='Number of games to run in statistics mode (default: 100)')
     args = parser.parse_args()
@@ -100,8 +100,10 @@ def main() -> None:
         sys.exit(1)
     
     # Statistics mode
-    if args.stats:
-        run_statistics_mode(bots, args.runs, args.stats)
+    if args.stats is not None:
+        # args.stats can be True (flag only) or a string (filename)
+        output_file = args.stats if isinstance(args.stats, str) else None
+        run_statistics_mode(bots, args.runs, output_file)
         return
     
     # Single game mode (with optional replay)
@@ -133,14 +135,14 @@ def main() -> None:
         print("\nGame ended with no winner.")
 
 
-def run_statistics_mode(bot_templates: List[Bot], num_runs: int, output_file: str) -> None:
+def run_statistics_mode(bot_templates: List[Bot], num_runs: int, output_file: Optional[str] = None) -> None:
     """
     Run multiple games and collect statistics.
     
     Args:
         bot_templates: List of bot instances to use as templates
         num_runs: Number of games to run
-        output_file: Path to save statistics JSON file
+        output_file: Optional path to save statistics JSON file. If None, only displays stats.
     """
     print(f"\nRunning {num_runs} games for statistics...")
     print(f"Bots: {', '.join(bot.name for bot in bot_templates)}")
@@ -175,12 +177,13 @@ def run_statistics_mode(bot_templates: List[Bot], num_runs: int, output_file: st
     # Display summary statistics
     stats.print_summary()
     
-    # Save to file
-    try:
-        stats.save_to_file(output_file)
-        print(f"\n✅ Statistics saved to: {output_file}")
-    except Exception as e:
-        print(f"\n❌ Error saving statistics: {e}")
+    # Save to file if filename was provided
+    if output_file:
+        try:
+            stats.save_to_file(output_file)
+            print(f"\n✅ Statistics saved to: {output_file}")
+        except Exception as e:
+            print(f"\n❌ Error saving statistics: {e}")
 
 
 if __name__ == "__main__":
