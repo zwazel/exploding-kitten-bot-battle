@@ -170,7 +170,7 @@ def _calculate_explosion_risk(self, state: GameState) -> float:
         return 0.0
     
     # Count Exploding Kittens in play
-    total_kittens = state.total_cards_in_deck.exploding_kitten
+    total_kittens = state.initial_card_counts.get(CardType.EXPLODING_KITTEN, 0)
     played_kittens = sum(
         1 for card in state.history_of_played_cards 
         if card.card_type == CardType.EXPLODING_KITTEN

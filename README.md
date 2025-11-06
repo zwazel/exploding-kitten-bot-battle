@@ -86,7 +86,7 @@ exploding-kitten-bot-battle/
 ├── game/               # Core game engine and logic
 │   ├── __init__.py
 │   ├── cards.py       # Card types and Card class
-│   ├── game_state.py  # GameState and CardCounts classes
+│   ├── game_state.py  # GameState class for game information
 │   ├── bot.py         # Base Bot class (inherit from this!)
 │   ├── deck.py        # Deck management
 │   ├── game_engine.py # Main game loop and logic
@@ -619,7 +619,7 @@ See `replay-viewer/README.md` for detailed documentation.
 
 The `GameState` class contains all public information about the game:
 
-- `total_cards_in_deck: CardCounts` - Original card counts in the deck
+- `initial_card_counts: Dict[CardType, int]` - Original card counts by type at game start
 - `cards_left_to_draw: int` - Number of cards remaining in the deck
 - `was_last_card_exploding_kitten: bool` - True if last drawn Exploding Kitten was returned to deck
 - `history_of_played_cards: List[Card]` - All cards that have been played
