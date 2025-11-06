@@ -1463,9 +1463,9 @@ class TestStatisticsMode(unittest.TestCase):
         import json
         import tempfile
         
-        # Create a temporary file
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
-            temp_file = f.name
+        # Create a temporary file using mkstemp for cleaner handling
+        fd, temp_file = tempfile.mkstemp(suffix='.json')
+        os.close(fd)  # Close the file descriptor immediately
         
         try:
             # Capture stdout

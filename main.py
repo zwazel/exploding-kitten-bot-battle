@@ -74,7 +74,7 @@ def main() -> None:
     args = parser.parse_args()
     
     # Validate incompatible flags
-    if args.replay and args.stats:
+    if args.replay and args.stats is not None:
         print("Error: --replay and --stats flags are incompatible. Use one or the other.")
         sys.exit(1)
     
