@@ -4,7 +4,8 @@ import os
 import sys
 import importlib.util
 import argparse
-from typing import List, Optional
+import multiprocessing
+from typing import List, Optional, Tuple
 from game import Bot, GameEngine, ReplayRecorder, GameStatistics
 
 
@@ -71,11 +72,18 @@ def main() -> None:
                        help='Run multiple games and display statistics. Optionally save to file (e.g., stats.json)')
     parser.add_argument('--runs', type=int, default=100, metavar='N',
                        help='Number of games to run in statistics mode (default: 100)')
+    parser.add_argument('--parallel', action='store_true',
+                       help='Run games in parallel using multiple CPU cores (only for statistics mode)')
     args = parser.parse_args()
     
     # Validate incompatible flags
     if args.replay and args.stats is not None:
         print("Error: --replay and --stats flags are incompatible. Use one or the other.")
+        sys.exit(1)
+    
+    # Validate that --parallel is only used with --stats
+    if args.parallel and args.stats is None:
+        print("Error: --parallel flag can only be used with --stats mode.")
         sys.exit(1)
     
     # Load bots
@@ -103,7 +111,7 @@ def main() -> None:
     if args.stats is not None:
         # args.stats is empty string when flag is used without filename, or a string with the filename
         output_file = args.stats if args.stats else None
-        run_statistics_mode(bots, args.runs, output_file)
+        run_statistics_mode(bots, args.runs, output_file, parallel=args.parallel)
         return
     
     # Single game mode (with optional replay)
@@ -135,7 +143,46 @@ def main() -> None:
         print("\nGame ended with no winner.")
 
 
-def run_statistics_mode(bot_templates: List[Bot], num_runs: int, output_file: Optional[str] = None) -> None:
+def _run_single_game(bot_info: List[Tuple[str, str]]) -> List[Tuple[str, int]]:
+    """
+    Worker function to run a single game. Used for parallel execution.
+    
+    Args:
+        bot_info: List of (bot_module_path, bot_name) tuples
+        
+    Returns:
+        List of (bot_name, placement) tuples for this game
+    """
+    # Import bot classes from their module files
+    bots = []
+    
+    for module_path, bot_name in bot_info:
+        # Load the module dynamically
+        spec = importlib.util.spec_from_file_location(bot_name, module_path)
+        if spec and spec.loader:
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            
+            # Find the Bot class in the module
+            for attr_name in dir(module):
+                attr = getattr(module, attr_name)
+                if (isinstance(attr, type) and 
+                    issubclass(attr, Bot) and 
+                    attr is not Bot):
+                    # Instantiate the bot
+                    bot_instance = attr(bot_name)
+                    bots.append(bot_instance)
+                    break
+    
+    # Run the game in silent mode
+    game = GameEngine(bots, verbose=False)
+    game.play_game()
+    
+    # Return placements
+    return game.get_placements()
+
+
+def run_statistics_mode(bot_templates: List[Bot], num_runs: int, output_file: Optional[str] = None, parallel: bool = False) -> None:
     """
     Run multiple games and collect statistics.
     
@@ -143,33 +190,77 @@ def run_statistics_mode(bot_templates: List[Bot], num_runs: int, output_file: Op
         bot_templates: List of bot instances to use as templates
         num_runs: Number of games to run
         output_file: Optional path to save statistics JSON file. If None, only displays stats.
+        parallel: Whether to run games in parallel using multiprocessing
     """
     print(f"\nRunning {num_runs} games for statistics...")
     print(f"Bots: {', '.join(bot.name for bot in bot_templates)}")
+    if parallel:
+        cpu_count = multiprocessing.cpu_count()
+        print(f"Parallel mode enabled: using {cpu_count} CPU cores")
     print("=" * 70)
     
     stats = GameStatistics()
     
-    for run_num in range(1, num_runs + 1):
-        # Create fresh bot instances for each game
-        bots = []
+    if parallel:
+        # Parallel execution using multiprocessing
+        # Prepare bot info for worker processes
+        bot_info = []
+        bot_dir = os.path.join(os.path.dirname(__file__), "bots")
         for bot_template in bot_templates:
-            bot_class = type(bot_template)
-            new_bot = bot_class(bot_template.name)
-            bots.append(new_bot)
+            # Find the source file for this bot
+            bot_name = bot_template.name
+            file_path = os.path.join(bot_dir, f"{bot_name}.py")
+            if os.path.exists(file_path):
+                bot_info.append((file_path, bot_name))
         
-        # Run the game in silent mode (verbose=False)
-        game = GameEngine(bots, verbose=False)
-        winner = game.play_game()
+        # Fall back to sequential if bot files don't exist (e.g., for test bots)
+        if len(bot_info) < 2:
+            print("Warning: Bot files not found in bots/ directory. Falling back to sequential mode.")
+            parallel = False
         
-        # Record results
-        placements = game.get_placements()
-        stats.record_game(placements)
+    if parallel:
+        # Create work items (each is the same bot_info list)
+        work_items = [bot_info] * num_runs
         
-        # Show progress
-        if run_num % 10 == 0 or run_num == num_runs:
-            percentage = (run_num / num_runs) * 100
-            print(f"Progress: {run_num}/{num_runs} games completed ({percentage:.1f}%)")
+        # Use multiprocessing Pool to run games in parallel
+        cpu_count = multiprocessing.cpu_count()
+        with multiprocessing.Pool(processes=cpu_count) as pool:
+            # Use imap_unordered for better progress tracking
+            # Chunksize: balance between overhead and distribution
+            # Use minimum of 50 to avoid excessive overhead, or games/cores if smaller
+            chunksize = max(1, min(50, num_runs // cpu_count))
+            completed = 0
+            for placements in pool.imap_unordered(_run_single_game, work_items, chunksize=chunksize):
+                stats.record_game(placements)
+                completed += 1
+                
+                # Show progress
+                if completed % max(1, num_runs // 10) == 0 or completed == num_runs:
+                    percentage = (completed / num_runs) * 100
+                    print(f"Progress: {completed}/{num_runs} games completed ({percentage:.1f}%)")
+    
+    if not parallel:
+        # Sequential execution (original implementation)
+        for run_num in range(1, num_runs + 1):
+            # Create fresh bot instances for each game
+            bots = []
+            for bot_template in bot_templates:
+                bot_class = type(bot_template)
+                new_bot = bot_class(bot_template.name)
+                bots.append(new_bot)
+            
+            # Run the game in silent mode (verbose=False)
+            game = GameEngine(bots, verbose=False)
+            winner = game.play_game()
+            
+            # Record results
+            placements = game.get_placements()
+            stats.record_game(placements)
+            
+            # Show progress
+            if run_num % 10 == 0 or run_num == num_runs:
+                percentage = (run_num / num_runs) * 100
+                print(f"Progress: {run_num}/{num_runs} games completed ({percentage:.1f}%)")
     
     print("=" * 70)
     print("All games completed!\n")
