@@ -31,7 +31,7 @@ class CautiousBot(Bot):
         - Always use See the Future to gather intel
         - Use Skip if high explosion risk or known danger ahead
         - Use Shuffle if an Exploding Kitten is near the top
-        - Use defensive 2-of-a-kind combos to steal Defuse cards
+        - Only use defensive 2-of-a-kind combos in dire situations (very few cards and late game)
         """
         # Always use See the Future if we have it - information is key
         for card in self.hand:
@@ -68,9 +68,9 @@ class CautiousBot(Bot):
                 if card.card_type == CardType.SKIP:
                     return card
         
-        # Try defensive 2-of-a-kind combo to steal cards from others
-        # Only do this when we have few cards or in late game
-        if len(self.hand) <= 4 or state.alive_bots <= 2:
+        # VERY cautiously try defensive 2-of-a-kind combo ONLY in dire situations
+        # Only when we have very few cards (<=3) AND it's late game (<=2 bots)
+        if len(self.hand) <= 3 and state.alive_bots <= 2:
             combo = self._try_defensive_combo()
             if combo:
                 return combo
