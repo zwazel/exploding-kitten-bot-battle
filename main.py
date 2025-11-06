@@ -67,7 +67,7 @@ def main() -> None:
                        help='Run in test mode (auto-play without user input)')
     parser.add_argument('--replay', type=str, metavar='FILENAME',
                        help='Enable replay recording and save to specified file (e.g., replay.json)')
-    parser.add_argument('--stats', nargs='?', const=True, type=str, metavar='FILENAME',
+    parser.add_argument('--stats', nargs='?', const='', type=str, metavar='FILENAME',
                        help='Run multiple games and display statistics. Optionally save to file (e.g., stats.json)')
     parser.add_argument('--runs', type=int, default=100, metavar='N',
                        help='Number of games to run in statistics mode (default: 100)')
@@ -101,8 +101,8 @@ def main() -> None:
     
     # Statistics mode
     if args.stats is not None:
-        # args.stats can be True (flag only) or a string (filename)
-        output_file = args.stats if isinstance(args.stats, str) else None
+        # args.stats is empty string when flag is used without filename, or a string with the filename
+        output_file = args.stats if args.stats else None
         run_statistics_mode(bots, args.runs, output_file)
         return
     
