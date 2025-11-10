@@ -135,6 +135,26 @@ header h1 {
   color: #646cff;
 }
 
+#speed-input {
+  width: 70px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: white;
+  color: #213547;
+}
+
+#speed-input:focus {
+  outline: 2px solid #646cff;
+  outline-offset: 2px;
+}
+
+#speed-input::-webkit-inner-spin-button,
+#speed-input::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
 .event-progress {
   display: flex;
   align-items: center;

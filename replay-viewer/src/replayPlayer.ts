@@ -191,7 +191,7 @@ export class ReplayPlayer {
    * Set playback speed (events per second)
    */
   setSpeed(speed: number): void {
-    this.playbackState.speed = Math.max(0.1, Math.min(10, speed));
+    this.playbackState.speed = Math.max(0.1, Math.min(100, speed));
     this.notifyStateChange();
     // Speed change will be picked up in the next loop iteration
   }

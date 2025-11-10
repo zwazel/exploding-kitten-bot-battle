@@ -46,8 +46,9 @@ class ReplayApp {
             
             <div class="speed-control">
               <label for="speed-slider">Speed:</label>
-              <input type="range" id="speed-slider" min="0.5" max="3" step="0.5" value="1" />
+              <input type="range" id="speed-slider" min="0.5" max="10" step="0.5" value="1" />
               <span id="speed-display">1.0x</span>
+              <input type="number" id="speed-input" min="0.1" max="100" step="0.1" value="1.0" title="Custom speed (0.1x - 100x)" />
             </div>
             
             <div class="event-progress">
@@ -80,12 +81,24 @@ class ReplayApp {
     document.querySelector("#btn-stop")?.addEventListener("click", async () => await this.stop());
     document.querySelector("#btn-step-forward")?.addEventListener("click", () => this.stepForward());
 
-    // Speed control
+    // Speed control - slider
     const speedSlider = document.querySelector<HTMLInputElement>("#speed-slider")!;
     speedSlider.addEventListener("input", (e) => {
       const speed = parseFloat((e.target as HTMLInputElement).value);
       this.player.setSpeed(speed);
-      document.querySelector("#speed-display")!.textContent = `${speed.toFixed(1)}x`;
+      this.updateSpeedDisplay(speed);
+    });
+
+    // Speed control - input field
+    const speedInput = document.querySelector<HTMLInputElement>("#speed-input")!;
+    speedInput.addEventListener("change", (e) => {
+      const speed = parseFloat((e.target as HTMLInputElement).value);
+      // Clamp the speed between min and max
+      const clampedSpeed = Math.max(0.1, Math.min(100, speed));
+      this.player.setSpeed(clampedSpeed);
+      this.updateSpeedDisplay(clampedSpeed);
+      // Update the input field to show the clamped value
+      speedInput.value = clampedSpeed.toFixed(1);
     });
 
     // Hidden agent jump control - only listens to input event (not MutationObserver)
@@ -532,6 +545,22 @@ class ReplayApp {
     counter.textContent = `Event: ${current + 1} / ${total}`;
     // Add data attribute for debugging
     counter.setAttribute('data-current-index', String(current));
+  }
+
+  private updateSpeedDisplay(speed: number): void {
+    const speedDisplay = document.querySelector("#speed-display")!;
+    const speedSlider = document.querySelector<HTMLInputElement>("#speed-slider")!;
+    const speedInput = document.querySelector<HTMLInputElement>("#speed-input")!;
+    
+    speedDisplay.textContent = `${speed.toFixed(1)}x`;
+    
+    // Update slider if speed is within slider range
+    if (speed >= 0.5 && speed <= 10) {
+      speedSlider.value = speed.toString();
+    }
+    
+    // Update input field
+    speedInput.value = speed.toFixed(1);
   }
 
   private delay(ms: number): Promise<void> {
