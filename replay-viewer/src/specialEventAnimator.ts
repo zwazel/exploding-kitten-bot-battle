@@ -54,9 +54,37 @@ export interface SimpleAnimationConfig {
  */
 export class SpecialEventAnimator {
   private overlayElement: HTMLElement | null = null;
+  private dismissResolve: (() => void) | null = null;
 
   constructor(_container: HTMLElement) {
     this.createOverlay();
+  }
+
+  /**
+   * Check if manual popup dismiss is enabled
+   */
+  private isManualDismissEnabled(): boolean {
+    const checkbox = document.querySelector<HTMLInputElement>("#manual-popup-dismiss");
+    return checkbox ? checkbox.checked : false;
+  }
+
+  /**
+   * Wait for user to dismiss the popup
+   */
+  private waitForDismissal(): Promise<void> {
+    return new Promise((resolve) => {
+      this.dismissResolve = resolve;
+    });
+  }
+
+  /**
+   * Dismiss the current popup
+   */
+  private triggerDismissal(): void {
+    if (this.dismissResolve) {
+      this.dismissResolve();
+      this.dismissResolve = null;
+    }
   }
 
   /**
@@ -77,8 +105,61 @@ export class SpecialEventAnimator {
       justify-content: center;
       z-index: 10000;
       backdrop-filter: blur(4px);
+      cursor: pointer;
     `;
     document.body.appendChild(this.overlayElement);
+
+    // Click outside to close (on overlay background)
+    this.overlayElement.addEventListener("click", (e) => {
+      if (e.target === this.overlayElement) {
+        this.triggerDismissal();
+      }
+    });
+  }
+
+  /**
+   * Create close button HTML
+   */
+  private createCloseButton(): string {
+    return `
+      <button id="popup-close-btn" style="
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 32px;
+        height: 32px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
+        color: #fff;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        z-index: 10;
+        line-height: 1;
+        padding: 0;
+      " 
+      onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'; this.style.borderColor='#fff';"
+      onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'; this.style.borderColor='rgba(255, 255, 255, 0.5)';"
+      title="Close (or click outside)">✕</button>
+    `;
+  }
+
+  /**
+   * Setup close button listener after rendering
+   */
+  private setupCloseButton(): void {
+    const closeBtn = document.getElementById("popup-close-btn");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation(); // Prevent event from bubbling to overlay
+        this.triggerDismissal();
+      });
+    }
   }
 
   /**
@@ -147,7 +228,9 @@ export class SpecialEventAnimator {
         box-shadow: 0 0 60px rgba(100, 108, 255, 0.6);
         min-width: 600px;
         position: relative;
-      ">
+        cursor: default;
+      " onclick="event.stopPropagation()">
+        ${this.createCloseButton()}
         <h2 style="
           color: #fff;
           text-align: center;
@@ -284,7 +367,15 @@ export class SpecialEventAnimator {
     `;
 
     this.overlayElement.style.display = "flex";
-    await this.delay(duration);
+    this.setupCloseButton();
+    
+    // If manual dismiss is enabled, wait for user action, otherwise use timer
+    if (this.isManualDismissEnabled()) {
+      await this.waitForDismissal();
+    } else {
+      await this.delay(duration);
+    }
+    
     await this.hide();
   }
 
@@ -323,7 +414,7 @@ export class SpecialEventAnimator {
             opacity: 1;
           }
           to {
-            width: 200px;
+            width: 180px;
             opacity: 0.8;
           }
         }
@@ -335,7 +426,10 @@ export class SpecialEventAnimator {
         border: 4px solid #ff6b6b;
         box-shadow: 0 0 60px rgba(255, 107, 107, 0.6);
         min-width: 600px;
-      ">
+        position: relative;
+        cursor: default;
+      " onclick="event.stopPropagation()">
+        ${this.createCloseButton()}
         <h2 style="
           color: #ff6b6b;
           text-align: center;
@@ -384,16 +478,29 @@ export class SpecialEventAnimator {
             align-items: center;
             justify-content: center;
           ">
-            <!-- Energy beam -->
+            <!-- Energy beam with arrow -->
             <div style="
               position: absolute;
               left: 0;
+              width: 180px;
               height: 6px;
               background: linear-gradient(90deg, #ff6b6b 0%, #ffa07a 100%);
               border-radius: 3px;
               animation: beamShoot 0.5s ease forwards;
               box-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
-            "></div>
+            ">
+              <div style="
+                position: absolute;
+                right: -10px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 0;
+                height: 0;
+                border-left: 15px solid #ffa07a;
+                border-top: 10px solid transparent;
+                border-bottom: 10px solid transparent;
+              "></div>
+            </div>
             
             <div style="
               font-size: 64px;
@@ -432,7 +539,15 @@ export class SpecialEventAnimator {
     `;
 
     this.overlayElement.style.display = "flex";
-    await this.delay(duration);
+    this.setupCloseButton();
+    
+    // If manual dismiss is enabled, wait for user action, otherwise use timer
+    if (this.isManualDismissEnabled()) {
+      await this.waitForDismissal();
+    } else {
+      await this.delay(duration);
+    }
+    
     await this.hide();
   }
 
@@ -516,7 +631,10 @@ export class SpecialEventAnimator {
         border-radius: 20px;
         border: 4px solid #646cff;
         box-shadow: 0 0 60px rgba(100, 108, 255, 0.6);
-      ">
+        position: relative;
+        cursor: default;
+      " onclick="event.stopPropagation()">
+        ${this.createCloseButton()}
         <h2 style="
           color: #fff;
           text-align: center;
@@ -542,7 +660,15 @@ export class SpecialEventAnimator {
     `;
 
     this.overlayElement.style.display = "flex";
-    await this.delay(duration);
+    this.setupCloseButton();
+    
+    // If manual dismiss is enabled, wait for user action, otherwise use timer
+    if (this.isManualDismissEnabled()) {
+      await this.waitForDismissal();
+    } else {
+      await this.delay(duration);
+    }
+    
     await this.hide();
   }
 
