@@ -42,6 +42,7 @@ htmlcov/
 .tox/
 test.db
 *.db
+backend/test_arena.db
 
 # OS
 .DS_Store

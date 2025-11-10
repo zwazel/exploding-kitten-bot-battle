@@ -2,20 +2,28 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config import get_settings
-from .database import engine
-from .models import Base
+from .migrations import run_migrations
 from .routers import auth as auth_router
 from .routers import bots as bots_router
 from .routers import replays as replays_router
 
+logger = logging.getLogger(__name__)
+
 settings = get_settings()
 
-Base.metadata.create_all(bind=engine)
+# Run database migrations on startup
+try:
+    run_migrations()
+except Exception as e:
+    logger.error(f"Failed to run migrations: {e}")
+    # Continue anyway - the app might still work if migrations are up to date
 
 app = FastAPI(title="Exploding Kitten Arena API", version="0.1.0")
 
