@@ -154,3 +154,50 @@ def test_bot_lifecycle(client: TestClient) -> None:
     list_after_delete = client.get("/bots", headers={"Authorization": f"Bearer {token}"})
     assert list_after_delete.status_code == 200
     assert list_after_delete.json() == []
+
+
+def test_cors_headers_on_error_response(client: TestClient) -> None:
+    """Test that CORS headers are present even on error responses."""
+    # Make a request to a non-existent endpoint with origin header
+    response = client.get(
+        "/nonexistent-endpoint",
+        headers={"Origin": "http://localhost:5173"}
+    )
+    
+    # Should get 404 error
+    assert response.status_code == 404
+    
+    # But CORS headers should still be present
+    assert "access-control-allow-origin" in response.headers
+    
+    
+def test_cors_headers_on_validation_error(client: TestClient) -> None:
+    """Test that CORS headers are present on validation errors."""
+    # Try to signup with invalid data
+    response = client.post(
+        "/auth/signup",
+        json={"invalid": "data"},  # Missing required fields
+        headers={"Origin": "http://localhost:5173"}
+    )
+    
+    # Should get validation error (422)
+    assert response.status_code == 422
+    
+    # CORS headers should be present
+    assert "access-control-allow-origin" in response.headers
+
+
+def test_cors_headers_on_successful_request(client: TestClient) -> None:
+    """Test that CORS headers are present on successful requests."""
+    response = client.post(
+        "/auth/signup",
+        json=_signup_payload("cors-test@example.com"),
+        headers={"Origin": "http://localhost:5173"}
+    )
+    
+    # Should succeed
+    assert response.status_code == 201
+    
+    # CORS headers should be present
+    assert "access-control-allow-origin" in response.headers
+    assert response.headers["access-control-allow-origin"] in ["http://localhost:5173", "*"]
