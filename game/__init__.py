@@ -2,7 +2,7 @@
 
 from .cards import Card, CardType, ComboType, TargetContext, ActionType, GameAction
 from .game_state import GameState
-from .bot import Bot
+from .bot import Bot, BotProxy
 from .deck import Deck
 from .game_engine import GameEngine
 from .replay_recorder import ReplayRecorder
@@ -25,6 +25,7 @@ __all__ = [
     'GameAction',
     'GameState',
     'Bot',
+    'BotProxy',
     'Deck',
     'GameEngine',
     'ReplayRecorder',

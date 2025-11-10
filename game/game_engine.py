@@ -2,7 +2,7 @@
 
 import random
 from typing import List, Optional, Tuple, Union, Dict
-from .bot import Bot
+from .bot import Bot, BotProxy
 from .deck import Deck
 from .cards import Card, CardType, ComboType, TargetContext, ActionType, GameAction
 from .game_state import GameState
@@ -38,7 +38,7 @@ class GameEngine:
             initial_card_counts={},
             cards_left_to_draw=0,
             was_last_card_exploding_kitten=False,
-            history_of_played_cards=[],
+            history_of_played_cards=tuple(),  # Use tuple for immutability
             alive_bots=len(bots)
         )
         self.current_bot_index = 0
@@ -522,9 +522,16 @@ class GameEngine:
             try:
                 # Map combo type to target context
                 context = TargetContext.TWO_OF_A_KIND if combo_type == ComboType.TWO_OF_A_KIND else TargetContext.THREE_OF_A_KIND
-                target = bot.choose_target(self.game_state.copy(), alive_others, context)
-                if not target:
+                # Create BotProxy objects to prevent direct manipulation
+                target_proxies = [BotProxy(b) for b in alive_others]
+                target_proxy = bot.choose_target(self.game_state.copy(), target_proxies, context)
+                if not target_proxy:
                     self._log(f"  → No target selected")
+                    return
+                # Find the actual bot from the proxy
+                target = next((b for b in alive_others if b.name == target_proxy.name), None)
+                if not target:
+                    self._log(f"  → Invalid target selected")
                     return
                 self._log(f"  → {bot.name} targets {target.name}")
             except Exception as e:
@@ -732,10 +739,17 @@ class GameEngine:
             return
         
         try:
-            # Select target first
-            target = bot.choose_target(self.game_state.copy(), alive_others, TargetContext.FAVOR)
-            if not target:
+            # Select target first - use BotProxy to prevent direct manipulation
+            target_proxies = [BotProxy(b) for b in alive_others]
+            target_proxy = bot.choose_target(self.game_state.copy(), target_proxies, TargetContext.FAVOR)
+            if not target_proxy:
                 self._log(f"  → No target selected")
+                return
+            
+            # Find the actual bot from the proxy
+            target = next((b for b in alive_others if b.name == target_proxy.name), None)
+            if not target:
+                self._log(f"  → Invalid target selected")
                 return
             
             self._log(f"  → {bot.name} targets {target.name}")
@@ -824,7 +838,9 @@ class GameEngine:
             # Remove Defuse card from hand
             defuse_card = next(c for c in bot.hand if c.card_type == CardType.DEFUSE)
             bot.remove_card(defuse_card)
-            self.game_state.history_of_played_cards.append(defuse_card)
+            # Update history (append to tuple)
+            self.game_state.history_of_played_cards = self.game_state.history_of_played_cards + (defuse_card,)
+            self.game_state.was_last_card_exploding_kitten = True
             
             # Ask bot where to put the Exploding Kitten
             try:
@@ -869,5 +885,5 @@ class GameEngine:
                 self.replay_recorder.record_player_elimination(bot.name)
             # Notify all bots about the elimination
             self._notify_all_bots(GameAction(ActionType.ELIMINATION, bot.name))
-            self.game_state.history_of_played_cards.append(exploding_kitten)
+            self.game_state.history_of_played_cards = self.game_state.history_of_played_cards + (exploding_kitten,)
             self.game_state.was_last_card_exploding_kitten = False
