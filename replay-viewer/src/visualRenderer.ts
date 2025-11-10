@@ -21,6 +21,9 @@ export class VisualRenderer {
     const boardContainer = document.querySelector("#visual-board") as HTMLElement;
     this.gameBoard = new GameBoard(boardContainer);
     this.animationController = new AnimationController(this.gameBoard);
+
+    // Expose game board for automated tests (Playwright) to verify layout details.
+    (globalThis as Record<string, unknown>).__EK_REPLAY_GAME_BOARD__ = this.gameBoard;
   }
 
   /**
