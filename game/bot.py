@@ -7,6 +7,65 @@ from .cards import Card, CardType, TargetContext, GameAction
 from .game_state import GameState
 
 
+class BotProxy:
+    """
+    Read-only proxy for Bot objects.
+    
+    This prevents bots from directly manipulating other bots' hands or state.
+    Bots receive BotProxy objects when choosing targets, not actual Bot objects.
+    """
+    
+    def __init__(self, bot: 'Bot'):
+        """
+        Create a proxy for a bot.
+        
+        Args:
+            bot: The actual bot to proxy
+        """
+        self._name = bot.name
+        self._alive = bot.alive
+        self._hand_size = len(bot.hand)  # Store hand size for targeting decisions
+    
+    @property
+    def name(self) -> str:
+        """Get the bot's name (read-only)."""
+        return self._name
+    
+    @property
+    def alive(self) -> bool:
+        """Get the bot's alive status (read-only)."""
+        return self._alive
+    
+    @property
+    def hand(self) -> List:
+        """
+        Get a fake hand for compatibility with existing bots.
+        
+        Returns an empty list with the correct length so len(bot.hand) works.
+        Bots should not access individual cards, only the hand size.
+        """
+        # Return a list of None with correct length for len() to work
+        return [None] * self._hand_size
+    
+    def __str__(self):
+        return self._name
+    
+    def __repr__(self):
+        return f"BotProxy({self._name})"
+    
+    def __eq__(self, other):
+        """Allow comparison with other proxies or bots."""
+        if isinstance(other, BotProxy):
+            return self._name == other._name
+        if isinstance(other, Bot):
+            return self._name == other.name
+        return False
+    
+    def __hash__(self):
+        """Allow use in sets and as dict keys."""
+        return hash(self._name)
+
+
 class Bot(ABC):
     """
     Base class for all bots in the Exploding Kittens game.
@@ -64,17 +123,21 @@ class Bot(ABC):
         pass
 
     @abstractmethod
-    def choose_target(self, state: GameState, alive_players: List['Bot'], context: TargetContext) -> Optional['Bot']:
+    def choose_target(self, state: GameState, alive_players: List[Union['BotProxy', 'Bot']], context: TargetContext) -> Optional[Union['BotProxy', 'Bot']]:
         """
         Called when bot needs to choose a target for Favor or combo.
         
         Args:
             state: The current game state
-            alive_players: List of alive bots (excluding self)
+            alive_players: List of BotProxy objects (read-only proxies for alive bots, excluding self)
             context: Why target is being chosen (TargetContext enum value)
             
         Returns:
-            The target bot, or None if no valid target
+            A BotProxy or Bot object representing the target, or None if no valid target
+            
+        Note:
+            The game engine now passes BotProxy objects instead of real Bot objects
+            to prevent direct manipulation of other bots' hands or state.
         """
         pass
 
