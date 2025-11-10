@@ -125,6 +125,33 @@ header h1 {
   margin-left: 1rem;
 }
 
+.popup-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 1rem;
+}
+
+.popup-control label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #aaa;
+  transition: color 0.2s;
+}
+
+.popup-control label:hover {
+  color: #fff;
+}
+
+.popup-control input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
 #speed-slider {
   width: 120px;
 }

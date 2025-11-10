@@ -50,6 +50,13 @@ class ReplayApp {
               <span id="speed-display">1.0x</span>
             </div>
             
+            <div class="popup-control">
+              <label for="manual-popup-dismiss" title="When checked, popups will pause playback and wait for you to dismiss them">
+                <input type="checkbox" id="manual-popup-dismiss" checked />
+                Manual Popup Dismiss
+              </label>
+            </div>
+            
             <div class="event-progress">
               <span id="event-counter">Event: 0 / 0</span>
             </div>
