@@ -424,6 +424,13 @@ export class VisualRenderer {
   }
 
   /**
+   * Set playback speed for animations
+   */
+  setSpeed(speed: number): void {
+    this.animationController.setSpeed(speed);
+  }
+
+  /**
    * Reset the renderer
    */
   reset(): void {

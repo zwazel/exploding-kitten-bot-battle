@@ -570,6 +570,7 @@ class ReplayApp {
 
   private applySpeedChange(speed: number): void {
     this.player.setSpeed(speed);
+    this.renderer.setSpeed(speed);
     const currentSpeed = this.player.getPlaybackState().speed;
     this.updateSpeedControls(currentSpeed);
   }
