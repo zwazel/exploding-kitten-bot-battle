@@ -46,15 +46,32 @@ export class GameBoard {
    */
   private initializeBoard(): void {
     this.container.innerHTML = `
-      <div class="game-board-wrapper" style="width: 100%; display: flex; justify-content: center; align-items: center;">
-        <div class="game-board" style="position: relative; width: ${this.boardWidth}px; height: ${this.boardHeight}px; background: #1a1a1a; border-radius: 12px; overflow: visible; transform-origin: center center;">
+      <div class="game-board-wrapper" style="
+        width: 100%; 
+        height: 100%;
+        display: flex; 
+        justify-content: center; 
+        align-items: center;
+        container-type: size;
+      ">
+        <div class="game-board" style="
+          position: relative; 
+          width: 100%;
+          height: 100%;
+          max-width: ${this.boardWidth}px; 
+          max-height: ${this.boardHeight}px;
+          aspect-ratio: ${this.boardWidth} / ${this.boardHeight};
+          background: #1a1a1a; 
+          border-radius: 12px; 
+          overflow: visible;
+        ">
           <!-- Deck and discard pile area -->
           <div class="center-area" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
-            <div id="deck-pile" class="card-pile" style="position: absolute; left: -150px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-              <span style="color: #888; font-size: 14px;">DECK</span>
+            <div id="deck-pile" class="card-pile" style="position: absolute; left: -12.5%; top: -7.5%; width: 8.33%; height: 17.5%; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+              <span style="color: #888; font-size: 0.875rem;">DECK</span>
             </div>
-            <div id="discard-pile" class="card-pile" style="position: absolute; left: 0px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-              <span style="color: #888; font-size: 14px;">DISCARD</span>
+            <div id="discard-pile" class="card-pile" style="position: absolute; left: 0%; top: -7.5%; width: 8.33%; height: 17.5%; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+              <span style="color: #888; font-size: 0.875rem;">DISCARD</span>
             </div>
           </div>
 
@@ -70,59 +87,27 @@ export class GameBoard {
       </div>
     `;
     
-    // Apply responsive scaling after board is created
-    this.applyResponsiveScaling();
+    // Update board dimensions based on actual rendered size
+    this.updateBoardDimensions();
     
-    // Re-apply scaling on window resize
-    window.addEventListener('resize', () => this.applyResponsiveScaling());
+    // Re-update dimensions on window resize
+    window.addEventListener('resize', () => this.updateBoardDimensions());
   }
   
   /**
-   * Apply responsive scaling to fit the board within the viewport
+   * Update board dimensions based on actual rendered size
    */
-  private applyResponsiveScaling(): void {
+  private updateBoardDimensions(): void {
     const board = this.container.querySelector('.game-board') as HTMLElement;
-    const wrapper = this.container.querySelector('.game-board-wrapper') as HTMLElement;
-    if (!board || !wrapper) return;
+    if (!board) return;
     
-    // Get available space (accounting for padding and margins)
-    const containerRect = this.container.getBoundingClientRect();
-    const availableWidth = containerRect.width;
+    const rect = board.getBoundingClientRect();
+    this.boardWidth = rect.width;
+    this.boardHeight = rect.height;
     
-    // Calculate scale to fit width (with some padding)
-    const padding = 40; // 20px on each side
-    const maxWidth = availableWidth - padding;
-    
-    // Calculate scale based on width
-    const scaleX = maxWidth / this.boardWidth;
-    
-    // For laptop screens (1366x768 and similar), also consider viewport height
-    // Reserve space for header (~70px), controls (~90px), game info (~60px), current event (~80px), legend (~120px)
-    // That leaves roughly 348px for the board on a 768px screen
-    const viewportHeight = window.innerHeight;
-    if (viewportHeight <= 900) {
-      // On smaller screens, target max 320px for the board height to fit everything without scrolling
-      const targetMaxHeight = 320;
-      const scaleY = targetMaxHeight / this.boardHeight;
-      const scale = Math.min(1, scaleX, scaleY);
-      
-      // Apply scale transform
-      board.style.transform = `scale(${scale})`;
-      
-      // Adjust wrapper height to account for scaled content
-      const scaledHeight = this.boardHeight * scale;
-      wrapper.style.height = `${scaledHeight}px`;
-    } else {
-      // On larger screens, just scale by width
-      const scale = Math.min(1, scaleX);
-      
-      // Apply scale transform
-      board.style.transform = `scale(${scale})`;
-      
-      // Adjust wrapper height to account for scaled content
-      const scaledHeight = this.boardHeight * scale;
-      wrapper.style.height = `${scaledHeight}px`;
-    }
+    // Update deck and discard positions based on new dimensions
+    this.deckPosition = { x: this.boardWidth * 0.383, y: this.boardHeight * 0.4425 };
+    this.discardPosition = { x: this.boardWidth * 0.508, y: this.boardHeight * 0.4425 };
   }
 
   /**
@@ -173,27 +158,31 @@ export class GameBoard {
     const color = this.getCardColor(cardType);
     const textColor = this.getTextColor(color);
     const cardName = cardType.replace(/_/g, " ");
+    
+    // Card dimensions as percentage of board (80/1200 = 6.67%, 112/800 = 14%)
+    const cardWidthPercent = 6.67;
+    const cardHeightPercent = 14;
 
     const card = document.createElement("div");
     card.id = cardId;
     card.className = "game-card";
     card.style.cssText = `
       position: absolute;
-      left: ${position.x}px;
-      top: ${position.y}px;
-      width: 80px;
-      height: 112px;
+      left: ${(position.x / this.boardWidth) * 100}%;
+      top: ${(position.y / this.boardHeight) * 100}%;
+      width: ${cardWidthPercent}%;
+      height: ${cardHeightPercent}%;
       background: ${color};
       border: 2px solid #333;
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 10px;
+      font-size: 0.625rem;
       font-weight: bold;
       color: ${textColor};
       text-align: center;
-      padding: 4px;
+      padding: 0.33%;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       transition: all 0.3s ease, transform 0.2s ease;
       cursor: pointer;
@@ -237,8 +226,8 @@ export class GameBoard {
 
     return new Promise((resolve) => {
       cardElement.element.style.transition = `all ${duration}ms ease`;
-      cardElement.element.style.left = `${newPosition.x}px`;
-      cardElement.element.style.top = `${newPosition.y}px`;
+      cardElement.element.style.left = `${(newPosition.x / this.boardWidth) * 100}%`;
+      cardElement.element.style.top = `${(newPosition.y / this.boardHeight) * 100}%`;
       if (newPosition.rotation !== undefined) {
         cardElement.element.style.transform = `rotate(${newPosition.rotation}deg)`;
       }
@@ -278,14 +267,18 @@ export class GameBoard {
 
     const numPlayers = playerNames.length;
     const angleStep = (2 * Math.PI) / numPlayers;
-    const radius = 300;
-    const centerX = this.boardWidth / 2;
-    const centerY = this.boardHeight / 2;
+    // Use percentage of board width for radius (25% of width = 300px on 1200px board)
+    const radiusPercent = 25;
+    const centerX = 50; // 50% = center
+    const centerY = 50; // 50% = center
+    
+    // Player box size as percentage (16.67% of width = 200px on 1200px board)
+    const playerBoxSizePercent = 16.67;
 
     playerNames.forEach((name, index) => {
       const angle = angleStep * index - Math.PI / 2; // Start from top
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
+      const xPercent = centerX + radiusPercent * Math.cos(angle);
+      const yPercent = centerY + radiusPercent * Math.sin(angle);
 
       const playerArea = document.createElement("div");
       playerArea.id = `player-${name}`;
@@ -293,21 +286,21 @@ export class GameBoard {
       
       playerArea.style.cssText = `
         position: absolute;
-        left: ${x - 100}px;
-        top: ${y - 100}px;
-        width: 200px;
-        height: 200px;
+        left: ${xPercent - playerBoxSizePercent / 2}%;
+        top: ${yPercent - playerBoxSizePercent / 2}%;
+        width: ${playerBoxSizePercent}%;
+        height: ${playerBoxSizePercent}%;
         border: 2px solid #44ff44;
         border-radius: 8px;
         background: rgba(0, 255, 0, 0.1);
-        padding: 8px;
+        padding: 0.67%;
       `;
 
       playerArea.innerHTML = `
-        <div style="color: #44ff44; font-weight: bold; margin-bottom: 4px; text-align: center;">${this.escapeHtml(name)}</div>
-        <div id="turns-${name}" style="color: #ffa500; font-size: 0.9rem; text-align: center; margin-bottom: 4px;">Turns: <span id="turns-count-${name}">-</span></div>
-        <div id="cards-${name}" style="color: #4db8ff; font-size: 0.9rem; text-align: center; margin-bottom: 4px;">Cards: <span id="cards-count-${name}">0</span></div>
-        <div id="hand-${name}" class="player-hand" data-rotation="0" style="position: relative; min-height: 150px;"></div>
+        <div style="color: #44ff44; font-weight: bold; margin-bottom: 4px; text-align: center; font-size: 0.875rem;">${this.escapeHtml(name)}</div>
+        <div id="turns-${name}" style="color: #ffa500; font-size: 0.75rem; text-align: center; margin-bottom: 4px;">Turns: <span id="turns-count-${name}">-</span></div>
+        <div id="cards-${name}" style="color: #4db8ff; font-size: 0.75rem; text-align: center; margin-bottom: 4px;">Cards: <span id="cards-count-${name}">0</span></div>
+        <div id="hand-${name}" class="player-hand" data-rotation="0" style="position: relative; flex: 1; min-height: 0;"></div>
       `;
 
       playerAreas.appendChild(playerArea);
@@ -322,29 +315,40 @@ export class GameBoard {
     if (!handArea) return { x: 0, y: 0 };
 
     const rect = handArea.getBoundingClientRect();
-    const containerRect = this.container.querySelector(".game-board")!.getBoundingClientRect();
+    const board = this.container.querySelector(".game-board") as HTMLElement;
+    if (!board) return { x: 0, y: 0 };
+    
+    const boardRect = board.getBoundingClientRect();
     
     // Get rotation from data attribute
     const baseRotation = parseFloat(handArea.getAttribute('data-rotation') || '0');
 
     // Fan layout calculations
     const maxSpread = 30; // Maximum angle spread for the fan
-    const cardOverlap = 40; // How much cards overlap (smaller = more overlap)
+    // Card overlap as percentage of board width (40/1200 = 3.33%)
+    const cardOverlapPercent = 3.33;
+    const cardOverlap = (this.boardWidth * cardOverlapPercent) / 100;
     
     // Calculate angle for this card in the fan
     const fanAngle = totalCards > 1 
       ? (cardIndex - (totalCards - 1) / 2) * (maxSpread / Math.max(totalCards - 1, 1))
       : 0;
     
-    const centerX = rect.left - containerRect.left + rect.width / 2;
-    const centerY = rect.top - containerRect.top + rect.height / 2;
+    // Calculate center position relative to board (in pixels)
+    const centerX = rect.left - boardRect.left + rect.width / 2;
+    const centerY = rect.top - boardRect.top + rect.height / 2;
     
+    // Calculate card position with fan layout
     const x = centerX + cardIndex * cardOverlap - ((totalCards - 1) * cardOverlap) / 2;
     const y = centerY + Math.abs(fanAngle) * 0.5; // Slight arc effect
     
+    // Card dimensions (80/1200 = 6.67% width, 112/800 = 14% height)
+    const cardWidth = this.boardWidth * 0.0667;
+    const cardHeight = this.boardHeight * 0.14;
+    
     return {
-      x: x - 40, // Center the card (80px width / 2)
-      y: y - 20,
+      x: x - cardWidth / 2, // Center the card
+      y: y - cardHeight / 2,
       rotation: baseRotation + fanAngle,
       zIndex: cardIndex + 1
     };
@@ -704,9 +708,13 @@ export class GameBoard {
    * Get center position for card animations
    */
   getCenterPosition(): Position {
+    // Card dimensions (80/1200 = 6.67% width, 112/800 = 14% height)
+    const cardWidth = this.boardWidth * 0.0667;
+    const cardHeight = this.boardHeight * 0.14;
+    
     return {
-      x: this.boardWidth / 2 - 40, // Center - half card width
-      y: this.boardHeight / 2 - 56  // Center - half card height
+      x: this.boardWidth / 2 - cardWidth / 2, // Center - half card width
+      y: this.boardHeight / 2 - cardHeight / 2  // Center - half card height
     };
   }
 

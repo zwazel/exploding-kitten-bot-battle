@@ -36,7 +36,7 @@ export class VisualRenderer {
           </div>
           
           <!-- Visual game board -->
-          <div id="visual-board">
+          <div id="visual-board" style="min-height: 400px; max-height: 600px; height: 50vh;">
           </div>
           
           <!-- Event History -->
