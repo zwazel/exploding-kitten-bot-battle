@@ -28,6 +28,60 @@ uvicorn app.main:app --app-dir backend/app --reload
 
 The OpenAPI docs are available at <http://localhost:8000/docs>.
 
+## Database Migrations
+
+The backend uses Alembic for database schema migrations. Migrations are automatically applied on application startup, but you can also run them manually.
+
+### Automatic migrations
+
+When the backend starts, it automatically runs all pending migrations. This ensures the database schema is always up to date.
+
+### Manual migration management
+
+```bash
+# Check current migration status
+cd backend
+alembic current
+
+# View migration history
+alembic history
+
+# Manually run migrations (if needed)
+alembic upgrade head
+
+# Downgrade to a specific revision (use with caution)
+alembic downgrade <revision>
+
+# Create a new migration after model changes
+alembic revision --autogenerate -m "description_of_changes"
+```
+
+### Troubleshooting database issues
+
+If you encounter errors like "column does not exist" or other schema mismatches:
+
+1. **With Docker:** Reset the database by removing volumes:
+   ```bash
+   docker compose down -v  # Remove volumes
+   docker compose up --build  # Recreate with fresh database
+   ```
+
+2. **Without Docker:** Drop and recreate the database, then run migrations:
+   ```bash
+   # Using psql
+   dropdb exploding
+   createdb exploding
+   cd backend
+   alembic upgrade head
+   ```
+
+3. **Check migration status:**
+   ```bash
+   cd backend
+   alembic current  # Shows current revision
+   alembic history  # Shows all migrations
+   ```
+
 ## Tests
 
 ```bash
