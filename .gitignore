@@ -44,6 +44,10 @@ test.db
 *.db
 backend/test_arena.db
 
+# Backend storage (uploaded bots and replays)
+backend/storage/
+backend/backend/
+
 # OS
 .DS_Store
 Thumbs.db
