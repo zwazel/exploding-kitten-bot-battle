@@ -3,30 +3,42 @@
  * Main application entry point
  */
 
-import "./style.css";
 import { ReplayPlayer } from "./replayPlayer";
 import { VisualRenderer } from "./visualRenderer";
 import type { ReplayData, CardType, ReplayEvent } from "./types";
 
-class ReplayApp {
+export class ReplayApp {
+  private readonly root: HTMLElement;
   private player: ReplayPlayer;
   private renderer!: VisualRenderer;
   private fileInput: HTMLInputElement | null = null;
   private isProcessingEvent = false;
   private readonly MAX_EVENT_PROCESSING_TIMEOUT_MS = 5000;
 
-  constructor() {
+  private rootQuery<T extends Element>(selector: string): T {
+    const element = this.root.querySelector<T>(selector);
+    if (!element) {
+      throw new Error(`Element ${selector} not found in replay viewer container.`);
+    }
+    return element;
+  }
+
+  private rootMaybe<T extends Element>(selector: string): T | null {
+    return this.root.querySelector<T>(selector);
+  }
+
+  constructor(root: HTMLElement) {
+    this.root = root;
     this.player = new ReplayPlayer();
     this.initializeUI();
     this.renderer = new VisualRenderer(
-      document.querySelector<HTMLDivElement>("#game-display")!
+      this.rootQuery<HTMLDivElement>("#game-display")
     );
     this.setupEventListeners();
   }
 
   private initializeUI(): void {
-    const app = document.querySelector<HTMLDivElement>("#app")!;
-    app.innerHTML = `
+    this.root.innerHTML = `
       <div class="replay-viewer">
         <header>
           <h1>🎮 Exploding Kittens Replay Viewer</h1>
@@ -89,22 +101,22 @@ class ReplayApp {
 
   private setupEventListeners(): void {
     // File input
-    this.fileInput = document.querySelector<HTMLInputElement>("#file-input")!;
+    this.fileInput = this.rootQuery<HTMLInputElement>("#file-input");
     this.fileInput.addEventListener("change", (e) => this.handleFileLoad(e));
 
     // Playback controls
-    document.querySelector("#btn-play-pause")?.addEventListener("click", () => this.togglePlayPause());
-    document.querySelector("#btn-stop")?.addEventListener("click", async () => await this.stop());
-    document.querySelector("#btn-step-forward")?.addEventListener("click", () => this.stepForward());
+    this.rootMaybe<HTMLButtonElement>("#btn-play-pause")?.addEventListener("click", () => this.togglePlayPause());
+    this.rootMaybe<HTMLButtonElement>("#btn-stop")?.addEventListener("click", async () => await this.stop());
+    this.rootMaybe<HTMLButtonElement>("#btn-step-forward")?.addEventListener("click", () => this.stepForward());
 
     // Speed control
-    const speedSlider = document.querySelector<HTMLInputElement>("#speed-slider")!;
+    const speedSlider = this.rootQuery<HTMLInputElement>("#speed-slider");
     speedSlider.addEventListener("input", (e) => {
       const speed = parseFloat((e.target as HTMLInputElement).value);
       this.applySpeedChange(speed);
     });
 
-    const speedInput = document.querySelector<HTMLInputElement>("#speed-input")!;
+    const speedInput = this.rootQuery<HTMLInputElement>("#speed-input");
     const commitSpeedInput = () => {
       const rawValue = parseFloat(speedInput.value);
       if (!Number.isFinite(rawValue)) {
@@ -131,7 +143,7 @@ class ReplayApp {
     // agentJumpInput.value = "42";
     // agentJumpInput.dispatchEvent(new Event('input', { bubbles: true }));
     // This ensures the application responds to the change as expected.
-    const agentJumpInput = document.querySelector<HTMLInputElement>("#agent-jump-to-event")!;
+    const agentJumpInput = this.rootQuery<HTMLInputElement>("#agent-jump-to-event");
     agentJumpInput.addEventListener("input", () => this.handleAgentJump());
 
     // Player callbacks
@@ -147,6 +159,20 @@ class ReplayApp {
     this.updateSpeedControls(this.player.getPlaybackState().speed);
   }
 
+  public async loadReplayFromData(data: ReplayData, label = "Replay"): Promise<void> {
+    this.player.loadReplay(data);
+    await this.renderer.renderGameSetup(data);
+
+    this.updateEventCounter(0, data.events.length);
+
+    if (data.events[0]) {
+      await this.updateDisplay(0);
+    }
+
+    this.rootQuery<HTMLDivElement>("#playback-controls").style.display = "flex";
+    this.rootQuery<HTMLSpanElement>("#file-name").textContent = label;
+  }
+
   private async handleFileLoad(e: Event): Promise<void> {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -155,22 +181,7 @@ class ReplayApp {
     try {
       const text = await file.text();
       const data: ReplayData = JSON.parse(text);
-      
-      this.player.loadReplay(data);
-      await this.renderer.renderGameSetup(data);
-
-      // Update event counter
-      this.updateEventCounter(0, data.events.length);
-
-      // Show first event by triggering event change
-      const firstEvent = data.events[0];
-      if (firstEvent) {
-        await this.updateDisplay(0);
-      }
-
-      // Show controls and update UI AFTER initial event is processed
-      document.querySelector<HTMLDivElement>("#playback-controls")!.style.display = "flex";
-      document.querySelector<HTMLSpanElement>("#file-name")!.textContent = file.name;
+      await this.loadReplayFromData(data, file.name);
     } catch (error) {
       alert(`Error loading replay file: ${error}`);
       console.error("Error loading replay:", error);
@@ -207,7 +218,7 @@ class ReplayApp {
   }
 
   private async stepForward(): Promise<void> {
-    const stepButton = document.querySelector<HTMLButtonElement>("#btn-step-forward")!;
+    const stepButton = this.rootQuery<HTMLButtonElement>("#btn-step-forward");
     
     // Check if replay is currently playing
     const currentState = this.player.getPlaybackState();
@@ -281,7 +292,7 @@ class ReplayApp {
    * Update the entire event history up to the current event
    */
   private updateEventHistory(currentEventIndex: number): void {
-    const historyContent = document.querySelector("#history-content") as HTMLElement;
+    const historyContent = this.rootMaybe<HTMLElement>("#history-content");
     if (!historyContent) return;
 
     const replayData = this.player.getReplayData();
@@ -403,7 +414,7 @@ class ReplayApp {
    * This saves time by skipping all animations including the target event
    */
   private async handleAgentJump(): Promise<void> {
-    const agentJumpInput = document.querySelector<HTMLInputElement>("#agent-jump-to-event")!;
+    const agentJumpInput = this.rootQuery<HTMLInputElement>("#agent-jump-to-event");
     const targetEventIndex = parseInt(agentJumpInput.value, 10);
     
     if (isNaN(targetEventIndex)) return;
@@ -561,9 +572,11 @@ class ReplayApp {
   }
 
   private updatePlaybackUI(state: any): void {
-    const playPauseBtn = document.querySelector("#btn-play-pause")!;
-    playPauseBtn.textContent = state.isPlaying ? "⏸️" : "▶️";
-    playPauseBtn.setAttribute("title", state.isPlaying ? "Pause" : "Play");
+    const playPauseBtn = this.rootMaybe<HTMLButtonElement>("#btn-play-pause");
+    if (playPauseBtn) {
+      playPauseBtn.textContent = state.isPlaying ? "⏸️" : "▶️";
+      playPauseBtn.setAttribute("title", state.isPlaying ? "Pause" : "Play");
+    }
 
     this.updateSpeedControls(state.speed);
   }
@@ -576,9 +589,9 @@ class ReplayApp {
   }
 
   private updateSpeedControls(speed: number): void {
-    const speedSlider = document.querySelector<HTMLInputElement>("#speed-slider");
-    const speedInput = document.querySelector<HTMLInputElement>("#speed-input");
-    const speedDisplay = document.querySelector<HTMLSpanElement>("#speed-display");
+    const speedSlider = this.rootMaybe<HTMLInputElement>("#speed-slider");
+    const speedInput = this.rootMaybe<HTMLInputElement>("#speed-input");
+    const speedDisplay = this.rootMaybe<HTMLSpanElement>("#speed-display");
 
     if (speedSlider) {
       const sliderMin = parseFloat(speedSlider.min);
@@ -599,7 +612,7 @@ class ReplayApp {
   }
 
   private updateEventCounter(current: number, total: number): void {
-    const counter = document.querySelector("#event-counter")!;
+    const counter = this.rootQuery<HTMLSpanElement>("#event-counter");
     counter.textContent = `Event: ${current + 1} / ${total}`;
     // Add data attribute for debugging
     counter.setAttribute('data-current-index', String(current));
@@ -610,5 +623,4 @@ class ReplayApp {
   }
 }
 
-// Initialize the app
-new ReplayApp();
+// Instances are created by src/main.ts

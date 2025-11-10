@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-This guide will help you get started with the Exploding Kittens Replay Viewer.
+This guide will help you get started with the Arena Frontend.
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ This will:
 
 ```bash
 # Navigate to the replay viewer
-cd replay-viewer
+cd frontend
 
 # Install dependencies (first time only)
 npm install
@@ -34,7 +34,7 @@ npm install
 npm run dev
 ```
 
-The replay viewer will open at `http://localhost:5173`
+The frontend runs at `http://localhost:5173` and defaults to the local backend at `http://localhost:8000`.
 
 ## Step 3: Load and Watch the Replay
 
@@ -53,11 +53,11 @@ The replay viewer will open at `http://localhost:5173`
 To build for deployment:
 
 ```bash
-cd replay-viewer
+cd frontend
 npm run build
 ```
 
-The built files will be in `replay-viewer/dist/` and can be:
+The built files will be in `frontend/dist/` and can be:
 - Deployed to GitHub Pages
 - Served by any web server
 - Opened directly in a browser
@@ -65,7 +65,7 @@ The built files will be in `replay-viewer/dist/` and can be:
 ## Troubleshooting
 
 ### "Module not found" errors
-Make sure you ran `npm install` in the `replay-viewer` directory.
+Make sure you ran `npm install` in the `frontend` directory.
 
 ### Replay file won't load
 Ensure your JSON file was generated using the `--replay` flag with the Python game engine.
@@ -75,6 +75,6 @@ If you're developing, the dev server has hot reload. Just save your files and th
 
 ## Next Steps
 
-- Read the full [Replay Viewer README](README.md)
+- Read the full [Arena Frontend README](README.md)
 - Check out the [Main Project README](../README.md) for game rules
 - Create your own bot and generate more replays!

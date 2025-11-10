@@ -1,4 +1,4 @@
-# Replay Viewer Development Guide
+# Arena Frontend Development Guide
 
 This document contains detailed information about the replay viewer's architecture, common pitfalls, edge cases, and lessons learned during development.
 
@@ -14,16 +14,18 @@ This document contains detailed information about the replay viewer's architectu
 
 ### Core Components
 
-- **`main.ts`**: Application entry point, UI management, and event coordination
+- **`main.ts`**: Top-level layout and navigation between the viewer and the arena dashboard
+- **`replayApp.ts`**: Viewer controller that orchestrates playback (uses `replayPlayer.ts` internally)
 - **`replayPlayer.ts`**: Manages replay state, playback control, and event progression
-- **`visualRenderer.ts`**: Handles visual rendering and game state display
+- **`renderer.ts` / `visualRenderer.ts`**: Handles visual rendering and game state display
 - **`animationController.ts`**: Manages card animations and transitions
+- **`arenaApp.ts`**: Handles authentication, uploads, and replay history in the arena tab
 - **`gameBoard.ts`**: DOM manipulation for the game board layout
 
 ### Event Flow
 
 ```
-User Action → main.ts → replayPlayer.ts → Event Callbacks → main.ts (updateDisplay) → visualRenderer.ts → animationController.ts → DOM
+User Action → replayApp.ts → replayPlayer.ts → Event Callbacks → replayApp.ts (updateDisplay) → visualRenderer.ts → animationController.ts → DOM
 ```
 
 ## Asynchronous Event Processing
