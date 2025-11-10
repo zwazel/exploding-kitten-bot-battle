@@ -32,9 +32,13 @@ The OpenAPI docs are available at <http://localhost:8000/docs>.
 
 The backend uses Alembic for database schema migrations. Migrations are automatically applied on application startup, but you can also run them manually.
 
-### Automatic migrations
+### Automatic migrations and database connection
 
-When the backend starts, it automatically runs all pending migrations. This ensures the database schema is always up to date.
+When the backend starts, it:
+1. **Waits for the database** to be ready (up to 30 connection attempts with exponential backoff)
+2. **Automatically runs all pending migrations** to ensure the database schema is up to date
+
+This ensures reliable startup even when using Docker Compose, where PostgreSQL may take a few seconds to become ready after the container starts.
 
 ### Manual migration management
 

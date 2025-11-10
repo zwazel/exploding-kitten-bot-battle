@@ -58,17 +58,7 @@ docker compose up --build
 
 This starts Postgres (credentials `exploding/exploding`) and the backend on <http://localhost:8000>. The backend exposes OpenAPI docs at `/docs`.
 
-**Database migrations:** The backend automatically runs database migrations on startup using Alembic. If you encounter database schema errors (like "column does not exist"), you may need to reset your database:
-
-```bash
-# Option 1: Remove the database volume and recreate (fresh start)
-docker compose down -v
-docker compose up --build
-
-# Option 2: Manually run migrations (if database exists)
-cd backend
-alembic upgrade head
-```
+**Database migrations:** The backend automatically waits for the database to be ready and runs all pending migrations on startup using Alembic. This ensures the database schema is always synchronized with the code, even after a fresh `docker compose down -v && docker compose up --build`.
 
 To run without Docker, point to your database and launch uvicorn:
 
