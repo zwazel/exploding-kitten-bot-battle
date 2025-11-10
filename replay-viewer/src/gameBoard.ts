@@ -25,16 +25,18 @@ export class GameBoard {
   private container: HTMLElement;
   private boardWidth = 1200;
   private boardHeight = 800;
+  private currentScale = 1;
   private cardElements: Map<string, CardElement> = new Map();
   private discardPileStack: CardType[] = []; // Track discard pile cards
 
   // Board positions (centered on the 1200x800 board)
-  // Deck and discard piles are in a centered container
-  // Deck: left -150px from center (600px), top -60px from center (400px), 100x140px box
-  // Discard: left 0px from center, top -60px from center, 100x140px box
-  // Position for card top-left corner to center it on the pile (card is 80x112):
-  private deckPosition: Position = { x: 460, y: 354 };
-  private discardPosition: Position = { x: 610, y: 354 };
+  // Deck and discard piles are in a centered container.
+  // The piles straddle the center line of the board with equal spacing so they remain centered
+  // even when the board is scaled responsively. Each pile is a 100x140px area that visually
+  // contains an 80x112px card, so the positions below are the card top-left coordinates that
+  // place the cards in the middle of their respective pile boxes.
+  private deckPosition: Position = { x: 490, y: 354 };
+  private discardPosition: Position = { x: 630, y: 354 };
   
   constructor(container: HTMLElement) {
     this.container = container;
@@ -50,10 +52,10 @@ export class GameBoard {
         <div class="game-board" style="position: relative; width: ${this.boardWidth}px; height: ${this.boardHeight}px; background: #1a1a1a; border-radius: 12px; overflow: visible; transform-origin: center center;">
           <!-- Deck and discard pile area -->
           <div class="center-area" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
-            <div id="deck-pile" class="card-pile" style="position: absolute; left: -150px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+            <div id="deck-pile" class="card-pile" style="position: absolute; left: -120px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
               <span style="color: #888; font-size: 14px;">DECK</span>
             </div>
-            <div id="discard-pile" class="card-pile" style="position: absolute; left: 0px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+            <div id="discard-pile" class="card-pile" style="position: absolute; left: 20px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
               <span style="color: #888; font-size: 14px;">DISCARD</span>
             </div>
           </div>
@@ -86,43 +88,38 @@ export class GameBoard {
     if (!board || !wrapper) return;
     
     // Get available space (accounting for padding and margins)
-    const containerRect = this.container.getBoundingClientRect();
-    const availableWidth = containerRect.width;
-    
-    // Calculate scale to fit width (with some padding)
+    // Determine how much horizontal space the board can take.
+    // Prefer the direct container width, but fall back to the parent's width or the viewport if needed.
+    const availableWidth = Math.max(
+      this.container.clientWidth,
+      this.container.parentElement?.clientWidth ?? 0,
+      window.innerWidth * 0.8
+    );
+
+    // Calculate scale to fit within available width while keeping a small padding buffer.
     const padding = 40; // 20px on each side
-    const maxWidth = availableWidth - padding;
-    
-    // Calculate scale based on width
+    const maxWidth = Math.max(availableWidth - padding, 200);
     const scaleX = maxWidth / this.boardWidth;
-    
-    // For laptop screens (1366x768 and similar), also consider viewport height
-    // Reserve space for header (~70px), controls (~90px), game info (~60px), current event (~80px), legend (~120px)
-    // That leaves roughly 348px for the board on a 768px screen
-    const viewportHeight = window.innerHeight;
-    if (viewportHeight <= 900) {
-      // On smaller screens, target max 320px for the board height to fit everything without scrolling
-      const targetMaxHeight = 320;
-      const scaleY = targetMaxHeight / this.boardHeight;
-      const scale = Math.min(1, scaleX, scaleY);
-      
-      // Apply scale transform
-      board.style.transform = `scale(${scale})`;
-      
-      // Adjust wrapper height to account for scaled content
-      const scaledHeight = this.boardHeight * scale;
-      wrapper.style.height = `${scaledHeight}px`;
-    } else {
-      // On larger screens, just scale by width
-      const scale = Math.min(1, scaleX);
-      
-      // Apply scale transform
-      board.style.transform = `scale(${scale})`;
-      
-      // Adjust wrapper height to account for scaled content
-      const scaledHeight = this.boardHeight * scale;
-      wrapper.style.height = `${scaledHeight}px`;
-    }
+
+    // Also respect available vertical space so the board doesn't overflow on short viewports.
+    const reservedVerticalSpace = 360; // header, controls, and info sections
+    const maxHeight = Math.max(window.innerHeight - reservedVerticalSpace, 240);
+    const scaleY = maxHeight / this.boardHeight;
+
+    const scale = Math.min(1, scaleX, scaleY);
+    this.currentScale = Math.max(scale, 0.1);
+
+    // Apply scale transform
+    board.style.transform = `scale(${this.currentScale})`;
+
+    // Adjust wrapper dimensions so layout calculations use the scaled size,
+    // keeping the board centered and preventing overflow issues on narrow screens.
+    const scaledWidth = this.boardWidth * this.currentScale;
+    const scaledHeight = this.boardHeight * this.currentScale;
+    wrapper.style.width = `${scaledWidth}px`;
+    wrapper.style.height = `${scaledHeight}px`;
+    wrapper.style.maxWidth = "100%";
+    wrapper.style.margin = "0 auto";
   }
 
   /**
@@ -322,7 +319,13 @@ export class GameBoard {
     if (!handArea) return { x: 0, y: 0 };
 
     const rect = handArea.getBoundingClientRect();
-    const containerRect = this.container.querySelector(".game-board")!.getBoundingClientRect();
+    const boardElement = this.container.querySelector(".game-board") as HTMLElement | null;
+    if (!boardElement) {
+      return { x: 0, y: 0 };
+    }
+
+    const containerRect = boardElement.getBoundingClientRect();
+    const scale = this.currentScale || Math.max(containerRect.width / this.boardWidth, 0.1);
     
     // Get rotation from data attribute
     const baseRotation = parseFloat(handArea.getAttribute('data-rotation') || '0');
@@ -336,8 +339,8 @@ export class GameBoard {
       ? (cardIndex - (totalCards - 1) / 2) * (maxSpread / Math.max(totalCards - 1, 1))
       : 0;
     
-    const centerX = rect.left - containerRect.left + rect.width / 2;
-    const centerY = rect.top - containerRect.top + rect.height / 2;
+    const centerX = (rect.left - containerRect.left + rect.width / 2) / scale;
+    const centerY = (rect.top - containerRect.top + rect.height / 2) / scale;
     
     const x = centerX + cardIndex * cardOverlap - ((totalCards - 1) * cardOverlap) / 2;
     const y = centerY + Math.abs(fanAngle) * 0.5; // Slight arc effect
