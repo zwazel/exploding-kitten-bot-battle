@@ -34,10 +34,16 @@ test.describe('Replay Viewer - Playback Controls', () => {
     await expect(stepButton).toBeEnabled();
   });
 
-  test('should have speed control slider', async ({ page }) => {
+  test('should have speed control slider and input', async ({ page }) => {
     const speedSlider = page.locator('#speed-slider');
     await expect(speedSlider).toBeVisible();
-    
+    await expect(speedSlider).toHaveAttribute('max', '10');
+    await expect(speedSlider).toHaveAttribute('min', '0.5');
+
+    const speedInput = page.locator('#speed-input');
+    await expect(speedInput).toBeVisible();
+    await expect(speedInput).toHaveValue('1');
+
     // Check default value is 1
     const speedDisplay = page.locator('#speed-display');
     await expect(speedDisplay).toContainText('1.0x');
@@ -69,12 +75,30 @@ test.describe('Replay Viewer - Playback Controls', () => {
   test('should update speed display when slider is moved', async ({ page }) => {
     const speedSlider = page.locator('#speed-slider');
     const speedDisplay = page.locator('#speed-display');
-    
+
     // Change speed to 2x
     await speedSlider.fill('2');
-    
+
     // Speed display should update
     await expect(speedDisplay).toContainText('2.0x');
+  });
+
+  test('should allow custom speed input values beyond slider range', async ({ page }) => {
+    const speedInput = page.locator('#speed-input');
+    const speedSlider = page.locator('#speed-slider');
+    const speedDisplay = page.locator('#speed-display');
+
+    await speedInput.fill('15');
+    await speedInput.press('Enter');
+
+    await expect(speedDisplay).toContainText('15.0x');
+    await expect(speedSlider).toHaveValue('10');
+
+    await speedInput.fill('0.05');
+    await speedInput.press('Enter');
+
+    await expect(speedDisplay).toContainText('0.1x');
+    await expect(speedSlider).toHaveValue('0.5');
   });
 
   test('should reset to beginning when stop button is clicked', async ({ page }) => {
