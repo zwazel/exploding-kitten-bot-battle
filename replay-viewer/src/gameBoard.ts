@@ -22,6 +22,10 @@ export interface CardElement {
  * Visual game board manager
  */
 export class GameBoard {
+  private static readonly CARD_WIDTH = 80;
+  private static readonly CARD_HEIGHT = 112;
+  private static readonly PILE_WIDTH = 100;
+  private static readonly PILE_HEIGHT = 140;
   private container: HTMLElement;
   private boardWidth = 1200;
   private boardHeight = 800;
@@ -50,21 +54,18 @@ export class GameBoard {
     this.container.innerHTML = `
       <div class="game-board-wrapper" style="width: 100%; display: flex; justify-content: center; align-items: center;">
         <div class="game-board" style="position: relative; width: ${this.boardWidth}px; height: ${this.boardHeight}px; background: #1a1a1a; border-radius: 12px; overflow: visible; transform-origin: center center;">
-          <!-- Deck and discard pile area -->
-          <div class="center-area" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);">
-            <div id="deck-pile" class="card-pile" style="position: absolute; left: -120px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+          <!-- Player areas (positioned around the table) -->
+          <div id="player-areas" style="position: absolute; width: 100%; height: 100%;"></div>
+
+          <!-- Cards container for animations -->
+          <div id="cards-container" style="position: absolute; width: 100%; height: 100%; pointer-events: auto;">
+            <div id="deck-pile" class="card-pile" style="position: absolute; left: ${this.deckPosition.x - (GameBoard.PILE_WIDTH - GameBoard.CARD_WIDTH) / 2}px; top: ${this.deckPosition.y - (GameBoard.PILE_HEIGHT - GameBoard.CARD_HEIGHT) / 2}px; width: ${GameBoard.PILE_WIDTH}px; height: ${GameBoard.PILE_HEIGHT}px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center; z-index: 0; pointer-events: none;">
               <span style="color: #888; font-size: 14px;">DECK</span>
             </div>
-            <div id="discard-pile" class="card-pile" style="position: absolute; left: 20px; top: -60px; width: 100px; height: 140px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+            <div id="discard-pile" class="card-pile" style="position: absolute; left: ${this.discardPosition.x - (GameBoard.PILE_WIDTH - GameBoard.CARD_WIDTH) / 2}px; top: ${this.discardPosition.y - (GameBoard.PILE_HEIGHT - GameBoard.CARD_HEIGHT) / 2}px; width: ${GameBoard.PILE_WIDTH}px; height: ${GameBoard.PILE_HEIGHT}px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center; z-index: 0; pointer-events: none;">
               <span style="color: #888; font-size: 14px;">DISCARD</span>
             </div>
           </div>
-
-          <!-- Player areas (positioned around the table) -->
-          <div id="player-areas" style="position: absolute; width: 100%; height: 100%;"></div>
-          
-          <!-- Cards container for animations -->
-          <div id="cards-container" style="position: absolute; width: 100%; height: 100%; pointer-events: auto;"></div>
           
           <!-- Center display for special cards (See Future, Exploding Kitten, etc) -->
           <div id="center-display" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; z-index: 1000;"></div>
@@ -74,9 +75,11 @@ export class GameBoard {
     
     // Apply responsive scaling after board is created
     this.applyResponsiveScaling();
-    
+
     // Re-apply scaling on window resize
-    window.addEventListener('resize', () => this.applyResponsiveScaling());
+    window.addEventListener('resize', () => {
+      this.applyResponsiveScaling();
+    });
   }
   
   /**
@@ -365,6 +368,16 @@ export class GameBoard {
    */
   getDiscardPosition(): Position {
     return { ...this.discardPosition };
+  }
+
+  /**
+   * Internal helper exposed for automated tests to assert pile alignment.
+   */
+  getPilePositionsForTesting(): { deck: Position; discard: Position } {
+    return {
+      deck: { ...this.deckPosition },
+      discard: { ...this.discardPosition },
+    };
   }
 
   /**
