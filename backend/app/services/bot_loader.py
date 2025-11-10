@@ -7,7 +7,7 @@ import inspect
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import Iterable, List, Tuple, Type
+from typing import Type
 
 from fastapi import HTTPException, status
 
@@ -41,17 +41,6 @@ def instantiate_bot(path: Path, module_hint: str, name: str) -> Bot:
     return bot_class(name)
 
 
-def load_builtin_bots(directory: Path) -> List[Tuple[Path, str]]:
-    bots: List[Tuple[Path, str]] = []
-    if not directory.exists():
-        return bots
-    for file in directory.glob("*.py"):
-        if file.name.startswith("__"):
-            continue
-        bots.append((file, file.stem))
-    return bots
-
-
 def require_bot(upload_path: Path, module_hint: str, name: str) -> Bot:
     try:
         return instantiate_bot(upload_path, module_hint, name)
@@ -62,6 +51,5 @@ def require_bot(upload_path: Path, module_hint: str, name: str) -> Bot:
 __all__ = [
     "BotLoadError",
     "instantiate_bot",
-    "load_builtin_bots",
     "require_bot",
 ]

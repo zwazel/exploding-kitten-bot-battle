@@ -43,7 +43,11 @@ def get_replay(
     if replay is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Replay not found")
 
-    owned_versions = {version.id for version in current_user.bot.versions} if current_user.bot else set()
+    owned_versions = {
+        version.id
+        for bot in current_user.bots
+        for version in bot.versions
+    } if current_user.bots else set()
     if owned_versions:
         participant_version_ids = {
             p.bot_version_id for p in replay.participants if p.bot_version_id is not None
@@ -64,7 +68,11 @@ def download_replay(
     if replay is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Replay not found")
 
-    owned_versions = {version.id for version in current_user.bot.versions} if current_user.bot else set()
+    owned_versions = {
+        version.id
+        for bot in current_user.bots
+        for version in bot.versions
+    } if current_user.bots else set()
     if owned_versions:
         participant_version_ids = {
             p.bot_version_id for p in replay.participants if p.bot_version_id is not None

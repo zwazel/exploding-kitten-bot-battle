@@ -4,7 +4,7 @@ A complete toolkit for building, testing, and battling Exploding Kitten bots. Th
 
 1. **Game engine (`game/`, `bots/`, `main.py`)** – the Python implementation of Exploding Kittens used for local simulation.
 2. **Arena backend (`backend/`)** – a FastAPI service that accepts bot uploads, runs arena matches, stores replays, and exposes history over a PostgreSQL database.
-3. **Arena frontend (`frontend/`)** – a Vite + TypeScript single page app that combines the original replay viewer with arena account management.
+3. **Arena frontend (`frontend/`)** – a Vite + TypeScript single page app that combines the original replay viewer with arena account and bot management.
 
 The existing replay viewer behaviour is preserved: you can still load local replay files without signing in. When authenticated, the same UI lets you upload bots to the arena and review hosted replays.
 
@@ -12,8 +12,8 @@ The existing replay viewer behaviour is preserved: you can still load local repl
 
 ```
 exploding-kitten-bot-battle/
-├── backend/              # FastAPI backend service and tests
-├── bots/                 # Built-in sample bots
+├── backend/              # FastAPI backend service, commands, and tests
+├── bots/                 # Reference bots (synced to the arena via the admin script)
 ├── docker-compose.yml    # Local orchestration for Postgres + backend
 ├── frontend/             # Vite web application (viewer + arena dashboard)
 ├── game/                 # Core game engine
@@ -67,6 +67,20 @@ uvicorn app.main:app --app-dir backend/app --reload
 
 Backend configuration is documented in `backend/app/config.py` – environment variables are prefixed with `ARENA_` (e.g., `ARENA_SECRET_KEY`, `ARENA_ALLOWED_ORIGINS`). Uploaded bot files and arena replays are stored under `backend/storage/` (mounted as a volume in Compose).
 
+#### Seed arena bots
+
+After the backend is running, create an admin account and sync the reference bots so that every match has opponents available. The command is idempotent and can be re-run whenever files in `bots/` change:
+
+```bash
+python -m app.commands.setup_admin \
+  --email admin@example.com \
+  --display-name AdminUser \
+  --password supersecret \
+  --bots-dir ./bots
+```
+
+The script computes a hash for each bot file; unchanged bots keep their existing version numbers, while updated files create a new version automatically.
+
 ## 3. Frontend setup
 
 The frontend lives under `frontend/` and now combines:
@@ -85,10 +99,10 @@ The app reads the backend origin from `VITE_API_BASE_URL` (defaults to `http://l
 
 ## Arena workflow overview
 
-1. Sign up and log in through the “Arena” tab.
-2. Upload a Python bot file that subclasses `game.Bot` (the backend validates this by loading the class).
-3. The backend selects four opponents (other active bots or the built-ins) and records a replay.
-4. The replay, placements, and bot version history become available in the dashboard. Any replay can be downloaded or viewed instantly in the viewer tab.
+1. Seed the arena with the reference bots using the admin setup script (see above) so there are opponents available.
+2. Sign up and log in through the “Arena” tab. Usernames are normalised to lowercase identifiers and combined with bot names to form global labels (`username_botname`).
+3. Create one or more bots from the dashboard, then upload Python files (`.py`) for each bot. The backend validates the class and stores a new version when the file hash changes.
+4. Every upload runs an arena match against a random set of up to four other active bots. The replay, placements, and bot version history become available in the dashboard and any replay can be downloaded or opened in the viewer tab.
 
 ## Additional tooling
 

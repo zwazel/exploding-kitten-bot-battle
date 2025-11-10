@@ -17,6 +17,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from .utils.names import make_qualified_bot_name
+
 
 class Base(DeclarativeBase):
     pass
@@ -27,37 +29,52 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    username: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, nullable=False
     )
 
-    bot: Mapped[Optional["Bot"]] = relationship("Bot", back_populates="owner", uselist=False)
+    bots: Mapped[list["Bot"]] = relationship(
+        "Bot",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )
 
 
 class Bot(Base):
     __tablename__ = "bots"
+    __table_args__ = (
+        UniqueConstraint("user_id", "name", name="uq_bot_user_name"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, nullable=False
     )
     current_version_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("bot_versions.id", ondelete="SET NULL", use_alter=True), nullable=True
     )
-
-    owner: Mapped[User] = relationship("User", back_populates="bot")
+    owner: Mapped[User] = relationship("User", back_populates="bots")
     versions: Mapped[list["BotVersion"]] = relationship(
         "BotVersion",
         back_populates="bot",
         order_by="BotVersion.version_number",
         foreign_keys="BotVersion.bot_id",
+        cascade="all, delete-orphan",
     )
     current_version: Mapped[Optional["BotVersion"]] = relationship(
         "BotVersion", foreign_keys=[current_version_id], post_update=True
     )
+
+    @property
+    def qualified_name(self) -> str:
+        if not self.owner:
+            return self.name
+        return make_qualified_bot_name(self.owner.username, self.name)
 
 
 class BotVersion(Base):
@@ -74,6 +91,7 @@ class BotVersion(Base):
     )
     file_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    file_hash: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
 
     bot: Mapped[Bot] = relationship("Bot", back_populates="versions", foreign_keys=[bot_id])
     replay_entries: Mapped[list["ReplayParticipant"]] = relationship(

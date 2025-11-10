@@ -5,6 +5,9 @@ from typing import Dict
 
 from fastapi.testclient import TestClient
 
+from app.commands.setup_admin import main as setup_admin_main
+from app.config import get_settings
+
 BOT_CODE = """
 from typing import Optional, List, Union
 from game import Bot, GameState, Card, CardType, TargetContext, GameAction
@@ -42,7 +45,7 @@ class TestArenaBot(Bot):
 
 def _signup_payload(email: str) -> Dict[str, str]:
     return {
-        "display_name": "Test User",
+        "display_name": "TestUser",
         "email": email,
         "password": "supersecret",
     }
@@ -53,6 +56,7 @@ def test_signup_login_and_me(client: TestClient) -> None:
     assert response.status_code == 201
     body = response.json()
     assert body["email"] == "user@example.com"
+    assert body["username"] == "testuser"
 
     login_resp = client.post(
         "/auth/login",
@@ -65,9 +69,26 @@ def test_signup_login_and_me(client: TestClient) -> None:
     me_resp = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert me_resp.status_code == 200
     assert me_resp.json()["email"] == "user@example.com"
+    assert me_resp.json()["username"] == "testuser"
 
 
-def test_upload_bot_and_fetch_replay(client: TestClient) -> None:
+def test_bot_lifecycle(client: TestClient) -> None:
+    # Seed admin bots to guarantee opponents
+    settings = get_settings()
+    bots_dir = settings.builtin_bots_directory
+    setup_admin_main(
+        [
+            "--email",
+            "admin@example.com",
+            "--display-name",
+            "AdminUser",
+            "--password",
+            "changeit",
+            "--bots-dir",
+            str(bots_dir),
+        ]
+    )
+
     email = "bot@example.com"
     client.post("/auth/signup", json=_signup_payload(email))
     login_resp = client.post(
@@ -77,8 +98,20 @@ def test_upload_bot_and_fetch_replay(client: TestClient) -> None:
     )
     token = login_resp.json()["access_token"]
 
+    create_resp = client.post(
+        "/bots",
+        json={"name": "arena_bot"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert create_resp.status_code == 201, create_resp.text
+    bot_id = create_resp.json()["id"]
+
+    list_resp = client.get("/bots", headers={"Authorization": f"Bearer {token}"})
+    assert list_resp.status_code == 200
+    assert len(list_resp.json()) == 1
+
     upload_resp = client.post(
-        "/bots/upload",
+        f"/bots/{bot_id}/upload",
         headers={"Authorization": f"Bearer {token}"},
         files={"file": ("TestBot.py", BOT_CODE, "text/x-python")},
     )
@@ -87,6 +120,14 @@ def test_upload_bot_and_fetch_replay(client: TestClient) -> None:
     assert payload["bot_version"]["version_number"] == 1
     replay_id = payload["replay"]["id"]
     assert replay_id > 0
+
+    profile_resp = client.get(
+        f"/bots/{bot_id}", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert profile_resp.status_code == 200
+    profile = profile_resp.json()
+    assert profile["current_version"]["version_number"] == 1
+    assert profile["versions"][0]["is_active"] is True
 
     replay_resp = client.get(
         f"/replays/{replay_id}",
@@ -104,3 +145,12 @@ def test_upload_bot_and_fetch_replay(client: TestClient) -> None:
     assert file_resp.status_code == 200
     data = json.loads(file_resp.content)
     assert "events" in data
+
+    delete_resp = client.delete(
+        f"/bots/{bot_id}", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert delete_resp.status_code == 204
+
+    list_after_delete = client.get("/bots", headers={"Authorization": f"Bearer {token}"})
+    assert list_after_delete.status_code == 200
+    assert list_after_delete.json() == []

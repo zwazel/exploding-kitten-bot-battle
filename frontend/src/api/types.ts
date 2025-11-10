@@ -7,6 +7,7 @@ export interface User {
   id: number;
   email: string;
   display_name: string;
+  username: string;
   created_at: string;
 }
 
@@ -31,8 +32,19 @@ export interface ReplaySummary {
   summary: Record<string, unknown>;
 }
 
+export interface BotSummary {
+  id: number;
+  name: string;
+  qualified_name: string;
+  created_at: string;
+  current_version: BotVersionSummary | null;
+}
+
 export interface BotProfile {
-  bot_id: number;
+  id: number;
+  name: string;
+  qualified_name: string;
+  created_at: string;
   current_version: BotVersionSummary | null;
   versions: BotVersionSummary[];
   recent_replays: ReplaySummary[];

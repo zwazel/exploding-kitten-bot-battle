@@ -194,6 +194,33 @@ body {
   align-items: flex-start;
 }
 
+.bot-management {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.bot-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bot-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.bot-selector select {
+  border: 1px solid #cbd2d9;
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  font-size: 1rem;
+  min-width: 200px;
+}
+
 .simple-list {
   list-style: none;
   padding: 0;

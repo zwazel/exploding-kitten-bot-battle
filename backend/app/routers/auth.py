@@ -11,6 +11,7 @@ from ..auth import create_access_token, hash_password, verify_password
 from ..database import get_db
 from ..dependencies import get_current_user
 from ..schemas import TokenResponse, UserCreate, UserPublic
+from ..utils import clean_identifier
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -21,16 +22,22 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)) -> UserPublic:
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
+    try:
+        username = clean_identifier(payload.display_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+    username_conflict = db.query(models.User).filter(models.User.username == username).first()
+    if username_conflict:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Display name unavailable")
+
     user = models.User(
         email=payload.email.lower(),
+        username=username,
         display_name=payload.display_name,
         password_hash=hash_password(payload.password),
     )
     db.add(user)
-    db.flush()
-
-    bot = models.Bot(user_id=user.id)
-    db.add(bot)
     db.flush()
 
     return UserPublic.model_validate(user)

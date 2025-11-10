@@ -30,10 +30,22 @@ class StorageManager:
         path.mkdir(parents=True, exist_ok=True)
         return path
 
-    def save_bot_file(self, user_id: int, version_number: int, upload: UploadFile) -> Path:
-        destination = self.user_bot_directory(user_id) / f"version_{version_number}.py"
+    def bot_directory(self, user_id: int, bot_id: int) -> Path:
+        path = self.user_bot_directory(user_id) / f"bot_{bot_id}"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def save_bot_file(
+        self, user_id: int, bot_id: int, version_number: int, upload: UploadFile
+    ) -> Path:
+        destination = self.bot_directory(user_id, bot_id) / f"version_{version_number}.py"
         with destination.open("wb") as buffer:
             shutil.copyfileobj(upload.file, buffer)
+        return destination
+
+    def copy_bot_file(self, user_id: int, bot_id: int, version_number: int, source: Path) -> Path:
+        destination = self.bot_directory(user_id, bot_id) / f"version_{version_number}.py"
+        shutil.copy2(source, destination)
         return destination
 
     def archive_bot_files(self, paths: Iterable[Path]) -> None:

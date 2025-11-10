@@ -1,12 +1,15 @@
 import type { ReplayData } from "../types";
 import type {
   BotProfile,
+  BotSummary,
   TokenResponse,
   UploadResponse,
   User,
 } from "./types";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8000";
+const metaEnv = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
+const rawBaseUrl = metaEnv.VITE_API_BASE_URL || metaEnv.vite_api_base_url;
+const API_BASE_URL = (rawBaseUrl ?? "http://localhost:8000").replace(/\/$/, "");
 
 interface RequestOptions extends RequestInit {
   token?: string | null;
@@ -100,19 +103,41 @@ export async function getCurrentUser(token: string): Promise<User> {
   });
 }
 
-export async function getBotProfile(token: string): Promise<BotProfile> {
-  return requestJson<BotProfile>("/bots/me", {
+export async function listBots(token: string): Promise<BotSummary[]> {
+  return requestJson<BotSummary[]>("/bots", {
     method: "GET",
     token,
   });
 }
 
-export async function uploadBotFile(token: string, file: File): Promise<UploadResponse> {
+export async function createBot(token: string, name: string): Promise<BotSummary> {
+  return requestJson<BotSummary>("/bots", {
+    method: "POST",
+    token,
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function getBotProfile(token: string, botId: number): Promise<BotProfile> {
+  return requestJson<BotProfile>(`/bots/${botId}`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function uploadBotFile(token: string, botId: number, file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
-  return requestJson<UploadResponse>("/bots/upload", {
+  return requestJson<UploadResponse>(`/bots/${botId}/upload`, {
     method: "POST",
     body: formData,
+    token,
+  });
+}
+
+export async function deleteBot(token: string, botId: number): Promise<void> {
+  return requestJson<void>(`/bots/${botId}`, {
+    method: "DELETE",
     token,
   });
 }

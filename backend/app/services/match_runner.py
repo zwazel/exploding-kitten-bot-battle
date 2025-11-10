@@ -13,12 +13,8 @@ from sqlalchemy.orm import Session
 from game import GameEngine, ReplayRecorder
 
 from .. import models
-from ..config import get_settings
-from .bot_loader import instantiate_bot, load_builtin_bots
+from .bot_loader import instantiate_bot
 from .storage import StorageManager
-
-
-settings = get_settings()
 
 
 @dataclass
@@ -47,12 +43,13 @@ def _participant_from_version(version: models.BotVersion) -> Participant:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Bot file {path} is missing on the server.",
         )
-    owner_name = (
-        version.bot.owner.display_name
-        if version.bot and version.bot.owner
-        else f"Bot {version.bot_id}"
-    )
-    label = f"{owner_name} v{version.version_number}"
+    bot = version.bot
+    if not bot:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Bot version {version.id} is not associated with a bot.",
+        )
+    label = bot.qualified_name
     return Participant(path=path, label=label, bot_version_id=version.id)
 
 
@@ -75,14 +72,6 @@ def run_match(db: Session, bot_version: models.BotVersion, storage: StorageManag
 
     for version in select_opponents(db, bot_version.bot_id, limit=4):
         players.append(_participant_from_version(version))
-
-    desired_total = 5
-    builtin = load_builtin_bots(settings.builtin_bots_directory)
-    random.shuffle(builtin)
-    for path, stem in builtin:
-        if len(players) >= desired_total:
-            break
-        players.append(Participant(path=path, label=f"Builtin {stem}", bot_version_id=None))
 
     if len(players) < 2:
         raise HTTPException(

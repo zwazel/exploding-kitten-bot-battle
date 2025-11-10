@@ -5,8 +5,9 @@ A Vite + TypeScript single page application that combines the classic Exploding 
 ## Features
 
 - 🎮 **Replay viewer** – drop in a JSON replay file to animate every action.
-- 🔐 **Authentication** – sign up/login to upload your own bot.
-- 🤖 **Bot upload** – send a `.py` bot file to the backend; the arena instantly runs a match against four opponents.
+- 🔐 **Authentication** – sign up/login to manage your arena bots.
+- 🧰 **Multi-bot management** – create, select, and delete bots; uploads are tracked per bot with automatic versioning.
+- 🤖 **Bot upload** – send a `.py` bot file to the backend; the arena instantly runs a match against other active bots.
 - 📜 **Version history** – keep track of uploads and know which replays belong to each version.
 - 📁 **Replay archive** – download or instantly open any hosted replay back in the viewer tab.
 - 📱 Responsive design that works down to small viewports.
@@ -49,7 +50,7 @@ frontend/
 ## Usage tips
 
 - The viewer tab behaves exactly like the original tool – no login required.
-- Uploading a bot triggers a match immediately; the placements summary appears in the arena tab and the replay is available to view or download.
+- Uploading a bot version triggers a match immediately; the placements summary appears in the arena tab and the replay is available to view or download.
 - Arena replays respect your current bot version history, so you can always tell which upload generated which game.
 
 See the root `README.md` for instructions on running the backend service.

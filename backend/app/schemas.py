@@ -24,6 +24,7 @@ class UserCreate(UserBase):
 
 class UserPublic(UserBase):
     id: int
+    username: str
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -54,11 +55,28 @@ class ReplaySummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class BotSummary(BaseModel):
+    id: int
+    name: str
+    qualified_name: str
+    created_at: datetime
+    current_version: Optional[BotVersionSummary]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class BotProfile(BaseModel):
-    bot_id: int
+    id: int
+    name: str
+    qualified_name: str
+    created_at: datetime
     current_version: Optional[BotVersionSummary]
     versions: list[BotVersionSummary]
     recent_replays: list[ReplaySummary]
+
+
+class BotCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
 
 
 class LoginRequest(BaseModel):
@@ -75,7 +93,9 @@ __all__ = [
     "TokenResponse",
     "UserCreate",
     "UserPublic",
+    "BotSummary",
     "BotProfile",
+    "BotCreateRequest",
     "LoginRequest",
     "UploadResponse",
     "BotVersionSummary",

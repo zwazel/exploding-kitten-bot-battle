@@ -1,14 +1,17 @@
 import {
+  createBot,
+  deleteBot,
   downloadReplayFile,
   fetchReplayMetadata,
   getApiBaseUrl,
   getBotProfile,
   getCurrentUser,
+  listBots,
   login,
   signup,
   uploadBotFile,
 } from "./api/client";
-import type { BotProfile, ReplaySummary, User } from "./api/types";
+import type { BotProfile, BotSummary, ReplaySummary, User } from "./api/types";
 import { ReplayApp } from "./replayApp";
 
 const TOKEN_STORAGE_KEY = "exploding-kitten-arena-token";
@@ -38,6 +41,8 @@ export class ArenaApp {
   private readonly onShowReplay?: () => void;
   private token: string | null = null;
   private user: User | null = null;
+  private bots: BotSummary[] = [];
+  private selectedBotId: number | null = null;
   private profile: BotProfile | null = null;
 
   constructor(root: HTMLElement, replayApp: ReplayApp, options: ArenaOptions = {}) {
@@ -49,6 +54,7 @@ export class ArenaApp {
     this.attachAuthHandlers();
     this.attachUploadHandler();
     this.attachReplayHandlers();
+    this.attachBotManagementHandlers();
   }
 
   private renderBaseLayout(): void {
@@ -84,18 +90,35 @@ export class ArenaApp {
             <button id="logout-button" class="secondary-button">Log out</button>
           </div>
 
+          <section class="card bot-management">
+            <h3>Manage bots</h3>
+            <form id="create-bot-form" class="bot-create-form">
+              <label for="bot-name">New bot name</label>
+              <input id="bot-name" name="bot_name" type="text" pattern="[A-Za-z0-9_-]+" minlength="1" maxlength="120" required />
+              <button type="submit" class="primary-button">Create bot</button>
+            </form>
+            <div class="bot-selector">
+              <label for="bot-select">Your bots</label>
+              <select id="bot-select"></select>
+              <button type="button" id="refresh-bots" class="secondary-button">Refresh</button>
+              <button type="button" id="delete-bot" class="secondary-button">Delete selected</button>
+            </div>
+            <p class="form-feedback" id="bot-feedback"></p>
+          </section>
+
           <section class="card upload-card">
-            <h3>Upload a new bot</h3>
+            <h3>Upload a new version</h3>
+            <p class="subtle">Selected bot: <span id="selected-bot-name">None</span></p>
             <form id="upload-form" class="upload-form">
               <input type="file" id="bot-file" name="bot" accept=".py" required />
               <button type="submit" class="primary-button">Upload &amp; run arena match</button>
             </form>
-            <p class="subtle">Uploading a new file replaces your previous bot. The arena will immediately run a match and record the replay.</p>
+            <p class="subtle">Uploading a new file adds a version for the selected bot. The arena will immediately run a match and record the replay.</p>
             <p class="form-feedback" id="upload-feedback"></p>
           </section>
 
           <section class="card" id="current-bot-card">
-            <h3>Your bot</h3>
+            <h3>Bot details</h3>
             <div id="current-bot"></div>
           </section>
 
@@ -117,7 +140,7 @@ export class ArenaApp {
     const stored = window.localStorage.getItem(TOKEN_STORAGE_KEY);
     if (stored) {
       this.token = stored;
-      this.bootstrapProfile();
+      void this.bootstrapProfile();
     } else {
       this.showAuthPanels();
     }
@@ -127,9 +150,9 @@ export class ArenaApp {
     if (!this.token) return;
     try {
       this.user = await getCurrentUser(this.token);
-      this.profile = await getBotProfile(this.token);
-      this.updateDashboard();
+      await this.reloadBots();
       this.showDashboard();
+      this.updateDashboard();
     } catch (error) {
       console.error("Failed to restore session", error);
       this.setFeedback("login-feedback", "Unable to restore session. Please log in again.", false);
@@ -182,6 +205,8 @@ export class ArenaApp {
     logoutButton?.addEventListener("click", () => {
       this.clearToken();
       this.user = null;
+      this.bots = [];
+      this.selectedBotId = null;
       this.profile = null;
       this.showAuthPanels();
     });
@@ -197,6 +222,10 @@ export class ArenaApp {
         this.setFeedback("upload-feedback", "Log in to upload a bot.", false);
         return;
       }
+      if (!this.selectedBotId) {
+        this.setFeedback("upload-feedback", "Create and select a bot first.", false);
+        return;
+      }
       const fileInput = this.root.querySelector<HTMLInputElement>("#bot-file");
       const file = fileInput?.files?.[0];
       if (!file) {
@@ -205,7 +234,7 @@ export class ArenaApp {
       }
       try {
         this.setFeedback("upload-feedback", "Uploading and running match…", true);
-        const result = await uploadBotFile(this.token, file);
+        const result = await uploadBotFile(this.token, this.selectedBotId, file);
         const summaryPlacements = (result.replay.summary as Record<string, unknown>).placements;
         let placementText = "Match completed.";
         if (Array.isArray(summaryPlacements)) {
@@ -221,11 +250,67 @@ export class ArenaApp {
           `Match finished. Winner: ${result.replay.winner_name}. Placements: ${placementText}.`,
           true
         );
-        await this.bootstrapProfile();
+        await this.reloadBots(this.selectedBotId);
       } catch (error) {
         this.setFeedback("upload-feedback", (error as Error).message, false);
       } finally {
         uploadForm.reset();
+      }
+    });
+  }
+
+  private attachBotManagementHandlers(): void {
+    const createForm = this.root.querySelector<HTMLFormElement>("#create-bot-form");
+    const select = this.root.querySelector<HTMLSelectElement>("#bot-select");
+    const refreshButton = this.root.querySelector<HTMLButtonElement>("#refresh-bots");
+    const deleteButton = this.root.querySelector<HTMLButtonElement>("#delete-bot");
+
+    createForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!this.token) {
+        this.setFeedback("bot-feedback", "Log in to create bots.", false);
+        return;
+      }
+      const formData = new FormData(createForm);
+      const name = (formData.get("bot_name") as string).trim();
+      if (!name) {
+        this.setFeedback("bot-feedback", "Provide a bot name.", false);
+        return;
+      }
+      try {
+        this.setFeedback("bot-feedback", "Creating bot…", true);
+        const summary = await createBot(this.token, name);
+        await this.reloadBots(summary.id);
+        this.setFeedback("bot-feedback", `Bot ${summary.qualified_name} created.`, true);
+        createForm.reset();
+      } catch (error) {
+        this.setFeedback("bot-feedback", (error as Error).message, false);
+      }
+    });
+
+    select?.addEventListener("change", async () => {
+      const value = select.value;
+      this.selectedBotId = value ? Number.parseInt(value, 10) : null;
+      await this.loadSelectedBot();
+      this.updateDashboard();
+    });
+
+    refreshButton?.addEventListener("click", async () => {
+      await this.reloadBots(this.selectedBotId);
+      this.setFeedback("bot-feedback", "Bots refreshed.", true);
+    });
+
+    deleteButton?.addEventListener("click", async () => {
+      if (!this.token || !this.selectedBotId) {
+        this.setFeedback("bot-feedback", "Select a bot to delete.", false);
+        return;
+      }
+      try {
+        await deleteBot(this.token, this.selectedBotId);
+        await this.reloadBots();
+        this.setFeedback("bot-feedback", "Bot deleted.", true);
+      } catch (error) {
+        this.setFeedback("bot-feedback", (error as Error).message, false);
       }
     });
   }
@@ -244,6 +329,75 @@ export class ArenaApp {
         await this.viewReplay(replayId, target);
       } else if (action === "download") {
         await this.downloadReplay(replayId, target);
+      }
+    });
+  }
+
+  private async reloadBots(preferredId?: number | null): Promise<void> {
+    if (!this.token) return;
+    this.bots = await listBots(this.token);
+    const selectElement = this.root.querySelector<HTMLSelectElement>("#bot-select");
+    const previousSelection = this.selectedBotId;
+    this.selectedBotId = null;
+    if (this.bots.length > 0) {
+      const desired = preferredId ?? previousSelection ?? this.bots[0].id;
+      const found = this.bots.find((bot) => bot.id === desired) ?? this.bots[0];
+      this.selectedBotId = found.id;
+    }
+    this.renderBotSelector();
+    await this.loadSelectedBot();
+    this.updateDashboard();
+    if (selectElement) {
+      selectElement.value = this.selectedBotId !== null ? String(this.selectedBotId) : "";
+    }
+  }
+
+  private async loadSelectedBot(): Promise<void> {
+    if (!this.token || this.selectedBotId === null) {
+      this.profile = null;
+      return;
+    }
+    try {
+      this.profile = await getBotProfile(this.token, this.selectedBotId);
+    } catch (error) {
+      console.error("Unable to fetch bot profile", error);
+      this.profile = null;
+    }
+  }
+
+  private renderBotSelector(): void {
+    const select = this.root.querySelector<HTMLSelectElement>("#bot-select");
+    const selectedName = this.root.querySelector<HTMLSpanElement>("#selected-bot-name");
+    if (!select || !selectedName) return;
+
+    select.innerHTML = "";
+    if (this.bots.length === 0) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No bots yet";
+      select.appendChild(option);
+      select.disabled = true;
+      selectedName.textContent = "None";
+    } else {
+      this.bots.forEach((bot) => {
+        const option = document.createElement("option");
+        option.value = String(bot.id);
+        option.textContent = bot.qualified_name;
+        if (bot.id === this.selectedBotId) {
+          option.selected = true;
+        }
+        select.appendChild(option);
+      });
+      select.disabled = false;
+      const active = this.bots.find((bot) => bot.id === this.selectedBotId);
+      selectedName.textContent = active ? active.qualified_name : "None";
+    }
+
+    const uploadForm = this.root.querySelector<HTMLFormElement>("#upload-form");
+    const uploadInputs = uploadForm ? Array.from(uploadForm.elements) : [];
+    uploadInputs.forEach((element) => {
+      if (element instanceof HTMLInputElement || element instanceof HTMLButtonElement) {
+        element.disabled = this.selectedBotId === null;
       }
     });
   }
@@ -291,56 +445,65 @@ export class ArenaApp {
     const replayList = dashboard.querySelector<HTMLUListElement>("#replay-list");
 
     if (info && this.user) {
-      info.textContent = `${this.user.display_name} (${this.user.email})`;
+      info.textContent = `${this.user.display_name} (@${this.user.username}) · ${this.user.email}`;
     }
     if (apiInfo) {
       apiInfo.textContent = `API base: ${getApiBaseUrl()}`;
     }
 
     if (currentBotContainer) {
-      if (this.profile?.current_version) {
-        const v = this.profile.current_version;
-        currentBotContainer.innerHTML = `<p>Active version <strong>${v.version_number}</strong> uploaded ${formatDate(v.created_at)}.</p>`;
+      if (!this.profile) {
+        currentBotContainer.innerHTML = `<p>No bot selected. Create or choose a bot to view details.</p>`;
       } else {
-        currentBotContainer.innerHTML = `<p>No bot uploaded yet. Upload a Python bot file to enter the arena.</p>`;
+        const currentVersion = this.profile.current_version;
+        const createdText = formatDate(this.profile.created_at);
+        const versionInfo = currentVersion
+          ? `Active version <strong>${currentVersion.version_number}</strong> uploaded ${formatDate(currentVersion.created_at)}.`
+          : "No versions uploaded yet.";
+        currentBotContainer.innerHTML = `
+          <p><strong>${this.profile.qualified_name}</strong></p>
+          <p>Created ${createdText}. ${versionInfo}</p>
+        `;
       }
     }
 
     if (versionsList) {
       versionsList.innerHTML = "";
-      this.profile?.versions.forEach((version) => {
-        const li = document.createElement("li");
-        li.textContent = `${version.version_number}. uploaded ${formatDate(version.created_at)}${version.is_active ? " (active)" : ""}`;
-        versionsList.appendChild(li);
-      });
-      if (!versionsList.hasChildNodes()) {
+      if (!this.profile || this.profile.versions.length === 0) {
         const li = document.createElement("li");
         li.textContent = "No versions yet.";
         versionsList.appendChild(li);
+      } else {
+        this.profile.versions.forEach((version) => {
+          const li = document.createElement("li");
+          li.textContent = `${version.version_number}. uploaded ${formatDate(version.created_at)}${version.is_active ? " (active)" : ""}`;
+          versionsList.appendChild(li);
+        });
       }
     }
 
     if (replayList) {
       replayList.innerHTML = "";
-      this.profile?.recent_replays.forEach((replay) => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <div class="replay-entry">
-            <div>
-              <p>${summarizeReplay(replay)}</p>
-            </div>
-            <div class="replay-actions">
-              <button class="secondary-button" data-action="view" data-replay-id="${replay.id}">View</button>
-              <button class="secondary-button" data-action="download" data-replay-id="${replay.id}">Download</button>
-            </div>
-          </div>
-        `;
-        replayList.appendChild(li);
-      });
-      if (!replayList.hasChildNodes()) {
+      if (!this.profile || this.profile.recent_replays.length === 0) {
         const li = document.createElement("li");
         li.textContent = "No arena replays yet.";
         replayList.appendChild(li);
+      } else {
+        this.profile.recent_replays.forEach((replay) => {
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <div class="replay-entry">
+              <div>
+                <p>${summarizeReplay(replay)}</p>
+              </div>
+              <div class="replay-actions">
+                <button class="secondary-button" data-action="view" data-replay-id="${replay.id}">View</button>
+                <button class="secondary-button" data-action="download" data-replay-id="${replay.id}">Download</button>
+              </div>
+            </div>
+          `;
+          replayList.appendChild(li);
+        });
       }
     }
   }
@@ -349,7 +512,11 @@ export class ArenaApp {
     const element = this.root.querySelector<HTMLParagraphElement>(`#${elementId}`);
     if (!element) return;
     element.textContent = message;
-    element.dataset.status = positive ? "positive" : "negative";
+    if (!message) {
+      delete element.dataset.status;
+    } else {
+      element.dataset.status = positive ? "positive" : "negative";
+    }
   }
 
   private saveToken(token: string): void {
