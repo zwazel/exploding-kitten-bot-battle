@@ -46,7 +46,17 @@ class ReplayApp {
             
             <div class="speed-control">
               <label for="speed-slider">Speed:</label>
-              <input type="range" id="speed-slider" min="0.5" max="3" step="0.5" value="1" />
+              <input type="range" id="speed-slider" min="0.5" max="10" step="0.5" value="1" />
+              <input
+                type="number"
+                id="speed-input"
+                min="0.1"
+                max="100"
+                step="0.1"
+                value="1"
+                inputmode="decimal"
+                title="Set custom playback speed"
+              />
               <span id="speed-display">1.0x</span>
             </div>
             
@@ -84,8 +94,27 @@ class ReplayApp {
     const speedSlider = document.querySelector<HTMLInputElement>("#speed-slider")!;
     speedSlider.addEventListener("input", (e) => {
       const speed = parseFloat((e.target as HTMLInputElement).value);
-      this.player.setSpeed(speed);
-      document.querySelector("#speed-display")!.textContent = `${speed.toFixed(1)}x`;
+      this.applySpeedChange(speed);
+    });
+
+    const speedInput = document.querySelector<HTMLInputElement>("#speed-input")!;
+    const commitSpeedInput = () => {
+      const rawValue = parseFloat(speedInput.value);
+      if (!Number.isFinite(rawValue)) {
+        // Reset to the current playback speed if the input is invalid
+        this.updateSpeedControls(this.player.getPlaybackState().speed);
+        return;
+      }
+      this.applySpeedChange(rawValue);
+    };
+
+    speedInput.addEventListener("change", commitSpeedInput);
+    speedInput.addEventListener("blur", commitSpeedInput);
+    speedInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        commitSpeedInput();
+        (event.target as HTMLInputElement).blur();
+      }
     });
 
     // Hidden agent jump control - only listens to input event (not MutationObserver)
@@ -106,6 +135,9 @@ class ReplayApp {
     this.player.onStateChange((state) => {
       this.updatePlaybackUI(state);
     });
+
+    // Ensure the speed controls reflect the initial state
+    this.updateSpeedControls(this.player.getPlaybackState().speed);
   }
 
   private async handleFileLoad(e: Event): Promise<void> {
@@ -525,6 +557,37 @@ class ReplayApp {
     const playPauseBtn = document.querySelector("#btn-play-pause")!;
     playPauseBtn.textContent = state.isPlaying ? "⏸️" : "▶️";
     playPauseBtn.setAttribute("title", state.isPlaying ? "Pause" : "Play");
+
+    this.updateSpeedControls(state.speed);
+  }
+
+  private applySpeedChange(speed: number): void {
+    this.player.setSpeed(speed);
+    const currentSpeed = this.player.getPlaybackState().speed;
+    this.updateSpeedControls(currentSpeed);
+  }
+
+  private updateSpeedControls(speed: number): void {
+    const speedSlider = document.querySelector<HTMLInputElement>("#speed-slider");
+    const speedInput = document.querySelector<HTMLInputElement>("#speed-input");
+    const speedDisplay = document.querySelector<HTMLSpanElement>("#speed-display");
+
+    if (speedSlider) {
+      const sliderMin = parseFloat(speedSlider.min);
+      const sliderMax = parseFloat(speedSlider.max);
+      const sliderValue = Math.min(sliderMax, Math.max(sliderMin, speed));
+      speedSlider.value = sliderValue.toString();
+    }
+
+    if (speedInput) {
+      const clampedInput = Math.max(parseFloat(speedInput.min), Math.min(parseFloat(speedInput.max), speed));
+      speedInput.value = clampedInput.toString();
+    }
+
+    if (speedDisplay) {
+      const formatted = speed < 1 ? Number(speed.toFixed(2)).toString() : speed.toFixed(1);
+      speedDisplay.textContent = `${formatted}x`;
+    }
   }
 
   private updateEventCounter(current: number, total: number): void {
