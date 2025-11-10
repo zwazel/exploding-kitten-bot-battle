@@ -55,9 +55,17 @@ export interface SimpleAnimationConfig {
 export class SpecialEventAnimator {
   private overlayElement: HTMLElement | null = null;
   private dismissResolve: (() => void) | null = null;
+  private speedMultiplier: number = 1.0;
 
   constructor(_container: HTMLElement) {
     this.createOverlay();
+  }
+
+  /**
+   * Set the speed multiplier for animations
+   */
+  setSpeed(speed: number): void {
+    this.speedMultiplier = speed;
   }
 
   /**
@@ -369,12 +377,8 @@ export class SpecialEventAnimator {
     this.overlayElement.style.display = "flex";
     this.setupCloseButton();
     
-    // If manual dismiss is enabled, wait for user action, otherwise use timer
-    if (this.isManualDismissEnabled()) {
-      await this.waitForDismissal();
-    } else {
-      await this.delay(duration);
-    }
+    // Wait for either user dismissal or timeout (user can always dismiss)
+    await this.waitForDismissalOrTimeout(duration);
     
     await this.hide();
   }
@@ -541,12 +545,8 @@ export class SpecialEventAnimator {
     this.overlayElement.style.display = "flex";
     this.setupCloseButton();
     
-    // If manual dismiss is enabled, wait for user action, otherwise use timer
-    if (this.isManualDismissEnabled()) {
-      await this.waitForDismissal();
-    } else {
-      await this.delay(duration);
-    }
+    // Wait for either user dismissal or timeout (user can always dismiss)
+    await this.waitForDismissalOrTimeout(duration);
     
     await this.hide();
   }
@@ -662,12 +662,8 @@ export class SpecialEventAnimator {
     this.overlayElement.style.display = "flex";
     this.setupCloseButton();
     
-    // If manual dismiss is enabled, wait for user action, otherwise use timer
-    if (this.isManualDismissEnabled()) {
-      await this.waitForDismissal();
-    } else {
-      await this.delay(duration);
-    }
+    // Wait for either user dismissal or timeout (user can always dismiss)
+    await this.waitForDismissalOrTimeout(duration);
     
     await this.hide();
   }
@@ -786,10 +782,36 @@ export class SpecialEventAnimator {
   }
 
   /**
-   * Helper delay function
+   * Helper delay function with speed scaling
    */
   private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    const scaledMs = ms / this.speedMultiplier;
+    return new Promise((resolve) => setTimeout(resolve, scaledMs));
+  }
+
+  /**
+   * Wait for either user dismissal or timeout (whichever comes first)
+   * User can always dismiss via X button or clicking outside
+   */
+  private async waitForDismissalOrTimeout(duration: number): Promise<void> {
+    const scaledDuration = duration / this.speedMultiplier;
+    
+    // If manual dismiss is enabled, wait indefinitely for user action
+    if (this.isManualDismissEnabled()) {
+      await this.waitForDismissal();
+      return;
+    }
+    
+    // Otherwise, race between user dismissal and timeout
+    await Promise.race([
+      this.waitForDismissal(),
+      this.delay(scaledDuration)
+    ]);
+    
+    // Clean up the resolve callback if timeout won
+    if (this.dismissResolve) {
+      this.dismissResolve = null;
+    }
   }
 
   /**

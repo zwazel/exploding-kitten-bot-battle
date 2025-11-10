@@ -16,10 +16,19 @@ export class AnimationController {
   private currentPlayer: string | null = null;
   private explodingKittenCardId: string | null = null; // Track exploding kitten card for defuse
   private playOrder: string[] = []; // Track turn order for attack animations
+  private speedMultiplier: number = 1.0;
 
   constructor(gameBoard: GameBoard) {
     this.gameBoard = gameBoard;
     this.specialAnimator = new SpecialEventAnimator(document.body);
+  }
+
+  /**
+   * Set the speed multiplier for animations
+   */
+  setSpeed(speed: number): void {
+    this.speedMultiplier = speed;
+    this.specialAnimator.setSpeed(speed);
   }
 
   /**
@@ -668,10 +677,11 @@ export class AnimationController {
   }
 
   /**
-   * Helper delay function
+   * Helper delay function with speed scaling
    */
   private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    const scaledMs = ms / this.speedMultiplier;
+    return new Promise((resolve) => setTimeout(resolve, scaledMs));
   }
 
   /**
