@@ -6,7 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List
 
-from pydantic import Field, field_validator, ConfigDict
+from pydantic import ConfigDict, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
         description="Secret key for signing JWT tokens.",
     )
     access_token_expire_minutes: int = Field(default=120, ge=5, description="JWT expiry.")
-    allowed_origins: List[str] = Field(
+    allowed_origins: List[str] | str = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"],
         description="Origins allowed for CORS requests.",
     )
@@ -42,6 +42,14 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
+
+    @model_validator(mode="after")
+    def _ensure_list(self) -> "Settings":
+        if isinstance(self.allowed_origins, str):
+            self.allowed_origins = [
+                item.strip() for item in self.allowed_origins.split(",") if item.strip()
+            ]
+        return self
 
     model_config = ConfigDict(env_file=".env", env_prefix="ARENA_", case_sensitive=False)
 
