@@ -11,6 +11,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exploding -d exploding"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   backend:
     build:
@@ -20,7 +26,8 @@ services:
       ARENA_DATABASE_URL: postgresql+psycopg2://exploding:exploding@db:5432/exploding
       ARENA_ALLOWED_ORIGINS: http://localhost:5173
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
