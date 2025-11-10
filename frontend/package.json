@@ -16,5 +16,8 @@
     "@types/node": "^24.10.0",
     "typescript": "~5.9.3",
     "vite": "^7.1.7"
+  },
+  "dependencies": {
+    "playwright": "^1.56.1"
   }
 }

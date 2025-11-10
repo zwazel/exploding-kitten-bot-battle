@@ -40,6 +40,8 @@ env/
 .coverage
 htmlcov/
 .tox/
+test.db
+*.db
 
 # OS
 .DS_Store
