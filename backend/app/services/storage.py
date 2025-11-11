@@ -48,6 +48,12 @@ class StorageManager:
         shutil.copy2(source, destination)
         return destination
 
+    def write_bot_file(self, user_id: int, bot_id: int, version_number: int, data: bytes) -> Path:
+        destination = self.bot_directory(user_id, bot_id) / f"version_{version_number}.py"
+        with destination.open("wb") as handle:
+            handle.write(data)
+        return destination
+
     def archive_bot_files(self, paths: Iterable[Path]) -> None:
         for path in paths:
             if path.exists():

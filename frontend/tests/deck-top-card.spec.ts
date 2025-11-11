@@ -10,7 +10,7 @@ test.describe('Deck Top Card Display', () => {
     
     // Load the test replay file
     const filePath = path.join(__dirname, 'fixtures', 'simple-game.json');
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await fileInput.setInputFiles(filePath);
     
     // Wait for the game to be loaded
@@ -30,7 +30,7 @@ test.describe('Deck Top Card Display', () => {
     
     // Load the test replay file
     const filePath = path.join(__dirname, 'fixtures', 'simple-game.json');
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await fileInput.setInputFiles(filePath);
     
     // Wait for the game to be loaded
@@ -64,7 +64,7 @@ test.describe('Deck Top Card Display', () => {
     
     // Load the test replay file
     const filePath = path.join(__dirname, 'fixtures', 'simple-game.json');
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await fileInput.setInputFiles(filePath);
     
     // Wait for the game to be loaded
@@ -96,7 +96,7 @@ test.describe('Deck Top Card Display', () => {
     
     // Load the test replay file  
     const filePath = path.join(__dirname, 'fixtures', 'simple-game.json');
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await fileInput.setInputFiles(filePath);
     
     // Wait for the game to be loaded
@@ -132,7 +132,7 @@ test.describe('Deck Top Card Display', () => {
     
     // Load the test replay file (simple-game.json contains shuffle events)
     const filePath = path.join(__dirname, 'fixtures', 'simple-game.json');
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await fileInput.setInputFiles(filePath);
     
     // Wait for the game to be loaded

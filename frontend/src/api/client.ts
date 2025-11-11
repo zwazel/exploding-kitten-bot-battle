@@ -1,9 +1,10 @@
 import type { ReplayData } from "../types";
 import type {
+  ArenaMatchResponse,
   BotProfile,
   BotSummary,
+  BotUploadResponse,
   TokenResponse,
-  UploadResponse,
   User,
 } from "./types";
 
@@ -110,14 +111,6 @@ export async function listBots(token: string): Promise<BotSummary[]> {
   });
 }
 
-export async function createBot(token: string, name: string): Promise<BotSummary> {
-  return requestJson<BotSummary>("/bots", {
-    method: "POST",
-    token,
-    body: JSON.stringify({ name }),
-  });
-}
-
 export async function getBotProfile(token: string, botId: number): Promise<BotProfile> {
   return requestJson<BotProfile>(`/bots/${botId}`, {
     method: "GET",
@@ -125,13 +118,21 @@ export async function getBotProfile(token: string, botId: number): Promise<BotPr
   });
 }
 
-export async function uploadBotFile(token: string, botId: number, file: File): Promise<UploadResponse> {
+export async function uploadBot(token: string, file: File): Promise<BotUploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
-  return requestJson<UploadResponse>(`/bots/${botId}/upload`, {
+  return requestJson<BotUploadResponse>(`/bots/upload`, {
     method: "POST",
     body: formData,
     token,
+  });
+}
+
+export async function startArenaMatch(token: string, botId: number): Promise<ArenaMatchResponse> {
+  return requestJson<ArenaMatchResponse>(`/arena/matches`, {
+    method: "POST",
+    token,
+    body: JSON.stringify({ bot_id: botId }),
   });
 }
 

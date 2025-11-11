@@ -10,7 +10,7 @@ test.describe('Event History', () => {
     
     // Upload the test replay file
     const filePath = path.join(__dirname, 'fixtures', 'test_replay.json');
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await fileInput.setInputFiles(filePath);
     
     // Wait for playback controls to be visible
@@ -40,7 +40,7 @@ test.describe('Event History', () => {
     
     // Upload the test replay file
     const filePath = path.join(__dirname, 'fixtures', 'test_replay.json');
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await fileInput.setInputFiles(filePath);
     
     // Wait for playback controls
@@ -80,7 +80,7 @@ test.describe('Event History', () => {
     
     // Upload the test replay file
     const filePath = path.join(__dirname, 'fixtures', 'test_replay.json');
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await fileInput.setInputFiles(filePath);
     
     // Wait for playback controls
@@ -111,7 +111,7 @@ test.describe('Event History', () => {
     
     // Upload the test replay file
     const filePath = path.join(__dirname, 'fixtures', 'test_replay.json');
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await fileInput.setInputFiles(filePath);
     
     // Wait for playback controls
@@ -152,7 +152,7 @@ test.describe('Event History', () => {
     
     // Upload the test replay file
     const filePath = path.join(__dirname, 'fixtures', 'test_replay.json');
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await fileInput.setInputFiles(filePath);
     
     // Wait for playback controls

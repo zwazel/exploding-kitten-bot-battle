@@ -1,3 +1,5 @@
+import type { ReplayData } from "../types";
+
 export interface TokenResponse {
   access_token: string;
   token_type: string;
@@ -16,6 +18,7 @@ export interface BotVersionSummary {
   version_number: number;
   created_at: string;
   is_active: boolean;
+  file_hash: string | null;
 }
 
 export interface ReplayParticipantSummary {
@@ -50,7 +53,15 @@ export interface BotProfile {
   recent_replays: ReplaySummary[];
 }
 
-export interface UploadResponse {
-  bot_version: BotVersionSummary;
+export type BotUploadStatus = "created" | "new_version" | "reverted" | "unchanged";
+
+export interface BotUploadResponse {
+  status: BotUploadStatus;
+  bot: BotSummary;
+  version: BotVersionSummary;
+}
+
+export interface ArenaMatchResponse {
   replay: ReplaySummary;
+  replay_data: ReplayData;
 }

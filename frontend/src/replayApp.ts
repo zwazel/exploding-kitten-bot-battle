@@ -5,7 +5,7 @@
 
 import { ReplayPlayer } from "./replayPlayer";
 import { VisualRenderer } from "./visualRenderer";
-import type { ReplayData, CardType, ReplayEvent } from "./types";
+import type { ReplayData, CardType, ReplayEvent, ReplayParticipantSummary } from "./types";
 
 export class ReplayApp {
   private readonly root: HTMLElement;
@@ -14,6 +14,17 @@ export class ReplayApp {
   private fileInput: HTMLInputElement | null = null;
   private isProcessingEvent = false;
   private readonly MAX_EVENT_PROCESSING_TIMEOUT_MS = 5000;
+  private arenaElements: {
+    container: HTMLDivElement;
+    selectedBot: HTMLSpanElement;
+    status: HTMLParagraphElement;
+    participants: HTMLUListElement;
+    startButton: HTMLButtonElement;
+    downloadButton: HTMLButtonElement;
+  } | null = null;
+  private arenaStartHandler: (() => Promise<void> | void) | null = null;
+  private arenaDownloadHandler: (() => Promise<void> | void) | null = null;
+  private hasArenaBotSelected = false;
 
   private rootQuery<T extends Element>(selector: string): T {
     const element = this.root.querySelector<T>(selector);
@@ -31,6 +42,7 @@ export class ReplayApp {
     this.root = root;
     this.player = new ReplayPlayer();
     this.initializeUI();
+    this.initializeArenaElements();
     this.renderer = new VisualRenderer(
       this.rootQuery<HTMLDivElement>("#game-display")
     );
@@ -50,12 +62,12 @@ export class ReplayApp {
             <label for="file-input" class="file-label">📁 Load Replay File</label>
             <span id="file-name" class="file-name"></span>
           </div>
-          
+
           <div class="playback-controls" id="playback-controls" style="display: none;">
             <button id="btn-stop" title="Stop and Reset">⏹️</button>
             <button id="btn-play-pause" title="Play/Pause">▶️</button>
             <button id="btn-step-forward" title="Step Forward">⏭️</button>
-            
+
             <div class="speed-control">
               <label for="speed-slider">Speed:</label>
               <input type="range" id="speed-slider" min="0.5" max="10" step="0.5" value="1" />
@@ -71,20 +83,33 @@ export class ReplayApp {
               />
               <span id="speed-display">1.0x</span>
             </div>
-            
+
             <div class="popup-control">
               <label for="manual-popup-dismiss" title="When checked, popups will pause playback and wait for you to dismiss them">
                 <input type="checkbox" id="manual-popup-dismiss" checked />
                 Manual Popup Dismiss
               </label>
             </div>
-            
+
             <div class="event-progress">
               <span id="event-counter">Event: 0 / 0</span>
             </div>
-            
+
             <!-- Hidden jump control for automated testing/agents only -->
             <input type="hidden" id="agent-jump-to-event" data-testid="agent-jump-to-event" value="0" />
+          </div>
+
+          <div class="arena-controls" id="arena-controls" hidden>
+            <div class="arena-controls__header">
+              <h3>Arena</h3>
+              <p>Active bot: <span id="arena-selected-bot">No bot selected</span></p>
+            </div>
+            <p id="arena-status" class="arena-status" hidden></p>
+            <ul id="arena-participants" class="arena-participants"></ul>
+            <div class="arena-actions">
+              <button id="arena-start" class="primary-button">Start arena match</button>
+              <button id="arena-download" class="secondary-button" disabled>Download replay</button>
+            </div>
           </div>
         </div>
         
@@ -97,6 +122,42 @@ export class ReplayApp {
         </div>
       </div>
     `;
+  }
+
+  private initializeArenaElements(): void {
+    const container = this.rootMaybe<HTMLDivElement>("#arena-controls");
+    if (!container) {
+      this.arenaElements = null;
+      return;
+    }
+    this.arenaElements = {
+      container,
+      selectedBot: this.rootQuery<HTMLSpanElement>("#arena-selected-bot"),
+      status: this.rootQuery<HTMLParagraphElement>("#arena-status"),
+      participants: this.rootQuery<HTMLUListElement>("#arena-participants"),
+      startButton: this.rootQuery<HTMLButtonElement>("#arena-start"),
+      downloadButton: this.rootQuery<HTMLButtonElement>("#arena-download"),
+    };
+    this.resetArenaControls();
+  }
+
+  private resetArenaControls(): void {
+    if (!this.arenaElements) {
+      return;
+    }
+    const { container, status, participants, downloadButton, startButton } = this.arenaElements;
+    container.dataset.loading = "false";
+    container.hidden = true;
+    status.textContent = "";
+    status.hidden = true;
+    delete status.dataset.variant;
+    participants.innerHTML = "";
+    const placeholder = document.createElement("li");
+    placeholder.textContent = "No match loaded yet.";
+    participants.appendChild(placeholder);
+    downloadButton.disabled = true;
+    startButton.disabled = true;
+    this.hasArenaBotSelected = false;
   }
 
   private setupEventListeners(): void {
@@ -157,6 +218,18 @@ export class ReplayApp {
 
     // Ensure the speed controls reflect the initial state
     this.updateSpeedControls(this.player.getPlaybackState().speed);
+
+    const arenaStartButton = this.rootMaybe<HTMLButtonElement>("#arena-start");
+    arenaStartButton?.addEventListener("click", () => {
+      if (!this.arenaStartHandler) return;
+      void Promise.resolve(this.arenaStartHandler());
+    });
+
+    const arenaDownloadButton = this.rootMaybe<HTMLButtonElement>("#arena-download");
+    arenaDownloadButton?.addEventListener("click", () => {
+      if (!this.arenaDownloadHandler) return;
+      void Promise.resolve(this.arenaDownloadHandler());
+    });
   }
 
   public async loadReplayFromData(data: ReplayData, label = "Replay"): Promise<void> {
@@ -171,6 +244,89 @@ export class ReplayApp {
 
     this.rootQuery<HTMLDivElement>("#playback-controls").style.display = "flex";
     this.rootQuery<HTMLSpanElement>("#file-name").textContent = label;
+  }
+
+  public showArenaControls(): void {
+    if (!this.arenaElements) return;
+    this.arenaElements.container.hidden = false;
+  }
+
+  public hideArenaControls(): void {
+    this.resetArenaControls();
+  }
+
+  public setArenaSelectedBot(botName: string | null): void {
+    if (!this.arenaElements) return;
+    this.hasArenaBotSelected = Boolean(botName);
+    this.arenaElements.selectedBot.textContent = botName ?? "No bot selected";
+    if (!botName) {
+      this.arenaElements.selectedBot.dataset.state = "empty";
+    } else {
+      delete this.arenaElements.selectedBot.dataset.state;
+    }
+    const loading = this.isArenaLoading();
+    this.arenaElements.startButton.disabled = !this.hasArenaBotSelected || loading;
+  }
+
+  public setArenaStatus(
+    message: string,
+    variant: "info" | "positive" | "negative" = "info"
+  ): void {
+    if (!this.arenaElements) return;
+    const { status } = this.arenaElements;
+    status.textContent = message;
+    if (!message) {
+      status.hidden = true;
+      delete status.dataset.variant;
+    } else {
+      status.hidden = false;
+      status.dataset.variant = variant;
+    }
+  }
+
+  public setArenaParticipants(participants: ReplayParticipantSummary[]): void {
+    if (!this.arenaElements) return;
+    const list = this.arenaElements.participants;
+    list.innerHTML = "";
+    if (participants.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "No match loaded yet.";
+      list.appendChild(li);
+      return;
+    }
+    participants
+      .slice()
+      .sort((a, b) => a.placement - b.placement)
+      .forEach((participant) => {
+        const li = document.createElement("li");
+        const winner = participant.is_winner ? " 🏆" : "";
+        li.textContent = `${participant.placement}. ${participant.bot_label}${winner}`;
+        list.appendChild(li);
+      });
+  }
+
+  public setArenaLoading(loading: boolean): void {
+    if (!this.arenaElements) return;
+    this.arenaElements.container.dataset.loading = loading ? "true" : "false";
+    this.arenaElements.startButton.disabled = loading || !this.hasArenaBotSelected;
+  }
+
+  public enableArenaDownload(enabled: boolean): void {
+    if (!this.arenaElements) return;
+    this.arenaElements.downloadButton.disabled = !enabled;
+  }
+
+  public onArenaStart(handler: (() => Promise<void> | void) | null): void {
+    this.arenaStartHandler = handler;
+  }
+
+  public onArenaDownload(handler: (() => Promise<void> | void) | null): void {
+    this.arenaDownloadHandler = handler;
+  }
+
+  private isArenaLoading(): boolean {
+    if (!this.arenaElements) return false;
+    return this.arenaElements.container.dataset.loading === "true";
   }
 
   private async handleFileLoad(e: Event): Promise<void> {

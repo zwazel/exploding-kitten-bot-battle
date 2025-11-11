@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { Buffer } from 'buffer';
 
 /**
  * Arena Authentication and Bot Management Integration Tests
@@ -21,18 +22,50 @@ const mockToken = { access_token: 'mock-jwt-token-12345' };
 const mockBots = [
   {
     id: 1,
-    name: 'TestBot1',
-    label: 'testuser_testbot1',
+    name: 'testbot',
+    qualified_name: 'testuser_testbot',
     created_at: '2025-01-01T00:00:00Z',
-    versions_count: 2,
-    latest_version: 2,
+    current_version: {
+      id: 10,
+      version_number: 1,
+      created_at: '2025-01-01T01:00:00Z',
+      is_active: true,
+      file_hash: 'abc12345',
+    },
   },
 ];
 
+const mockProfiles: Record<number, unknown> = {
+  1: {
+    id: 1,
+    name: 'testbot',
+    qualified_name: 'testuser_testbot',
+    created_at: '2025-01-01T00:00:00Z',
+    current_version: {
+      id: 10,
+      version_number: 1,
+      created_at: '2025-01-01T01:00:00Z',
+      is_active: true,
+      file_hash: 'abc12345',
+    },
+    versions: [
+      {
+        id: 10,
+        version_number: 1,
+        created_at: '2025-01-01T01:00:00Z',
+        is_active: true,
+        file_hash: 'abc12345',
+      },
+    ],
+    recent_replays: [],
+  },
+};
+
 test.describe('Arena - Full Integration Tests', () => {
-  test('should complete full bot creation flow with mocked backend', async ({ page }) => {
-    let botsCreated = 0;
-    
+  test('should complete bot upload flow with mocked backend', async ({ page }) => {
+    let uploadCount = 0;
+    let bots = [...mockBots];
+
     // Mock authentication endpoints
     await page.route('**/auth/login', async (route) => {
       await route.fulfill({ json: mockToken });
@@ -42,28 +75,59 @@ test.describe('Arena - Full Integration Tests', () => {
       await route.fulfill({ json: mockUser });
     });
 
-    // Mock bots endpoint
     await page.route('**/bots', async (route) => {
       if (route.request().method() === 'GET') {
-        await route.fulfill({ json: mockBots });
-      } else if (route.request().method() === 'POST') {
-        botsCreated++;
-        const body = JSON.parse(await route.request().postData() || '{}');
-        const newBot = {
-          id: 2 + botsCreated,
-          name: body.name,
-          label: `testuser_${body.name.toLowerCase()}`,
-          created_at: new Date().toISOString(),
-          versions_count: 0,
-          latest_version: 0,
-        };
-        await route.fulfill({ json: newBot, status: 201 });
+        await route.fulfill({ json: bots });
       }
+    });
+
+    await page.route('**/bots/*', async (route) => {
+      if (route.request().method() === 'GET') {
+        const url = new URL(route.request().url());
+        const id = Number.parseInt(url.pathname.split('/').pop() ?? '', 10);
+        const profile = mockProfiles[id];
+        await route.fulfill({ json: profile ?? mockProfiles[1] });
+      }
+    });
+
+    await page.route('**/bots/upload', async (route) => {
+      uploadCount++;
+      const headers = route.request().headers();
+      expect(headers['content-type']).toContain('multipart/form-data');
+
+      const newBotId = 100 + uploadCount;
+      const botSummary = {
+        id: newBotId,
+        name: 'uploadbot',
+        qualified_name: 'testuser_uploadbot',
+        created_at: new Date().toISOString(),
+        current_version: {
+          id: 900 + uploadCount,
+          version_number: 1,
+          created_at: new Date().toISOString(),
+          is_active: true,
+          file_hash: 'feedbeef',
+        },
+      };
+      bots = [botSummary, ...mockBots];
+      mockProfiles[newBotId] = {
+        ...botSummary,
+        versions: [botSummary.current_version],
+        recent_replays: [],
+      };
+
+      await route.fulfill({
+        json: {
+          status: 'created',
+          bot: botSummary,
+          version: botSummary.current_version,
+        },
+      });
     });
 
     // Go to page
     await page.goto('/');
-    
+
     // Navigate to Arena tab
     await page.locator('button[data-view="arena"]').click();
     
@@ -79,29 +143,24 @@ test.describe('Arena - Full Integration Tests', () => {
     
     // Wait for dashboard to be visible
     await expect(page.locator('.arena-dashboard')).toBeVisible({ timeout: 5000 });
-    
+
     // Verify user info is displayed
     await expect(page.locator('#arena-user-info')).toContainText('Test User');
-    
-    // Fill in bot creation form
-    const botNameInput = page.locator('#bot-name');
-    await botNameInput.fill('MyTestBot');
-    
-    // Verify the input is valid
-    const isValid = await botNameInput.evaluate((el: HTMLInputElement) => el.validity.valid);
-    expect(isValid).toBe(true);
-    
-    // Submit bot creation form
-    await page.locator('#create-bot-form button[type="submit"]').click();
-    
-    // Wait a moment for the bot to be created
-    await page.waitForTimeout(500);
-    
-    // Verify a bot was created via API
-    expect(botsCreated).toBe(1);
+
+    // Upload a bot file
+    await page.setInputFiles('#bot-file', {
+      name: 'UploadBot.py',
+      mimeType: 'text/x-python',
+      buffer: Buffer.from('class Bot: pass'),
+    });
+
+    await page.locator('#upload-form button[type="submit"]').click();
+
+    await expect(page.locator('#upload-feedback')).toContainText('Created bot');
+    expect(uploadCount).toBe(1);
   });
 
-  test('should prevent invalid bot names from being submitted', async ({ page }) => {
+  test('should enable arena match controls after login', async ({ page }) => {
     // Mock authentication endpoints
     await page.route('**/auth/login', async (route) => {
       await route.fulfill({ json: mockToken });
@@ -112,14 +171,16 @@ test.describe('Arena - Full Integration Tests', () => {
     });
 
     await page.route('**/bots', async (route) => {
-      if (route.request().method() === 'GET') {
-        await route.fulfill({ json: mockBots });
-      }
+      await route.fulfill({ json: mockBots });
+    });
+
+    await page.route('**/bots/1', async (route) => {
+      await route.fulfill({ json: mockProfiles[1] });
     });
 
     // Go to page
     await page.goto('/');
-    
+
     // Navigate to Arena tab
     await page.locator('button[data-view="arena"]').click();
     
@@ -127,25 +188,16 @@ test.describe('Arena - Full Integration Tests', () => {
     await page.locator('#login-form input[name="email"]').fill('test@example.com');
     await page.locator('#login-form input[name="password"]').fill('password123');
     await page.locator('#login-form button[type="submit"]').click();
-    
+
     // Wait for dashboard
     await expect(page.locator('.arena-dashboard')).toBeVisible({ timeout: 5000 });
-    
-    // Try to create a bot with invalid name (spaces)
-    const botNameInput = page.locator('#bot-name');
-    await botNameInput.fill('Invalid Bot Name');
-    
-    // Verify the input is invalid
-    const isValid = await botNameInput.evaluate((el: HTMLInputElement) => el.validity.valid);
-    expect(isValid).toBe(false);
-    
-    // Try to submit (should be prevented by HTML5 validation)
-    const createButton = page.locator('#create-bot-form button[type="submit"]');
-    await createButton.click();
-    
-    // Check that the validation message appears
-    const validationMessage = await botNameInput.evaluate((el: HTMLInputElement) => el.validationMessage);
-    expect(validationMessage).not.toBe('');
+
+    // Switch back to viewer to inspect embedded arena controls
+    await page.locator('button[data-view="viewer"]').click();
+
+    // Arena controls should be visible with a start button
+    await expect(page.locator('#arena-controls')).toBeVisible();
+    await expect(page.locator('#arena-start')).toBeEnabled();
   });
 
   test('should show logout button when logged in', async ({ page }) => {
@@ -160,6 +212,10 @@ test.describe('Arena - Full Integration Tests', () => {
 
     await page.route('**/bots', async (route) => {
       await route.fulfill({ json: mockBots });
+    });
+
+    await page.route('**/bots/1', async (route) => {
+      await route.fulfill({ json: mockProfiles[1] });
     });
 
     // Go to page

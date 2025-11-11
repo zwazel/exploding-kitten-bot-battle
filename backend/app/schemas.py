@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
@@ -35,6 +36,7 @@ class BotVersionSummary(BaseModel):
     version_number: int
     created_at: datetime
     is_active: bool
+    file_hash: Optional[str]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -84,9 +86,26 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class UploadResponse(BaseModel):
-    bot_version: BotVersionSummary
+class BotUploadStatus(str, Enum):
+    CREATED = "created"
+    NEW_VERSION = "new_version"
+    REVERTED = "reverted"
+    UNCHANGED = "unchanged"
+
+
+class BotUploadResponse(BaseModel):
+    status: BotUploadStatus
+    bot: BotSummary
+    version: BotVersionSummary
+
+
+class ArenaMatchRequest(BaseModel):
+    bot_id: int
+
+
+class ArenaMatchResponse(BaseModel):
     replay: ReplaySummary
+    replay_data: dict
 
 
 __all__ = [
@@ -97,7 +116,10 @@ __all__ = [
     "BotProfile",
     "BotCreateRequest",
     "LoginRequest",
-    "UploadResponse",
+    "BotUploadStatus",
+    "BotUploadResponse",
+    "ArenaMatchRequest",
+    "ArenaMatchResponse",
     "BotVersionSummary",
     "ReplaySummary",
     "ReplayParticipantSummary",

@@ -200,12 +200,6 @@ body {
   gap: 1rem;
 }
 
-.bot-create-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 .bot-selector {
   display: flex;
   flex-wrap: wrap;
@@ -331,6 +325,69 @@ body {
 
 .playback-controls button:hover {
   background: rgba(99, 102, 241, 0.25);
+}
+
+.arena-controls {
+  margin-top: 1.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+  padding-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.arena-controls[data-loading="true"] {
+  opacity: 0.7;
+}
+
+.arena-controls__header {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.arena-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.arena-status {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.arena-status[data-variant="positive"] {
+  color: #047857;
+}
+
+.arena-status[data-variant="negative"] {
+  color: #b91c1c;
+}
+
+.arena-status[data-variant="info"] {
+  color: #1d4ed8;
+}
+
+.arena-status[hidden] {
+  display: none;
+}
+
+.arena-participants {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: #1f2937;
+  font-size: 0.95rem;
+}
+
+#arena-selected-bot[data-state="empty"] {
+  color: #64748b;
 }
 
 .speed-control,

@@ -10,7 +10,7 @@ test.describe('Replay Viewer - File Upload', () => {
     
     // Upload the test replay file
     const filePath = path.join(__dirname, 'fixtures', 'test_replay.json');
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await fileInput.setInputFiles(filePath);
     
     // Check that the file name is displayed
@@ -27,7 +27,7 @@ test.describe('Replay Viewer - File Upload', () => {
     
     // Upload the test replay file
     const filePath = path.join(__dirname, 'fixtures', 'test_replay.json');
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await fileInput.setInputFiles(filePath);
     
     // Wait for playback controls to be visible (indicates file is loaded)
