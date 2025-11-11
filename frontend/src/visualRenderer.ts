@@ -31,45 +31,22 @@ export class VisualRenderer {
    */
   private setupLayout(): void {
     this.container.innerHTML = `
-      <div class="visual-layout" style="display: flex; gap: 1rem;">
-        <!-- Main game area -->
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 1rem;">
-          <!-- Game info header -->
-          <div id="game-info" class="game-info" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333;">
-          </div>
-          
-          <!-- Visual game board -->
-          <div id="visual-board">
-          </div>
-          
-          <!-- Event History -->
-          <div id="event-history" class="event-history" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333;">
-            <h3 style="color: #888; margin: 0 0 0.5rem 0;">Event History</h3>
-            <div id="history-content" class="history-content" style="max-height: 300px; overflow-y: auto; background: #0f0f0f; border-radius: 6px; padding: 0.5rem;">
-              <em style="color: #888;">No events yet</em>
-            </div>
-          </div>
+      <div class="visual-layout">
+        <section id="game-info" class="game-info"></section>
+        <div class="visual-board-shell">
+          <div id="visual-board" class="visual-board"></div>
         </div>
-        
-        <!-- Sidebar -->
-        <div style="width: 200px; display: flex; flex-direction: column; gap: 1rem;">
-          <!-- Card tracker -->
-          <div id="card-tracker" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333;">
-            <h3 style="color: #646cff; margin: 0 0 1rem 0; font-size: 1rem;">Cards in Deck</h3>
-            <div id="card-counts" style="display: flex; flex-direction: column; gap: 0.25rem;">
-            </div>
+        <section id="event-history" class="event-history">
+          <header class="event-history__header">
+            <h3>Event history</h3>
+          </header>
+          <div id="history-content" class="history-content">
+            <em>No events yet</em>
           </div>
-          
-          <!-- Color legend -->
-          <div id="color-legend" style="background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px solid #333; height: fit-content; position: sticky; top: 1rem;">
-            <h3 style="color: #646cff; margin: 0 0 1rem 0; font-size: 1rem;">Card Colors</h3>
-            <div id="legend-items" style="display: flex; flex-direction: column; gap: 0.5rem;">
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
     `;
-    
+
     // Populate legend
     this.populateLegend();
   }
@@ -78,18 +55,20 @@ export class VisualRenderer {
    * Populate the color legend
    */
   private populateLegend(): void {
-    const legendItems = document.querySelector("#legend-items") as HTMLElement;
+    const legendItems = document.querySelector("#legend-items") as HTMLElement | null;
     if (!legendItems) return;
 
-    const items = Object.entries(CARD_COLORS).map(([cardType, color]) => {
-      const displayName = cardType.replace(/_/g, " ");
-      return `
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <div style="width: 20px; height: 20px; background: ${color}; border: 1px solid #333; border-radius: 3px; flex-shrink: 0;"></div>
-          <div style="color: #ccc; font-size: 0.75rem; line-height: 1.2;">${this.escapeHtml(displayName)}</div>
-        </div>
-      `;
-    }).join('');
+    const items = Object.entries(CARD_COLORS)
+      .map(([cardType, color]) => {
+        const displayName = cardType.replace(/_/g, " ");
+        return `
+          <div class="legend-item">
+            <span class="legend-item__swatch" style="--swatch-color: ${color};"></span>
+            <span class="legend-item__label">${this.escapeHtml(displayName)}</span>
+          </div>
+        `;
+      })
+      .join("");
 
     legendItems.innerHTML = items;
   }
@@ -162,7 +141,7 @@ export class VisualRenderer {
    * Render the card counts in the UI
    */
   private renderCardCounts(): void {
-    const cardCountsEl = document.querySelector("#card-counts") as HTMLElement;
+    const cardCountsEl = document.querySelector("#card-counts") as HTMLElement | null;
     if (!cardCountsEl) return;
 
     // Sort cards by count (descending) then by name
@@ -174,25 +153,35 @@ export class VisualRenderer {
       });
 
     if (sortedCards.length === 0) {
-      cardCountsEl.innerHTML = '<div style="color: #888; font-size: 0.75rem;">Deck empty</div>';
+      cardCountsEl.innerHTML = '<div class="card-counts__empty">Deck empty</div>';
       return;
     }
 
-    const html = sortedCards.map(([cardType, count]) => {
-      const displayName = cardType.replace(/_/g, " ");
-      const color = CARD_COLORS[cardType] || "#666";
-      return `
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
-          <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
-            <div style="width: 12px; height: 12px; background: ${color}; border: 1px solid #333; border-radius: 2px; flex-shrink: 0;"></div>
-            <div style="color: #ccc; font-size: 0.7rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.escapeHtml(displayName)}">${this.escapeHtml(displayName)}</div>
+    const html = sortedCards
+      .map(([cardType, count]) => {
+        const displayName = cardType.replace(/_/g, " ");
+        const color = CARD_COLORS[cardType] || "#666";
+        return `
+          <div class="card-count-row">
+            <span class="card-count-row__label">
+              <span class="card-count-row__swatch" style="--swatch-color: ${color};"></span>
+              <span class="card-count-row__name" title="${this.escapeHtml(displayName)}">${this.escapeHtml(displayName)}</span>
+            </span>
+            <span class="card-count-row__value">${count}</span>
           </div>
-          <div style="color: #fff; font-size: 0.75rem; font-weight: bold; flex-shrink: 0;">${count}</div>
-        </div>
-      `;
-    }).join('');
+        `;
+      })
+      .join("");
 
     cardCountsEl.innerHTML = html;
+  }
+
+  public refreshLayout(): void {
+    this.gameBoard.refreshLayout();
+  }
+
+  public dismissPopups(): void {
+    this.animationController.dismissPopups();
   }
 
   /**

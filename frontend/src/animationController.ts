@@ -31,6 +31,10 @@ export class AnimationController {
     this.specialAnimator.setSpeed(speed);
   }
 
+  dismissPopups(): void {
+    this.specialAnimator.dismissAll();
+  }
+
   /**
    * Initialize game with players
    */
