@@ -94,7 +94,7 @@ export class ArenaApp {
             <h3>Manage bots</h3>
             <form id="create-bot-form" class="bot-create-form">
               <label for="bot-name">New bot name</label>
-              <input id="bot-name" name="bot_name" type="text" pattern="[A-Za-z0-9_-]+" minlength="1" maxlength="120" required />
+              <input id="bot-name" name="bot_name" type="text" pattern="[A-Za-z0-9_\\-]+" minlength="1" maxlength="120" required />
               <button type="submit" class="primary-button">Create bot</button>
             </form>
             <div class="bot-selector">
