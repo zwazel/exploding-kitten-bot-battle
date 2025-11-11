@@ -9,7 +9,7 @@ test('card tracker displays and updates', async ({ page }) => {
   await page.goto('/');
   
   // Wait for the page to load
-  await expect(page.locator('h1')).toContainText('Exploding Kittens Replay Viewer');
+  await expect(page.getByRole('heading', { name: '🎮 Exploding Kittens Replay Viewer' })).toBeVisible();
   
   // Upload the replay file
   const filePath = path.join(__dirname, 'fixtures', 'test_replay.json');

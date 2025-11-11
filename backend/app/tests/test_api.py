@@ -98,28 +98,45 @@ def test_bot_lifecycle(client: TestClient) -> None:
     )
     token = login_resp.json()["access_token"]
 
-    create_resp = client.post(
-        "/bots",
-        json={"name": "arena_bot"},
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert create_resp.status_code == 201, create_resp.text
-    bot_id = create_resp.json()["id"]
-
-    list_resp = client.get("/bots", headers={"Authorization": f"Bearer {token}"})
-    assert list_resp.status_code == 200
-    assert len(list_resp.json()) == 1
-
     upload_resp = client.post(
-        f"/bots/{bot_id}/upload",
+        "/bots/upload",
         headers={"Authorization": f"Bearer {token}"},
         files={"file": ("TestBot.py", BOT_CODE, "text/x-python")},
     )
     assert upload_resp.status_code == 200, upload_resp.text
     payload = upload_resp.json()
-    assert payload["bot_version"]["version_number"] == 1
-    replay_id = payload["replay"]["id"]
-    assert replay_id > 0
+    assert payload["status"] == "created"
+    bot_id = payload["bot"]["id"]
+    assert payload["bot"]["name"] == "testbot"
+    assert payload["version"]["version_number"] == 1
+
+    list_resp = client.get("/bots", headers={"Authorization": f"Bearer {token}"})
+    assert list_resp.status_code == 200
+    bots = list_resp.json()
+    assert len(bots) == 1
+    assert bots[0]["current_version"]["version_number"] == 1
+
+    # Upload a modified file to create a new version
+    upload_v2 = client.post(
+        "/bots/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("TestBot.py", BOT_CODE + "\n# tweak", "text/x-python")},
+    )
+    assert upload_v2.status_code == 200, upload_v2.text
+    payload_v2 = upload_v2.json()
+    assert payload_v2["status"] == "new_version"
+    assert payload_v2["version"]["version_number"] == 2
+
+    # Re-upload the original file to revert to version 1
+    revert_resp = client.post(
+        "/bots/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("TestBot.py", BOT_CODE, "text/x-python")},
+    )
+    assert revert_resp.status_code == 200, revert_resp.text
+    revert_payload = revert_resp.json()
+    assert revert_payload["status"] == "reverted"
+    assert revert_payload["version"]["version_number"] == 1
 
     profile_resp = client.get(
         f"/bots/{bot_id}", headers={"Authorization": f"Bearer {token}"}
@@ -127,7 +144,28 @@ def test_bot_lifecycle(client: TestClient) -> None:
     assert profile_resp.status_code == 200
     profile = profile_resp.json()
     assert profile["current_version"]["version_number"] == 1
-    assert profile["versions"][0]["is_active"] is True
+    assert len(profile["versions"]) == 2
+    hashes = {version["version_number"]: version["file_hash"] for version in profile["versions"]}
+    assert hashes[1] == revert_payload["version"]["file_hash"]
+
+    match_resp = client.post(
+        "/arena/matches",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"bot_id": bot_id},
+    )
+    assert match_resp.status_code == 200, match_resp.text
+    match_payload = match_resp.json()
+    replay_id = match_payload["replay"]["id"]
+    assert replay_id > 0
+    assert "events" in match_payload["replay_data"]
+
+    file_resp = client.get(
+        f"/replays/{replay_id}/file",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert file_resp.status_code == 200
+    data = json.loads(file_resp.content)
+    assert "events" in data
 
     replay_resp = client.get(
         f"/replays/{replay_id}",
@@ -137,14 +175,6 @@ def test_bot_lifecycle(client: TestClient) -> None:
     replay_body = replay_resp.json()
     assert replay_body["winner_name"]
     assert replay_body["participants"]
-
-    file_resp = client.get(
-        f"/replays/{replay_id}/file",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert file_resp.status_code == 200
-    data = json.loads(file_resp.content)
-    assert "events" in data
 
     delete_resp = client.delete(
         f"/bots/{bot_id}", headers={"Authorization": f"Bearer {token}"}

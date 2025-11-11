@@ -16,7 +16,7 @@ test.describe('Deck and discard piles alignment', () => {
     await page.goto('/');
 
     const filePath = path.join(__dirname, 'fixtures', 'simple-game.json');
-    await page.locator('input[type="file"]').setInputFiles(filePath);
+    await page.locator('#file-input').setInputFiles(filePath);
 
     await page.waitForSelector('#deck-pile');
 

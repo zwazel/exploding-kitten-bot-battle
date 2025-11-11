@@ -8,16 +8,15 @@ test.describe('Replay Viewer - Basic UI', () => {
     await expect(page).toHaveTitle(/Exploding Kittens Replay Viewer/);
     
     // Check that the main heading is visible
-    const heading = page.locator('h1');
+    const heading = page.getByRole('heading', { name: '🎮 Exploding Kittens Replay Viewer' });
     await expect(heading).toBeVisible();
-    await expect(heading).toContainText('Exploding Kittens Replay Viewer');
   });
 
   test('should display file upload control', async ({ page }) => {
     await page.goto('/');
     
     // Check that the file input exists
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('#file-input');
     await expect(fileInput).toBeAttached();
     
     // Check that the file label is visible

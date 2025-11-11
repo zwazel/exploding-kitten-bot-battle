@@ -103,8 +103,8 @@ The app reads the backend origin from `VITE_API_BASE_URL` (defaults to `http://l
 
 1. Seed the arena with the reference bots using the admin setup script (see above) so there are opponents available.
 2. Sign up and log in through the “Arena” tab. Usernames are normalised to lowercase identifiers and combined with bot names to form global labels (`username_botname`).
-3. Create one or more bots from the dashboard, then upload Python files (`.py`) for each bot. The backend validates the class and stores a new version when the file hash changes.
-4. Every upload runs an arena match against a random set of up to four other active bots. The replay, placements, and bot version history become available in the dashboard and any replay can be downloaded or opened in the viewer tab.
+3. Upload Python bot files (`.py`) directly from the dashboard. The backend derives the bot name from the filename, validates the class, and stores a new version whenever the file hash changes. Re-uploading an older hash reactivates that version without deleting history.
+4. Start arena matches from the replay viewer. When logged in you can trigger a match for the selected bot, watch the participants load, and download the resulting replay once it finishes. Recent replays and version history remain accessible in the dashboard.
 
 ## Additional tooling
 

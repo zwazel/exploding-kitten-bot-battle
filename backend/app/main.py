@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from .config import get_settings
 from .migrations import run_migrations
+from .routers import arena as arena_router
 from .routers import auth as auth_router
 from .routers import bots as bots_router
 from .routers import replays as replays_router
@@ -68,6 +69,7 @@ app.add_middleware(
 
 app.include_router(auth_router.router)
 app.include_router(bots_router.router)
+app.include_router(arena_router.router)
 app.include_router(replays_router.router)
 
 

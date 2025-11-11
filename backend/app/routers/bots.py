@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import List
 
 from fastapi import (
@@ -21,16 +23,16 @@ from ..schemas import (
     BotCreateRequest,
     BotProfile,
     BotSummary,
+    BotUploadResponse,
+    BotUploadStatus,
     BotVersionSummary,
     ReplayParticipantSummary,
     ReplaySummary,
-    UploadResponse,
 )
 from ..services.bot_loader import require_bot
-from ..services.bot_versions import archive_versions, compute_file_hash
-from ..services.match_runner import run_match
+from ..services.bot_versions import compute_file_hash
 from ..services.storage import StorageManager
-from ..utils import enforce_bot_name
+from ..utils import clean_identifier, enforce_bot_name
 
 router = APIRouter(prefix="/bots", tags=["bots"])
 
@@ -43,6 +45,7 @@ def _bot_version_summary(version: models.BotVersion, active_id: int) -> BotVersi
         version_number=version.version_number,
         created_at=version.created_at,
         is_active=version.id == active_id,
+        file_hash=version.file_hash,
     )
 
 
@@ -160,58 +163,120 @@ def get_bot(
     return _bot_detail(bot, db)
 
 
-@router.post("/{bot_id}/upload", response_model=UploadResponse)
-def upload_bot_version(
-    bot_id: int,
+def _derive_bot_name(filename: str) -> str:
+    stem = Path(filename).stem
+    if not stem:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to derive bot name from filename",
+        )
+    try:
+        cleaned = clean_identifier(stem)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bot filename must contain alphanumeric characters",
+        ) from exc
+    try:
+        return enforce_bot_name(cleaned)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/upload", response_model=BotUploadResponse)
+def upload_bot(
     file: UploadFile = File(...),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> UploadResponse:
-    bot = _get_user_bot(db, current_user, bot_id)
-
+) -> BotUploadResponse:
     if not file.filename or not file.filename.endswith(".py"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only .py files are supported")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only .py files are supported",
+        )
 
-    next_version = (bot.versions[-1].version_number + 1) if bot.versions else 1
-    saved_path = storage.save_bot_file(current_user.id, bot.id, next_version, file)
+    bot_name = _derive_bot_name(file.filename)
+
+    bot = (
+        db.query(models.Bot)
+        .filter(models.Bot.user_id == current_user.id)
+        .filter(models.Bot.name == bot_name)
+        .first()
+    )
+    if not bot:
+        bot = models.Bot(user_id=current_user.id, name=bot_name)
+        bot.owner = current_user
+        db.add(bot)
+        db.flush()
+
+    content = file.file.read()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty",
+        )
+
+    with NamedTemporaryFile("wb", suffix=".py", delete=False) as handle:
+        handle.write(content)
+        temp_path = Path(handle.name)
 
     try:
-        require_bot(saved_path, f"user_{current_user.id}_{bot.id}_{next_version}", bot.qualified_name)
-    except Exception:
-        storage.archive_bot_files([saved_path])
-        raise
+        require_bot(temp_path, f"user_{current_user.id}_{bot.id}", bot.qualified_name)
+        file_hash = compute_file_hash(temp_path)
+    finally:
+        temp_path.unlink(missing_ok=True)
 
-    file_hash = compute_file_hash(saved_path)
-
-    old_versions = [v for v in bot.versions if v.file_path]
-    old_paths = archive_versions(db, old_versions)
-
-    version = models.BotVersion(
-        bot_id=bot.id,
-        version_number=next_version,
-        file_path=str(saved_path),
-        file_hash=file_hash,
+    previous_active = bot.current_version_id
+    matching_version = next(
+        (version for version in bot.versions if version.file_hash == file_hash),
+        None,
     )
-    db.add(version)
-    db.flush()
 
-    bot.current_version_id = version.id
-    db.add(bot)
+    if matching_version:
+        stored_path = Path(matching_version.file_path or "")
+        if not stored_path.exists():
+            restored = storage.write_bot_file(
+                current_user.id, bot.id, matching_version.version_number, content
+            )
+            matching_version.file_path = str(restored)
+            db.add(matching_version)
+        bot.current_version_id = matching_version.id
+        db.add(bot)
+        status = (
+            BotUploadStatus.UNCHANGED
+            if previous_active == matching_version.id
+            else BotUploadStatus.REVERTED
+        )
+        db.flush()
+        db.refresh(bot)
+        version_summary = _bot_version_summary(matching_version, bot.current_version_id or -1)
+    else:
+        next_version = (
+            max((version.version_number for version in bot.versions), default=0) + 1
+        )
+        saved_path = storage.write_bot_file(current_user.id, bot.id, next_version, content)
+        version = models.BotVersion(
+            bot_id=bot.id,
+            version_number=next_version,
+            file_path=str(saved_path),
+            file_hash=file_hash,
+        )
+        db.add(version)
+        db.flush()
 
-    storage.archive_bot_files(old_paths)
-    db.flush()
+        bot.current_version_id = version.id
+        db.add(bot)
+        db.flush()
+        db.refresh(bot)
 
-    try:
-        match_result = run_match(db, version, storage)
-    except Exception:
-        db.rollback()
-        storage.archive_bot_files([saved_path])
-        raise
+        status = (
+            BotUploadStatus.CREATED if next_version == 1 else BotUploadStatus.NEW_VERSION
+        )
+        version_summary = _bot_version_summary(version, bot.current_version_id or -1)
 
-    return UploadResponse(
-        bot_version=_bot_version_summary(version, version.id),
-        replay=_replay_summary(match_result.replay),
-    )
+    summary = _bot_summary(bot)
+
+    return BotUploadResponse(status=status, bot=summary, version=version_summary)
 
 
 @router.delete("/{bot_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -221,8 +286,8 @@ def delete_bot(
     db: Session = Depends(get_db),
 ) -> None:
     bot = _get_user_bot(db, current_user, bot_id)
-    old_paths = archive_versions(db, [v for v in bot.versions if v.file_path])
-    storage.archive_bot_files(old_paths)
+    paths = [Path(v.file_path) for v in bot.versions if v.file_path]
+    storage.archive_bot_files(paths)
     db.delete(bot)
     db.flush()
 

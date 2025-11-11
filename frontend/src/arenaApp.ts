@@ -1,5 +1,4 @@
 import {
-  createBot,
   deleteBot,
   downloadReplayFile,
   fetchReplayMetadata,
@@ -9,9 +8,16 @@ import {
   listBots,
   login,
   signup,
-  uploadBotFile,
+  startArenaMatch,
+  uploadBot,
 } from "./api/client";
-import type { BotProfile, BotSummary, ReplaySummary, User } from "./api/types";
+import type {
+  BotProfile,
+  BotSummary,
+  BotUploadResponse,
+  ReplaySummary,
+  User,
+} from "./api/types";
 import { ReplayApp } from "./replayApp";
 
 const TOKEN_STORAGE_KEY = "exploding-kitten-arena-token";
@@ -44,6 +50,7 @@ export class ArenaApp {
   private bots: BotSummary[] = [];
   private selectedBotId: number | null = null;
   private profile: BotProfile | null = null;
+  private lastReplayId: number | null = null;
 
   constructor(root: HTMLElement, replayApp: ReplayApp, options: ArenaOptions = {}) {
     this.root = root;
@@ -91,29 +98,25 @@ export class ArenaApp {
           </div>
 
           <section class="card bot-management">
-            <h3>Manage bots</h3>
-            <form id="create-bot-form" class="bot-create-form">
-              <label for="bot-name">New bot name</label>
-              <input id="bot-name" name="bot_name" type="text" pattern="[A-Za-z0-9_\\-]+" minlength="1" maxlength="120" required />
-              <button type="submit" class="primary-button">Create bot</button>
-            </form>
+            <h3>Your bots</h3>
+            <p class="subtle">Upload a Python file to create a bot automatically. The filename becomes the bot name.</p>
             <div class="bot-selector">
-              <label for="bot-select">Your bots</label>
+              <label for="bot-select">Active bot for arena matches</label>
               <select id="bot-select"></select>
               <button type="button" id="refresh-bots" class="secondary-button">Refresh</button>
               <button type="button" id="delete-bot" class="secondary-button">Delete selected</button>
             </div>
+            <p class="subtle">Selected bot: <span id="selected-bot-name">None</span></p>
             <p class="form-feedback" id="bot-feedback"></p>
           </section>
 
           <section class="card upload-card">
-            <h3>Upload a new version</h3>
-            <p class="subtle">Selected bot: <span id="selected-bot-name">None</span></p>
+            <h3>Upload a bot file</h3>
+            <p class="subtle">Drop in a <code>.py</code> file to create a new bot or version. Hashes detect unchanged uploads.</p>
             <form id="upload-form" class="upload-form">
               <input type="file" id="bot-file" name="bot" accept=".py" required />
-              <button type="submit" class="primary-button">Upload &amp; run arena match</button>
+              <button type="submit" class="primary-button">Upload bot</button>
             </form>
-            <p class="subtle">Uploading a new file adds a version for the selected bot. The arena will immediately run a match and record the replay.</p>
             <p class="form-feedback" id="upload-feedback"></p>
           </section>
 
@@ -152,11 +155,13 @@ export class ArenaApp {
       this.user = await getCurrentUser(this.token);
       await this.reloadBots();
       this.showDashboard();
+      this.configureArenaIntegration(true);
       this.updateDashboard();
     } catch (error) {
       console.error("Failed to restore session", error);
       this.setFeedback("login-feedback", "Unable to restore session. Please log in again.", false);
       this.clearToken();
+      this.configureArenaIntegration(false);
       this.showAuthPanels();
     }
   }
@@ -208,6 +213,7 @@ export class ArenaApp {
       this.bots = [];
       this.selectedBotId = null;
       this.profile = null;
+      this.configureArenaIntegration(false);
       this.showAuthPanels();
     });
   }
@@ -222,10 +228,6 @@ export class ArenaApp {
         this.setFeedback("upload-feedback", "Log in to upload a bot.", false);
         return;
       }
-      if (!this.selectedBotId) {
-        this.setFeedback("upload-feedback", "Create and select a bot first.", false);
-        return;
-      }
       const fileInput = this.root.querySelector<HTMLInputElement>("#bot-file");
       const file = fileInput?.files?.[0];
       if (!file) {
@@ -233,24 +235,11 @@ export class ArenaApp {
         return;
       }
       try {
-        this.setFeedback("upload-feedback", "Uploading and running match…", true);
-        const result = await uploadBotFile(this.token, this.selectedBotId, file);
-        const summaryPlacements = (result.replay.summary as Record<string, unknown>).placements;
-        let placementText = "Match completed.";
-        if (Array.isArray(summaryPlacements)) {
-          const entries = summaryPlacements
-            .filter((entry): entry is [string, number] => Array.isArray(entry) && entry.length === 2)
-            .map(([name, place]) => `${place}. ${name}`);
-          if (entries.length) {
-            placementText = entries.join(" | ");
-          }
-        }
-        this.setFeedback(
-          "upload-feedback",
-          `Match finished. Winner: ${result.replay.winner_name}. Placements: ${placementText}.`,
-          true
-        );
-        await this.reloadBots(this.selectedBotId);
+        this.setFeedback("upload-feedback", "Uploading bot…", true);
+        const response = await uploadBot(this.token, file);
+        await this.reloadBots(response.bot.id);
+        this.updateArenaSelection();
+        this.setFeedback("upload-feedback", this.describeUploadResult(response), true);
       } catch (error) {
         this.setFeedback("upload-feedback", (error as Error).message, false);
       } finally {
@@ -260,39 +249,16 @@ export class ArenaApp {
   }
 
   private attachBotManagementHandlers(): void {
-    const createForm = this.root.querySelector<HTMLFormElement>("#create-bot-form");
     const select = this.root.querySelector<HTMLSelectElement>("#bot-select");
     const refreshButton = this.root.querySelector<HTMLButtonElement>("#refresh-bots");
     const deleteButton = this.root.querySelector<HTMLButtonElement>("#delete-bot");
-
-    createForm?.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      if (!this.token) {
-        this.setFeedback("bot-feedback", "Log in to create bots.", false);
-        return;
-      }
-      const formData = new FormData(createForm);
-      const name = (formData.get("bot_name") as string).trim();
-      if (!name) {
-        this.setFeedback("bot-feedback", "Provide a bot name.", false);
-        return;
-      }
-      try {
-        this.setFeedback("bot-feedback", "Creating bot…", true);
-        const summary = await createBot(this.token, name);
-        await this.reloadBots(summary.id);
-        this.setFeedback("bot-feedback", `Bot ${summary.qualified_name} created.`, true);
-        createForm.reset();
-      } catch (error) {
-        this.setFeedback("bot-feedback", (error as Error).message, false);
-      }
-    });
 
     select?.addEventListener("change", async () => {
       const value = select.value;
       this.selectedBotId = value ? Number.parseInt(value, 10) : null;
       await this.loadSelectedBot();
       this.updateDashboard();
+      this.updateArenaSelection();
     });
 
     refreshButton?.addEventListener("click", async () => {
@@ -308,6 +274,7 @@ export class ArenaApp {
       try {
         await deleteBot(this.token, this.selectedBotId);
         await this.reloadBots();
+        this.updateArenaSelection();
         this.setFeedback("bot-feedback", "Bot deleted.", true);
       } catch (error) {
         this.setFeedback("bot-feedback", (error as Error).message, false);
@@ -347,6 +314,7 @@ export class ArenaApp {
     this.renderBotSelector();
     await this.loadSelectedBot();
     this.updateDashboard();
+    this.updateArenaSelection();
     if (selectElement) {
       selectElement.value = this.selectedBotId !== null ? String(this.selectedBotId) : "";
     }
@@ -392,14 +360,6 @@ export class ArenaApp {
       const active = this.bots.find((bot) => bot.id === this.selectedBotId);
       selectedName.textContent = active ? active.qualified_name : "None";
     }
-
-    const uploadForm = this.root.querySelector<HTMLFormElement>("#upload-form");
-    const uploadInputs = uploadForm ? Array.from(uploadForm.elements) : [];
-    uploadInputs.forEach((element) => {
-      if (element instanceof HTMLInputElement || element instanceof HTMLButtonElement) {
-        element.disabled = this.selectedBotId === null;
-      }
-    });
   }
 
   private async viewReplay(replayId: number, target: HTMLElement): Promise<void> {
@@ -457,8 +417,9 @@ export class ArenaApp {
       } else {
         const currentVersion = this.profile.current_version;
         const createdText = formatDate(this.profile.created_at);
+        const hashSuffix = currentVersion?.file_hash ? ` (hash ${currentVersion.file_hash.slice(0, 8)})` : "";
         const versionInfo = currentVersion
-          ? `Active version <strong>${currentVersion.version_number}</strong> uploaded ${formatDate(currentVersion.created_at)}.`
+          ? `Active version <strong>v${currentVersion.version_number}</strong>${hashSuffix} uploaded ${formatDate(currentVersion.created_at)}.`
           : "No versions uploaded yet.";
         currentBotContainer.innerHTML = `
           <p><strong>${this.profile.qualified_name}</strong></p>
@@ -476,7 +437,8 @@ export class ArenaApp {
       } else {
         this.profile.versions.forEach((version) => {
           const li = document.createElement("li");
-          li.textContent = `${version.version_number}. uploaded ${formatDate(version.created_at)}${version.is_active ? " (active)" : ""}`;
+          const hash = version.file_hash ? version.file_hash.slice(0, 8) : "n/a";
+          li.textContent = `v${version.version_number} · ${formatDate(version.created_at)} · hash ${hash}${version.is_active ? " (active)" : ""}`;
           versionsList.appendChild(li);
         });
       }
@@ -519,6 +481,23 @@ export class ArenaApp {
     }
   }
 
+  private describeUploadResult(result: BotUploadResponse): string {
+    const name = result.bot.qualified_name;
+    const version = result.version.version_number;
+    const hash = result.version.file_hash ? result.version.file_hash.slice(0, 8) : "unknown";
+    switch (result.status) {
+      case "created":
+        return `Created bot ${name} (v${version}, hash ${hash}).`;
+      case "new_version":
+        return `Uploaded new version v${version} for ${name} (hash ${hash}).`;
+      case "reverted":
+        return `Reverted ${name} to version v${version} (hash ${hash}).`;
+      case "unchanged":
+      default:
+        return `No changes detected for ${name}; staying on v${version}.`;
+    }
+  }
+
   private saveToken(token: string): void {
     this.token = token;
     window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
@@ -527,6 +506,90 @@ export class ArenaApp {
   private clearToken(): void {
     this.token = null;
     window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  }
+
+  private updateArenaSelection(): void {
+    if (!this.user) {
+      this.replayApp.hideArenaControls();
+      return;
+    }
+    this.replayApp.showArenaControls();
+    const active = this.bots.find((bot) => bot.id === this.selectedBotId) ?? null;
+    this.replayApp.setArenaSelectedBot(active ? active.qualified_name : null);
+    this.replayApp.enableArenaDownload(this.lastReplayId !== null);
+  }
+
+  private configureArenaIntegration(loggedIn: boolean): void {
+    if (loggedIn) {
+      this.replayApp.onArenaStart(() => this.runArenaMatch());
+      this.replayApp.onArenaDownload(() => this.downloadLatestReplay());
+      this.replayApp.enableArenaDownload(this.lastReplayId !== null);
+      this.replayApp.showArenaControls();
+      if (this.lastReplayId === null) {
+        this.replayApp.setArenaStatus("Select a bot and start an arena match.", "info");
+      }
+    } else {
+      this.replayApp.onArenaStart(null);
+      this.replayApp.onArenaDownload(null);
+      this.replayApp.hideArenaControls();
+      this.lastReplayId = null;
+    }
+  }
+
+  private async runArenaMatch(): Promise<void> {
+    if (!this.token) {
+      this.replayApp.setArenaStatus("Log in to start arena matches.", "negative");
+      return;
+    }
+    if (!this.selectedBotId) {
+      this.replayApp.setArenaStatus("Upload a bot and select it before starting a match.", "negative");
+      return;
+    }
+    try {
+      this.replayApp.setArenaStatus("Running arena match…", "info");
+      this.replayApp.setArenaLoading(true);
+      const response = await startArenaMatch(this.token, this.selectedBotId);
+      this.lastReplayId = response.replay.id;
+      this.replayApp.setArenaParticipants(response.replay.participants);
+      this.replayApp.setArenaStatus(`Winner: ${response.replay.winner_name}`, "positive");
+      this.replayApp.enableArenaDownload(true);
+      await this.replayApp.loadReplayFromData(
+        response.replay_data,
+        `Arena replay #${response.replay.id}`
+      );
+      this.onShowReplay?.();
+      await this.reloadBots(this.selectedBotId);
+    } catch (error) {
+      this.replayApp.setArenaStatus((error as Error).message, "negative");
+    } finally {
+      this.replayApp.setArenaLoading(false);
+    }
+  }
+
+  private async downloadLatestReplay(): Promise<void> {
+    if (!this.token) {
+      this.replayApp.setArenaStatus("Log in to download arena replays.", "negative");
+      return;
+    }
+    if (!this.lastReplayId) {
+      this.replayApp.setArenaStatus("Run a match to generate a replay first.", "negative");
+      return;
+    }
+    try {
+      this.replayApp.setArenaStatus("Downloading replay…", "info");
+      const blob = await downloadReplayFile(this.token, this.lastReplayId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `replay-${this.lastReplayId}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      this.replayApp.setArenaStatus("Replay downloaded.", "positive");
+    } catch (error) {
+      this.replayApp.setArenaStatus((error as Error).message, "negative");
+    }
   }
 
   private showDashboard(): void {

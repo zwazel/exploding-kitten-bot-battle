@@ -13,7 +13,7 @@ from .. import models
 from ..auth import hash_password
 from ..database import session_scope
 from ..services.bot_loader import require_bot
-from ..services.bot_versions import archive_versions, compute_file_hash
+from ..services.bot_versions import compute_file_hash
 from ..services.storage import StorageManager
 from ..utils import clean_identifier, enforce_bot_name, make_qualified_bot_name
 
@@ -74,12 +74,21 @@ def _sync_bot(
         session.flush()
 
     file_hash = compute_file_hash(source)
-    if bot.current_version and bot.current_version.file_hash == file_hash:
-        current_path = Path(bot.current_version.file_path or "")
+    existing_version = next(
+        (version for version in bot.versions if version.file_hash == file_hash),
+        None,
+    )
+
+    if existing_version:
+        current_path = Path(existing_version.file_path or "")
         if not current_path.exists():
-            destination = storage.copy_bot_file(user.id, bot.id, bot.current_version.version_number, source)
-            bot.current_version.file_path = str(destination)
-            session.add(bot.current_version)
+            destination = storage.copy_bot_file(
+                user.id, bot.id, existing_version.version_number, source
+            )
+            existing_version.file_path = str(destination)
+            session.add(existing_version)
+        bot.current_version_id = existing_version.id
+        session.add(bot)
         return
 
     next_version = (
@@ -90,7 +99,6 @@ def _sync_bot(
     label = make_qualified_bot_name(user.username, bot.name)
     require_bot(destination, f"admin_{user.id}_{bot.id}_{next_version}", label)
 
-    old_paths = archive_versions(session, [v for v in bot.versions if v.file_path])
     version = models.BotVersion(
         bot_id=bot.id,
         version_number=next_version,
@@ -102,8 +110,6 @@ def _sync_bot(
 
     bot.current_version_id = version.id
     session.add(bot)
-
-    storage.archive_bot_files(old_paths)
 
 
 def main(argv: Iterable[str] | None = None) -> None:
