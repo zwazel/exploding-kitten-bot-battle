@@ -61,7 +61,7 @@ const mockProfiles: Record<number, unknown> = {
   },
 };
 
-test.describe('Arena - Full Integration Tests', () => {
+test.describe('Bots - Full Integration Tests', () => {
   test('should complete bot upload flow with mocked backend', async ({ page }) => {
     let uploadCount = 0;
     let bots = [...mockBots];
@@ -128,8 +128,8 @@ test.describe('Arena - Full Integration Tests', () => {
     // Go to page
     await page.goto('/');
 
-    // Navigate to Arena tab
-    await page.locator('button[data-view="arena"]').click();
+    // Navigate to Bots tab
+    await page.locator('button[data-view="bots"]').click();
     
     // Wait for login form to be visible
     await expect(page.locator('#login-form')).toBeVisible();
@@ -181,8 +181,8 @@ test.describe('Arena - Full Integration Tests', () => {
     // Go to page
     await page.goto('/');
 
-    // Navigate to Arena tab
-    await page.locator('button[data-view="arena"]').click();
+    // Navigate to Bots tab
+    await page.locator('button[data-view="bots"]').click();
     
     // Login
     await page.locator('#login-form input[name="email"]').fill('test@example.com');
@@ -198,6 +198,10 @@ test.describe('Arena - Full Integration Tests', () => {
     // Arena controls should be visible with a start button
     await expect(page.locator('#arena-controls')).toBeVisible();
     await expect(page.locator('#arena-start')).toBeEnabled();
+    const botSelect = page.locator('#arena-bot-select');
+    await expect(botSelect).toBeVisible();
+    await expect(botSelect).not.toBeDisabled();
+    await expect(botSelect).toHaveValue('1');
   });
 
   test('should show logout button when logged in', async ({ page }) => {
@@ -221,8 +225,8 @@ test.describe('Arena - Full Integration Tests', () => {
     // Go to page
     await page.goto('/');
     
-    // Navigate to Arena tab
-    await page.locator('button[data-view="arena"]').click();
+    // Navigate to Bots tab
+    await page.locator('button[data-view="bots"]').click();
     
     // Login
     await page.locator('#login-form input[name="email"]').fill('test@example.com');

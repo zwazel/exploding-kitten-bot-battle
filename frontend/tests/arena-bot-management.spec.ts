@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * Arena Bot Management UI smoke tests (no backend).
  */
 
-test.describe('Arena - Bot management UI (static)', () => {
+test.describe('Bots - Bot management UI (static)', () => {
   test.beforeEach(async ({ page }) => {
     // Mock API calls to prevent hanging
     await page.route('**/auth/**', async (route) => {
@@ -29,7 +29,7 @@ test.describe('Arena - Bot management UI (static)', () => {
     });
     
     // Navigate to Arena tab
-    const arenaTab = page.locator('button[data-view="arena"]');
+    const arenaTab = page.locator('button[data-view="bots"]');
     await arenaTab.click();
     
     // Wait for a moment to ensure any errors would have fired
@@ -40,7 +40,7 @@ test.describe('Arena - Bot management UI (static)', () => {
   });
 
   test('should describe automatic naming in upload card', async ({ page }) => {
-    const arenaTab = page.locator('button[data-view="arena"]');
+    const arenaTab = page.locator('button[data-view="bots"]');
     await arenaTab.click();
 
     const instructionText = await page.locator('.upload-card .subtle').first().textContent();
@@ -49,7 +49,7 @@ test.describe('Arena - Bot management UI (static)', () => {
   });
 
   test('should restrict uploads to Python files', async ({ page }) => {
-    const arenaTab = page.locator('button[data-view="arena"]');
+    const arenaTab = page.locator('button[data-view="bots"]');
     await arenaTab.click();
 
     const acceptAttr = await page.locator('#upload-form input[type="file"]').getAttribute('accept');

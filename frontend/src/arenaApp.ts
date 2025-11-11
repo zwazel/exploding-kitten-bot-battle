@@ -21,6 +21,7 @@ import type {
 import { ReplayApp } from "./replayApp";
 
 const TOKEN_STORAGE_KEY = "exploding-kitten-arena-token";
+const ARENA_BOT_STORAGE_KEY = "exploding-kitten-arena-bot";
 
 function formatDate(timestamp: string): string {
   try {
@@ -51,12 +52,15 @@ export class ArenaApp {
   private selectedBotId: number | null = null;
   private profile: BotProfile | null = null;
   private lastReplayId: number | null = null;
+  private arenaBotId: number | null = null;
 
   constructor(root: HTMLElement, replayApp: ReplayApp, options: ArenaOptions = {}) {
     this.root = root;
     this.replayApp = replayApp;
     this.onShowReplay = options.onShowReplay;
     this.renderBaseLayout();
+    this.restoreArenaBotPreference();
+    this.replayApp.onArenaBotSelectionChange((botId) => this.handleArenaBotSelection(botId));
     this.restoreToken();
     this.attachAuthHandlers();
     this.attachUploadHandler();
@@ -101,12 +105,12 @@ export class ArenaApp {
             <h3>Your bots</h3>
             <p class="subtle">Upload a Python file to create a bot automatically. The filename becomes the bot name.</p>
             <div class="bot-selector">
-              <label for="bot-select">Active bot for arena matches</label>
+              <label for="bot-select">Select a bot to manage</label>
               <select id="bot-select"></select>
               <button type="button" id="refresh-bots" class="secondary-button">Refresh</button>
               <button type="button" id="delete-bot" class="secondary-button">Delete selected</button>
             </div>
-            <p class="subtle">Selected bot: <span id="selected-bot-name">None</span></p>
+            <p class="subtle">Managing: <span id="selected-bot-name">None</span></p>
             <p class="form-feedback" id="bot-feedback"></p>
           </section>
 
@@ -131,7 +135,7 @@ export class ArenaApp {
           </section>
 
           <section class="card">
-            <h3>Recent arena replays</h3>
+            <h3>Recent bot battles</h3>
             <ul id="replay-list" class="replay-list"></ul>
           </section>
         </div>
@@ -306,6 +310,14 @@ export class ArenaApp {
     const selectElement = this.root.querySelector<HTMLSelectElement>("#bot-select");
     const previousSelection = this.selectedBotId;
     this.selectedBotId = null;
+    if (this.bots.length === 0) {
+      this.handleArenaBotSelection(null);
+    } else if (
+      this.arenaBotId !== null &&
+      !this.bots.some((bot) => bot.id === this.arenaBotId)
+    ) {
+      this.handleArenaBotSelection(this.bots[0].id);
+    }
     if (this.bots.length > 0) {
       const desired = preferredId ?? previousSelection ?? this.bots[0].id;
       const found = this.bots.find((bot) => bot.id === desired) ?? this.bots[0];
@@ -508,25 +520,46 @@ export class ArenaApp {
     window.localStorage.removeItem(TOKEN_STORAGE_KEY);
   }
 
+  private restoreArenaBotPreference(): void {
+    const stored = window.localStorage.getItem(ARENA_BOT_STORAGE_KEY);
+    if (!stored) {
+      this.arenaBotId = null;
+      return;
+    }
+    const parsed = Number.parseInt(stored, 10);
+    this.arenaBotId = Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private persistArenaBotPreference(): void {
+    if (this.arenaBotId === null) {
+      window.localStorage.removeItem(ARENA_BOT_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(ARENA_BOT_STORAGE_KEY, String(this.arenaBotId));
+  }
+
   private updateArenaSelection(): void {
     if (!this.user) {
       this.replayApp.hideArenaControls();
       return;
     }
     this.replayApp.showArenaControls();
-    const active = this.bots.find((bot) => bot.id === this.selectedBotId) ?? null;
-    this.replayApp.setArenaSelectedBot(active ? active.qualified_name : null);
+    const options = this.bots.map((bot) => ({ id: bot.id, name: bot.qualified_name }));
+    const selection = this.replayApp.updateArenaBots(options, this.arenaBotId);
+    if (selection !== this.arenaBotId) {
+      this.handleArenaBotSelection(selection);
+    }
     this.replayApp.enableArenaDownload(this.lastReplayId !== null);
   }
 
   private configureArenaIntegration(loggedIn: boolean): void {
     if (loggedIn) {
-      this.replayApp.onArenaStart(() => this.runArenaMatch());
+      this.replayApp.onArenaStart((botId) => this.runArenaMatch(botId));
       this.replayApp.onArenaDownload(() => this.downloadLatestReplay());
       this.replayApp.enableArenaDownload(this.lastReplayId !== null);
       this.replayApp.showArenaControls();
       if (this.lastReplayId === null) {
-        this.replayApp.setArenaStatus("Select a bot and start an arena match.", "info");
+        this.replayApp.setArenaStatus("Choose a bot in the viewer and start a battle.", "info");
       }
     } else {
       this.replayApp.onArenaStart(null);
@@ -536,19 +569,24 @@ export class ArenaApp {
     }
   }
 
-  private async runArenaMatch(): Promise<void> {
+  private handleArenaBotSelection(botId: number | null): void {
+    this.arenaBotId = botId;
+    this.persistArenaBotPreference();
+  }
+
+  private async runArenaMatch(botId: number | null): Promise<void> {
     if (!this.token) {
       this.replayApp.setArenaStatus("Log in to start arena matches.", "negative");
       return;
     }
-    if (!this.selectedBotId) {
-      this.replayApp.setArenaStatus("Upload a bot and select it before starting a match.", "negative");
+    if (!botId) {
+      this.replayApp.setArenaStatus("Choose a bot to battle with before starting a match.", "negative");
       return;
     }
     try {
       this.replayApp.setArenaStatus("Running arena match…", "info");
       this.replayApp.setArenaLoading(true);
-      const response = await startArenaMatch(this.token, this.selectedBotId);
+      const response = await startArenaMatch(this.token, botId);
       this.lastReplayId = response.replay.id;
       this.replayApp.setArenaParticipants(response.replay.participants);
       this.replayApp.setArenaStatus(`Winner: ${response.replay.winner_name}`, "positive");
@@ -557,6 +595,7 @@ export class ArenaApp {
         response.replay_data,
         `Arena replay #${response.replay.id}`
       );
+      this.handleArenaBotSelection(botId);
       this.onShowReplay?.();
       await this.reloadBots(this.selectedBotId);
     } catch (error) {

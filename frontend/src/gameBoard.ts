@@ -52,27 +52,35 @@ export class GameBoard {
    */
   private initializeBoard(): void {
     this.container.innerHTML = `
-      <div class="game-board-wrapper" style="width: 100%; display: flex; justify-content: center; align-items: center;">
-        <div class="game-board" style="position: relative; width: ${this.boardWidth}px; height: ${this.boardHeight}px; background: #1a1a1a; border-radius: 12px; overflow: visible; transform-origin: center center;">
+      <div class="game-board-wrapper">
+        <div class="game-board" style="width: ${this.boardWidth}px; height: ${this.boardHeight}px;">
           <!-- Player areas (positioned around the table) -->
-          <div id="player-areas" style="position: absolute; width: 100%; height: 100%;"></div>
+          <div id="player-areas" class="player-areas"></div>
 
           <!-- Cards container for animations -->
-          <div id="cards-container" style="position: absolute; width: 100%; height: 100%; pointer-events: auto;">
-            <div id="deck-pile" class="card-pile" style="position: absolute; left: ${this.deckPosition.x - (GameBoard.PILE_WIDTH - GameBoard.CARD_WIDTH) / 2}px; top: ${this.deckPosition.y - (GameBoard.PILE_HEIGHT - GameBoard.CARD_HEIGHT) / 2}px; width: ${GameBoard.PILE_WIDTH}px; height: ${GameBoard.PILE_HEIGHT}px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center; z-index: 0; pointer-events: none;">
-              <span style="color: #888; font-size: 14px;">DECK</span>
+          <div id="cards-container" class="cards-container">
+            <div
+              id="deck-pile"
+              class="card-pile"
+              style="left: ${this.deckPosition.x - (GameBoard.PILE_WIDTH - GameBoard.CARD_WIDTH) / 2}px; top: ${this.deckPosition.y - (GameBoard.PILE_HEIGHT - GameBoard.CARD_HEIGHT) / 2}px; width: ${GameBoard.PILE_WIDTH}px; height: ${GameBoard.PILE_HEIGHT}px;"
+            >
+              <span>DECK</span>
             </div>
-            <div id="discard-pile" class="card-pile" style="position: absolute; left: ${this.discardPosition.x - (GameBoard.PILE_WIDTH - GameBoard.CARD_WIDTH) / 2}px; top: ${this.discardPosition.y - (GameBoard.PILE_HEIGHT - GameBoard.CARD_HEIGHT) / 2}px; width: ${GameBoard.PILE_WIDTH}px; height: ${GameBoard.PILE_HEIGHT}px; border: 2px dashed #555; border-radius: 8px; display: flex; align-items: center; justify-content: center; z-index: 0; pointer-events: none;">
-              <span style="color: #888; font-size: 14px;">DISCARD</span>
+            <div
+              id="discard-pile"
+              class="card-pile"
+              style="left: ${this.discardPosition.x - (GameBoard.PILE_WIDTH - GameBoard.CARD_WIDTH) / 2}px; top: ${this.discardPosition.y - (GameBoard.PILE_HEIGHT - GameBoard.CARD_HEIGHT) / 2}px; width: ${GameBoard.PILE_WIDTH}px; height: ${GameBoard.PILE_HEIGHT}px;"
+            >
+              <span>DISCARD</span>
             </div>
           </div>
-          
+
           <!-- Center display for special cards (See Future, Exploding Kitten, etc) -->
-          <div id="center-display" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; z-index: 1000;"></div>
+          <div id="center-display" class="center-display"></div>
         </div>
       </div>
     `;
-    
+
     // Apply responsive scaling after board is created
     this.applyResponsiveScaling();
 
@@ -123,6 +131,10 @@ export class GameBoard {
     wrapper.style.height = `${scaledHeight}px`;
     wrapper.style.maxWidth = "100%";
     wrapper.style.margin = "0 auto";
+  }
+
+  public refreshLayout(): void {
+    this.applyResponsiveScaling();
   }
 
   /**

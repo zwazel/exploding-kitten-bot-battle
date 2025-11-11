@@ -718,8 +718,16 @@ export class SpecialEventAnimator {
     this.overlayElement.style.opacity = "1";
     this.overlayElement.style.transition = "opacity 0.3s ease";
     this.overlayElement.style.opacity = "0";
-    
+
     await this.delay(300);
+    this.overlayElement.style.display = "none";
+    this.overlayElement.innerHTML = "";
+    this.overlayElement.style.opacity = "1";
+  }
+
+  public dismissAll(): void {
+    if (!this.overlayElement) return;
+    this.triggerDismissal();
     this.overlayElement.style.display = "none";
     this.overlayElement.innerHTML = "";
     this.overlayElement.style.opacity = "1";

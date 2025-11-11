@@ -16,15 +16,17 @@ export class ReplayApp {
   private readonly MAX_EVENT_PROCESSING_TIMEOUT_MS = 5000;
   private arenaElements: {
     container: HTMLDivElement;
-    selectedBot: HTMLSpanElement;
     status: HTMLParagraphElement;
     participants: HTMLUListElement;
     startButton: HTMLButtonElement;
     downloadButton: HTMLButtonElement;
+    botSelect: HTMLSelectElement;
   } | null = null;
-  private arenaStartHandler: (() => Promise<void> | void) | null = null;
+  private arenaStartHandler: ((botId: number | null) => Promise<void> | void) | null = null;
   private arenaDownloadHandler: (() => Promise<void> | void) | null = null;
-  private hasArenaBotSelected = false;
+  private arenaBotOptions: { id: number; name: string }[] = [];
+  private currentArenaBotId: number | null = null;
+  private arenaSelectionHandler: ((botId: number | null) => void) | null = null;
 
   private rootQuery<T extends Element>(selector: string): T {
     const element = this.root.querySelector<T>(selector);
@@ -52,46 +54,46 @@ export class ReplayApp {
   private initializeUI(): void {
     this.root.innerHTML = `
       <div class="replay-viewer">
-        <header>
-          <h1>🎮 Exploding Kittens Replay Viewer</h1>
-        </header>
-        
-        <div class="controls-panel">
-          <div class="file-controls">
+        <section class="viewer-controls">
+          <div class="viewer-controls__primary">
             <input type="file" id="file-input" accept=".json" />
             <label for="file-input" class="file-label">📁 Load Replay File</label>
             <span id="file-name" class="file-name"></span>
           </div>
 
-          <div class="playback-controls" id="playback-controls" style="display: none;">
-            <button id="btn-stop" title="Stop and Reset">⏹️</button>
-            <button id="btn-play-pause" title="Play/Pause">▶️</button>
-            <button id="btn-step-forward" title="Step Forward">⏭️</button>
+          <div class="playback-controls is-hidden" id="playback-controls">
+            <div class="playback-buttons" role="group" aria-label="Replay controls">
+              <button id="btn-stop" title="Stop and Reset" aria-label="Stop replay">⏹️</button>
+              <button id="btn-play-pause" title="Play/Pause" aria-label="Play or pause replay">▶️</button>
+              <button id="btn-step-forward" title="Step Forward" aria-label="Step forward">⏭️</button>
+            </div>
 
             <div class="speed-control">
-              <label for="speed-slider">Speed:</label>
+              <label for="speed-slider">Speed</label>
               <input type="range" id="speed-slider" min="0.5" max="10" step="0.5" value="1" />
-              <input
-                type="number"
-                id="speed-input"
-                min="0.1"
-                max="100"
-                step="0.1"
-                value="1"
-                inputmode="decimal"
-                title="Set custom playback speed"
-              />
-              <span id="speed-display">1.0x</span>
+              <div class="speed-input-group">
+                <input
+                  type="number"
+                  id="speed-input"
+                  min="0.1"
+                  max="100"
+                  step="0.1"
+                  value="1"
+                  inputmode="decimal"
+                  title="Set custom playback speed"
+                />
+                <span id="speed-display" aria-live="polite">1.0x</span>
+              </div>
             </div>
 
             <div class="popup-control">
               <label for="manual-popup-dismiss" title="When checked, popups will pause playback and wait for you to dismiss them">
                 <input type="checkbox" id="manual-popup-dismiss" checked />
-                Manual Popup Dismiss
+                Manual popup dismiss
               </label>
             </div>
 
-            <div class="event-progress">
+            <div class="event-progress" aria-live="polite">
               <span id="event-counter">Event: 0 / 0</span>
             </div>
 
@@ -101,25 +103,49 @@ export class ReplayApp {
 
           <div class="arena-controls" id="arena-controls" hidden>
             <div class="arena-controls__header">
-              <h3>Arena</h3>
-              <p>Active bot: <span id="arena-selected-bot">No bot selected</span></p>
+              <h3>Bot battle</h3>
+              <p class="arena-controls__description">Run a match against the arena using one of your uploaded bots.</p>
+            </div>
+            <div class="arena-controls__body">
+              <label class="arena-select" for="arena-bot-select">
+                <span>Choose a bot</span>
+                <select id="arena-bot-select"></select>
+              </label>
+              <div class="arena-actions">
+                <button id="arena-start" class="primary-button">Start match</button>
+                <button id="arena-download" class="secondary-button" disabled>Download replay</button>
+              </div>
             </div>
             <p id="arena-status" class="arena-status" hidden></p>
             <ul id="arena-participants" class="arena-participants"></ul>
-            <div class="arena-actions">
-              <button id="arena-start" class="primary-button">Start arena match</button>
-              <button id="arena-download" class="secondary-button" disabled>Download replay</button>
+          </div>
+        </section>
+
+        <section class="viewer-layout">
+          <div class="viewer-main">
+            <div id="game-display" class="game-display">
+              <div class="welcome-message">
+                <h2>Welcome to the replay viewer</h2>
+                <p>Load a replay JSON file or run an arena match to see the action unfold.</p>
+              </div>
             </div>
           </div>
-        </div>
-        
-        <div id="game-display" class="game-display">
-          <div class="welcome-message">
-            <h2>Welcome to Exploding Kittens Replay Viewer</h2>
-            <p>Load a replay JSON file to start viewing the game.</p>
-            <p>Watch cards move between players, deck, and discard pile with animated gameplay!</p>
-          </div>
-        </div>
+
+          <aside class="viewer-sidebar">
+            <section id="card-tracker" class="sidebar-card">
+              <header class="sidebar-card__header">
+                <h3>Cards in deck</h3>
+              </header>
+              <div id="card-counts" class="card-counts"></div>
+            </section>
+            <section id="color-legend" class="sidebar-card">
+              <header class="sidebar-card__header">
+                <h3>Card colors</h3>
+              </header>
+              <div id="legend-items" class="legend-items"></div>
+            </section>
+          </aside>
+        </section>
       </div>
     `;
   }
@@ -132,11 +158,11 @@ export class ReplayApp {
     }
     this.arenaElements = {
       container,
-      selectedBot: this.rootQuery<HTMLSpanElement>("#arena-selected-bot"),
       status: this.rootQuery<HTMLParagraphElement>("#arena-status"),
       participants: this.rootQuery<HTMLUListElement>("#arena-participants"),
       startButton: this.rootQuery<HTMLButtonElement>("#arena-start"),
       downloadButton: this.rootQuery<HTMLButtonElement>("#arena-download"),
+      botSelect: this.rootQuery<HTMLSelectElement>("#arena-bot-select"),
     };
     this.resetArenaControls();
   }
@@ -145,7 +171,7 @@ export class ReplayApp {
     if (!this.arenaElements) {
       return;
     }
-    const { container, status, participants, downloadButton, startButton } = this.arenaElements;
+    const { container, status, participants, downloadButton, startButton, botSelect } = this.arenaElements;
     container.dataset.loading = "false";
     container.hidden = true;
     status.textContent = "";
@@ -157,7 +183,10 @@ export class ReplayApp {
     participants.appendChild(placeholder);
     downloadButton.disabled = true;
     startButton.disabled = true;
-    this.hasArenaBotSelected = false;
+    botSelect.innerHTML = "";
+    botSelect.disabled = true;
+    this.currentArenaBotId = null;
+    this.arenaBotOptions = [];
   }
 
   private setupEventListeners(): void {
@@ -222,13 +251,24 @@ export class ReplayApp {
     const arenaStartButton = this.rootMaybe<HTMLButtonElement>("#arena-start");
     arenaStartButton?.addEventListener("click", () => {
       if (!this.arenaStartHandler) return;
-      void Promise.resolve(this.arenaStartHandler());
+      void Promise.resolve(this.arenaStartHandler(this.currentArenaBotId));
     });
 
     const arenaDownloadButton = this.rootMaybe<HTMLButtonElement>("#arena-download");
     arenaDownloadButton?.addEventListener("click", () => {
       if (!this.arenaDownloadHandler) return;
       void Promise.resolve(this.arenaDownloadHandler());
+    });
+
+    const arenaBotSelect = this.rootMaybe<HTMLSelectElement>("#arena-bot-select");
+    arenaBotSelect?.addEventListener("change", () => {
+      const value = arenaBotSelect.value;
+      this.currentArenaBotId = value ? Number.parseInt(value, 10) : null;
+      if (!Number.isFinite(this.currentArenaBotId as number)) {
+        this.currentArenaBotId = null;
+      }
+      this.updateArenaStartState();
+      this.arenaSelectionHandler?.(this.currentArenaBotId);
     });
   }
 
@@ -242,30 +282,65 @@ export class ReplayApp {
       await this.updateDisplay(0);
     }
 
-    this.rootQuery<HTMLDivElement>("#playback-controls").style.display = "flex";
+    this.rootQuery<HTMLDivElement>("#playback-controls").classList.remove("is-hidden");
     this.rootQuery<HTMLSpanElement>("#file-name").textContent = label;
   }
 
+  public handleVisibilityChange(isVisible: boolean): void {
+    if (isVisible) {
+      this.renderer.refreshLayout();
+      return;
+    }
+    this.player.pause();
+    this.renderer.dismissPopups();
+  }
+
   public showArenaControls(): void {
-    if (!this.arenaElements) return;
+    if (!this.arenaElements) return this.currentArenaBotId;
     this.arenaElements.container.hidden = false;
+    this.updateArenaStartState();
   }
 
   public hideArenaControls(): void {
     this.resetArenaControls();
   }
 
-  public setArenaSelectedBot(botName: string | null): void {
-    if (!this.arenaElements) return;
-    this.hasArenaBotSelected = Boolean(botName);
-    this.arenaElements.selectedBot.textContent = botName ?? "No bot selected";
-    if (!botName) {
-      this.arenaElements.selectedBot.dataset.state = "empty";
+  public updateArenaBots(options: { id: number; name: string }[], selectedId: number | null): number | null {
+    this.arenaBotOptions = options.slice();
+    this.currentArenaBotId = selectedId ?? null;
+
+    if (!this.arenaElements) return this.currentArenaBotId;
+    const { botSelect } = this.arenaElements;
+
+    botSelect.innerHTML = "";
+
+    if (options.length === 0) {
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "No bots available";
+      botSelect.appendChild(placeholder);
+      botSelect.disabled = true;
+      this.currentArenaBotId = null;
     } else {
-      delete this.arenaElements.selectedBot.dataset.state;
+      options.forEach((option) => {
+        const element = document.createElement("option");
+        element.value = String(option.id);
+        element.textContent = option.name;
+        botSelect.appendChild(element);
+      });
+
+      const hasSelected = options.some((option) => option.id === this.currentArenaBotId);
+      if (!hasSelected) {
+        this.currentArenaBotId = options[0].id;
+      }
+
+      botSelect.value = this.currentArenaBotId !== null ? String(this.currentArenaBotId) : "";
+      botSelect.disabled = false;
     }
-    const loading = this.isArenaLoading();
-    this.arenaElements.startButton.disabled = !this.hasArenaBotSelected || loading;
+
+    this.updateArenaStartState();
+    this.arenaSelectionHandler?.(this.currentArenaBotId);
+    return this.currentArenaBotId;
   }
 
   public setArenaStatus(
@@ -308,7 +383,8 @@ export class ReplayApp {
   public setArenaLoading(loading: boolean): void {
     if (!this.arenaElements) return;
     this.arenaElements.container.dataset.loading = loading ? "true" : "false";
-    this.arenaElements.startButton.disabled = loading || !this.hasArenaBotSelected;
+    this.arenaElements.botSelect.disabled = loading || this.arenaBotOptions.length === 0;
+    this.updateArenaStartState();
   }
 
   public enableArenaDownload(enabled: boolean): void {
@@ -316,17 +392,29 @@ export class ReplayApp {
     this.arenaElements.downloadButton.disabled = !enabled;
   }
 
-  public onArenaStart(handler: (() => Promise<void> | void) | null): void {
+  public onArenaStart(handler: ((botId: number | null) => Promise<void> | void) | null): void {
     this.arenaStartHandler = handler;
+    this.updateArenaStartState();
   }
 
   public onArenaDownload(handler: (() => Promise<void> | void) | null): void {
     this.arenaDownloadHandler = handler;
   }
 
+  public onArenaBotSelectionChange(handler: ((botId: number | null) => void) | null): void {
+    this.arenaSelectionHandler = handler;
+  }
+
   private isArenaLoading(): boolean {
     if (!this.arenaElements) return false;
     return this.arenaElements.container.dataset.loading === "true";
+  }
+
+  private updateArenaStartState(): void {
+    if (!this.arenaElements) return;
+    const loading = this.isArenaLoading();
+    const hasSelection = this.currentArenaBotId !== null;
+    this.arenaElements.startButton.disabled = loading || !hasSelection || !this.arenaStartHandler;
   }
 
   private async handleFileLoad(e: Event): Promise<void> {
