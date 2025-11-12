@@ -9,7 +9,7 @@ test('card tracker displays and updates', async ({ page }) => {
   await page.goto('/');
   
   // Wait for the page to load
-  await expect(page.getByRole('heading', { name: '🎮 Exploding Kittens Replay Viewer' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Exploding Kittens Command Center' })).toBeVisible();
   
   // Upload the replay file
   const filePath = path.join(__dirname, 'fixtures', 'test_replay.json');
@@ -21,7 +21,7 @@ test('card tracker displays and updates', async ({ page }) => {
   
   // Check that the card tracker is visible
   await expect(page.locator('#card-tracker')).toBeVisible();
-  await expect(page.locator('#card-tracker h3')).toContainText('Cards in Deck');
+  await expect(page.locator('#card-tracker h3')).toContainText('Cards in deck');
   
   // Check that card counts are displayed
   const cardCounts = page.locator('#card-counts');
