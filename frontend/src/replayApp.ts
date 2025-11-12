@@ -5,7 +5,8 @@
 
 import { ReplayPlayer } from "./replayPlayer";
 import { VisualRenderer } from "./visualRenderer";
-import type { ReplayData, CardType, ReplayEvent, ReplayParticipantSummary } from "./types";
+import type { ReplayData, CardType, ReplayEvent } from "./types";
+import type { ReplayParticipantSummary } from "./api/types";
 
 export class ReplayApp {
   private readonly root: HTMLElement;
@@ -296,7 +297,7 @@ export class ReplayApp {
   }
 
   public showArenaControls(): void {
-    if (!this.arenaElements) return this.currentArenaBotId;
+    if (!this.arenaElements) return;
     this.arenaElements.container.hidden = false;
     this.updateArenaStartState();
   }
