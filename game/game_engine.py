@@ -168,7 +168,11 @@ class GameEngine:
                                     else:
                                         desc = f"{current_action.player} playing {current_action.combo_type.name} combo"
                                 elif current_action.action_type == ActionType.NOPE:
-                                    desc = f"{current_action.player} playing NOPE"
+                                    # For chained NOPEs, include what the NOPE was targeting
+                                    if current_action.target:
+                                        desc = f"{current_action.player} playing NOPE on {current_action.target}"
+                                    else:
+                                        desc = f"{current_action.player} playing NOPE"
                                 else:
                                     desc = f"{current_action.player} action"
                                 
@@ -188,9 +192,12 @@ class GameEngine:
                                 )
                             
                             # Create new nope action for next round
+                            # Include target to track who is being noped (for chained NOPEs)
                             current_action = GameAction(
                                 action_type=ActionType.NOPE,
-                                player=bot.name
+                                player=bot.name,
+                                card=CardType.NOPE,
+                                target=current_action.player  # Who is being noped
                             )
                             noped = True
                             break  # Stop checking, go to notification phase for this Nope
