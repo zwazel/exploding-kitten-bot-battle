@@ -97,40 +97,40 @@ export class GameBoard {
     const board = this.container.querySelector('.game-board') as HTMLElement;
     const wrapper = this.container.querySelector('.game-board-wrapper') as HTMLElement;
     if (!board || !wrapper) return;
-    
-    // Get available space (accounting for padding and margins)
-    // Determine how much horizontal space the board can take.
-    // Prefer the direct container width, but fall back to the parent's width or the viewport if needed.
-    const availableWidth = Math.max(
-      this.container.clientWidth,
-      this.container.parentElement?.clientWidth ?? 0,
-      window.innerWidth * 0.8
-    );
 
-    // Calculate scale to fit within available width while keeping a small padding buffer.
-    const padding = 40; // 20px on each side
-    const maxWidth = Math.max(availableWidth - padding, 200);
+    const parent = wrapper.parentElement as HTMLElement | null;
+    const parentRect = parent?.getBoundingClientRect();
+    const availableWidth = parentRect?.width ?? this.container.clientWidth ?? window.innerWidth;
+
+    // Account for the shell padding so the board never touches the container edges.
+    const parentStyles = parent ? window.getComputedStyle(parent) : null;
+    const horizontalPadding = parentStyles
+      ? parseFloat(parentStyles.paddingLeft) + parseFloat(parentStyles.paddingRight)
+      : 0;
+
+    const maxWidth = Math.max(availableWidth - horizontalPadding, 320);
+
+    // Respect available vertical space to avoid clipping on short screens.
+    const availableHeight = Math.max(window.innerHeight - 320, 320);
     const scaleX = maxWidth / this.boardWidth;
-
-    // Also respect available vertical space so the board doesn't overflow on short viewports.
-    const reservedVerticalSpace = 360; // header, controls, and info sections
-    const maxHeight = Math.max(window.innerHeight - reservedVerticalSpace, 240);
-    const scaleY = maxHeight / this.boardHeight;
+    const scaleY = availableHeight / this.boardHeight;
 
     const scale = Math.min(1, scaleX, scaleY);
     this.currentScale = Math.max(scale, 0.1);
 
-    // Apply scale transform
-    board.style.transform = `scale(${this.currentScale})`;
+    // Apply scale transform while keeping the board centered in the wrapper.
+    board.style.position = "absolute";
+    board.style.left = "50%";
+    board.style.top = "50%";
+    board.style.transform = `translate(-50%, -50%) scale(${this.currentScale})`;
 
-    // Adjust wrapper dimensions so layout calculations use the scaled size,
-    // keeping the board centered and preventing overflow issues on narrow screens.
     const scaledWidth = this.boardWidth * this.currentScale;
     const scaledHeight = this.boardHeight * this.currentScale;
     wrapper.style.width = `${scaledWidth}px`;
     wrapper.style.height = `${scaledHeight}px`;
     wrapper.style.maxWidth = "100%";
     wrapper.style.margin = "0 auto";
+    wrapper.style.position = "relative";
   }
 
   public refreshLayout(): void {
