@@ -1205,6 +1205,101 @@ class TestReplayRecorder(unittest.TestCase):
         self.assertEqual(len(recorder.events), 1)
         self.assertEqual(recorder.events[0]["type"], "player_elimination")
         self.assertEqual(recorder.events[0]["player"], "Bot1")
+    
+    def test_chained_nope_logging(self):
+        """Test that chained NOPEs are logged correctly with proper target information."""
+        from game import ReplayRecorder
+        
+        # Create three bots: one to play action, two to nope
+        bot1 = SimpleBot("Bot1")
+        bot2 = NopeBot("Bot2")
+        bot3 = NopeBot("Bot3")
+        
+        recorder = ReplayRecorder(["Bot1", "Bot2", "Bot3"], enabled=True)
+        game = GameEngine([bot1, bot2, bot3], verbose=False, replay_recorder=recorder)
+        
+        # Give Bot2 and Bot3 NOPE cards
+        bot2.hand = [Card(CardType.NOPE)]
+        bot3.hand = [Card(CardType.NOPE)]
+        
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2, bot3]
+        
+        # Bot1 plays ATTACK, Bot2 nopes, Bot3 nopes the nope
+        was_noped = game._check_for_nope(
+            GameAction(ActionType.CARD_PLAY, "Bot1", card=CardType.ATTACK)
+        )
+        
+        # Even number of nopes = action proceeds
+        self.assertFalse(was_noped)
+        
+        # Check that NOPE events were recorded
+        nope_events = [e for e in recorder.events if e["type"] == "nope"]
+        self.assertEqual(len(nope_events), 2)
+        
+        # First NOPE: Bot2 nopes Bot1's ATTACK
+        self.assertEqual(nope_events[0]["player"], "Bot2")
+        self.assertEqual(nope_events[0]["action"], "Bot1 playing ATTACK")
+        self.assertEqual(nope_events[0]["original_action"], "ATTACK")
+        self.assertEqual(nope_events[0]["target_player"], "Bot1")
+        
+        # Second NOPE: Bot3 nopes Bot2's NOPE
+        # This should say "Bot2 playing NOPE on Bot1" not just "Bot2 playing NOPE"
+        self.assertEqual(nope_events[1]["player"], "Bot3")
+        self.assertEqual(nope_events[1]["action"], "Bot2 playing NOPE on Bot1")
+        self.assertEqual(nope_events[1]["original_action"], "ATTACK")
+        self.assertEqual(nope_events[1]["target_player"], "Bot2")
+    
+    def test_triple_chained_nope_logging(self):
+        """Test that triple-chained NOPEs are logged correctly."""
+        from game import ReplayRecorder
+        
+        # Create four bots: one to play action, three to nope
+        bot1 = SimpleBot("Bot1")
+        bot2 = NopeBot("Bot2")
+        bot3 = NopeBot("Bot3")
+        bot4 = NopeBot("Bot4")
+        
+        recorder = ReplayRecorder(["Bot1", "Bot2", "Bot3", "Bot4"], enabled=True)
+        game = GameEngine([bot1, bot2, bot3, bot4], verbose=False, replay_recorder=recorder)
+        
+        # Give bots NOPE cards
+        bot2.hand = [Card(CardType.NOPE)]
+        bot3.hand = [Card(CardType.NOPE)]
+        bot4.hand = [Card(CardType.NOPE)]
+        
+        game.setup_game = lambda: None
+        game.bots = [bot1, bot2, bot3, bot4]
+        
+        # Bot1 plays combo, bots 2, 3, 4 chain nopes
+        was_noped = game._check_for_nope(
+            GameAction(ActionType.COMBO_PLAY, "Bot1", combo_type=ComboType.TWO_OF_A_KIND, target="Bot2")
+        )
+        
+        # Odd number of nopes = action canceled
+        self.assertTrue(was_noped)
+        
+        # Check that NOPE events were recorded
+        nope_events = [e for e in recorder.events if e["type"] == "nope"]
+        self.assertEqual(len(nope_events), 3)
+        
+        # First NOPE: Bot2 nopes Bot1's combo
+        self.assertEqual(nope_events[0]["player"], "Bot2")
+        self.assertIn("Bot1 playing TWO_OF_A_KIND combo", nope_events[0]["action"])
+        self.assertEqual(nope_events[0]["original_action"], "TWO_OF_A_KIND combo")
+        self.assertEqual(nope_events[0]["target_player"], "Bot1")
+        
+        # Second NOPE: Bot3 nopes Bot2's NOPE
+        self.assertEqual(nope_events[1]["player"], "Bot3")
+        self.assertEqual(nope_events[1]["action"], "Bot2 playing NOPE on Bot1")
+        self.assertEqual(nope_events[1]["original_action"], "TWO_OF_A_KIND combo")
+        self.assertEqual(nope_events[1]["target_player"], "Bot2")
+        
+        # Third NOPE: Bot4 nopes Bot3's NOPE
+        self.assertEqual(nope_events[2]["player"], "Bot4")
+        self.assertEqual(nope_events[2]["action"], "Bot3 playing NOPE on Bot2")
+        self.assertEqual(nope_events[2]["original_action"], "TWO_OF_A_KIND combo")
+        self.assertEqual(nope_events[2]["target_player"], "Bot3")
 
 
 class TestBotDefuseComboValidation(unittest.TestCase):
