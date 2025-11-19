@@ -1,117 +1,100 @@
 # Exploding Kitten Bot Battle
 
-A complete toolkit for building, testing, and battling Exploding Kitten bots. The repository now contains three cooperating parts:
+A complete toolkit for building, testing, and battling Exploding Kitten bots.
 
-1. **Game engine (`game/`, `bots/`, `main.py`)** – the Python implementation of Exploding Kittens used for local simulation.
-2. **Arena backend (`backend/`)** – a FastAPI service that accepts bot uploads, runs arena matches, stores replays, and exposes history over a PostgreSQL database.
-3. **Arena frontend (`frontend/`)** – a Vite + TypeScript single page app that combines the original replay viewer with arena account and bot management.
+## Repository Layout
 
-The existing replay viewer behaviour is preserved: you can still load local replay files without signing in. When authenticated, the same UI lets you upload bots to the arena and review hosted replays.
-
-## Repository layout
-
-```
-exploding-kitten-bot-battle/
-├── backend/              # FastAPI backend service, commands, and tests
-├── bots/                 # Reference bots (synced to the arena via the admin script)
-├── docker-compose.yml    # Local orchestration for Postgres + backend
-├── frontend/             # Vite web application (viewer + arena dashboard)
-├── game/                 # Core game engine
-├── main.py               # CLI entry point for local simulations
-├── tests/                # Original unit tests for the game engine
-└── ...                   # Docs, screenshots, etc.
-```
+- `game/` & `bots/`: Core Python game engine and reference bots.
+- `backend/`: FastAPI service for arena matches, user accounts, and replay storage.
+- `frontend/`: Vite + TypeScript web app (replay viewer + arena dashboard).
+- `main.py`: CLI entry point for local simulations.
+- `tests/`: Unit tests for the game engine.
 
 ## Prerequisites
 
 - Python 3.10+
 - Node.js 20+
-- Docker (optional, for running the full stack locally)
+- Docker (optional, for full stack)
 
-## 1. Run local simulations
+## 1. Local Simulation (No Backend)
 
-The original workflow for iterating on bots still works.
-
-```bash
-python -m unittest tests.test_game -v              # verify engine integrity
-python main.py --replay my-local-replay.json        # run a match and record a replay
-```
-
-Drop the resulting JSON file into the “Replay Viewer” tab of the frontend to inspect it – no login required.
-
-## 2. Backend setup
-
-### Install dependencies & run tests
+Iterate on bots locally without the full arena stack:
 
 ```bash
-pip install -e ./backend[dev]
-pytest backend/app/tests
+# Run engine tests
+python -m unittest tests.test_game -v
+
+# Run a match and generate a replay
+python main.py --replay my-local-replay.json
 ```
 
-### Run with a local Postgres instance
+Upload the resulting JSON to the "Replay Viewer" in the frontend (or use the hosted version) to watch the match.
 
-The backend expects a PostgreSQL database. You can provide one manually through the `ARENA_DATABASE_URL` environment variable, or use the included Compose file:
+## 2. Backend Setup
+
+The backend manages the arena, user accounts, and hosted matches.
+
+```bash
+cd backend
+pip install -e .[dev]
+pytest app/tests
+```
+
+### Running with Docker (Recommended)
 
 ```bash
 docker compose up --build
 ```
+Starts Postgres and the backend at http://localhost:8000. Docs at `/docs`.
 
-This starts Postgres (credentials `exploding/exploding`) and the backend on <http://localhost:8000>. The backend exposes OpenAPI docs at `/docs`.
-
-**Database migrations:** The backend automatically waits for the database to be ready and runs all pending migrations on startup using Alembic. This ensures the database schema is always synchronized with the code, even after a fresh `docker compose down -v && docker compose up --build`.
-
-To run without Docker, point to your database and launch uvicorn:
+### Running Manually
 
 ```bash
 export ARENA_DATABASE_URL="postgresql+psycopg2://exploding:exploding@localhost:5432/exploding"
 uvicorn app.main:app --app-dir backend/app --reload
 ```
 
-Backend configuration is documented in `backend/app/config.py` – environment variables are prefixed with `ARENA_` (e.g., `ARENA_SECRET_KEY`, `ARENA_ALLOWED_ORIGINS`). Uploaded bot files and arena replays are stored under `backend/storage/` (mounted as a volume in Compose).
+See `backend/README.md` for more details on configuration and migrations.
 
-#### Seed arena bots
+## 3. Frontend Setup
 
-After the backend is running, create an admin account and sync the reference bots so that every match has opponents available. The command is idempotent and can be re-run whenever files in `bots/` change:
-
-```bash
-python -m app.commands.setup_admin \
-  --email admin@example.com \
-  --display-name AdminUser \
-  --password supersecret \
-  --bots-dir ./bots
-```
-
-The script computes a hash for each bot file; unchanged bots keep their existing version numbers, while updated files create a new version automatically.
-
-## 3. Frontend setup
-
-The frontend lives under `frontend/` and now combines:
-
-- The local replay viewer from the original project.
-- An arena dashboard with login/signup, bot upload, version history, and replay browsing.
+The frontend provides the UI for the arena and replay viewer.
 
 ```bash
 cd frontend
 npm install
-npm run dev   # served on http://localhost:5173
-npm test      # Playwright UI tests
+npm run dev
 ```
+Access at http://localhost:5173.
 
-The app reads the backend origin from `VITE_API_BASE_URL` (defaults to `http://localhost:8000`). Deployments to GitHub Pages continue to work via `.github/workflows/deploy-pages.yml`.
+See `frontend/README.md` for testing and build instructions.
 
-## Arena workflow overview
+## Bot Development & Cheat Prevention
 
-1. Seed the arena with the reference bots using the admin setup script (see above) so there are opponents available.
-2. Sign up and log in through the “Arena” tab. Usernames are normalised to lowercase identifiers and combined with bot names to form global labels (`username_botname`).
-3. Upload Python bot files (`.py`) directly from the dashboard. The backend derives the bot name from the filename, validates the class, and stores a new version whenever the file hash changes. Re-uploading an older hash reactivates that version without deleting history.
-4. Start arena matches from the replay viewer. When logged in you can trigger a match for the selected bot, watch the participants load, and download the resulting replay once it finishes. Recent replays and version history remain accessible in the dashboard.
+When writing bots, you will interact with the game state and other players. To ensure fairness, the game uses a `BotProxy` system.
 
-## Additional tooling
+### Key Rules
+1.  **No Direct Hand Access**: You cannot see the cards in an opponent's hand. `opponent.hand` will return a list of `None` or be inaccessible for card details.
+2.  **Use Public Info**: You CAN access:
+    - `opponent.name`
+    - `opponent.alive`
+    - `len(opponent.hand)`
+3.  **Do Not Modify State**: You cannot modify the `GameState` or other bots.
 
-- **Backend container** – `backend/Dockerfile` builds a production-ready image using uvicorn.
-- **Automated tests** – CI runs unit tests for the game engine, pytest-based backend tests, and Playwright UI tests for the frontend.
-- **Storage layout** – arena uploads and generated replays live under `backend/storage/bots/` and `backend/storage/replays/` so they can be mounted or backed up separately.
+### Example: Choosing a Target
+
+```python
+def choose_target(self, state, alive_players, context):
+    # ✅ GOOD: Target player with most cards
+    return max(alive_players, key=lambda b: len(b.hand))
+
+    # ❌ BAD: Trying to find a player with a specific card
+    # for p in alive_players:
+    #     if CardType.DEFUSE in p.hand: ... # Will fail or return False
+```
 
 ## Contributing
 
-See `CONTRIBUTING.md` for general guidelines. When touching backend code, add pytest coverage under `backend/app/tests/`; when touching the frontend, keep the replay viewer’s offline workflow intact.
+- **Backend**: Add tests in `backend/app/tests/`.
+- **Frontend**: Ensure the offline Replay Viewer continues to work.
+- **Bots**: Add new reference bots to `bots/` and run the admin setup script to seed them.
