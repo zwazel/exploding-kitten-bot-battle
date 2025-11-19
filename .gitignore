@@ -40,6 +40,13 @@ env/
 .coverage
 htmlcov/
 .tox/
+test.db
+*.db
+backend/test_arena.db
+
+# Backend storage (uploaded bots and replays)
+backend/storage/
+backend/backend/
 
 # OS
 .DS_Store
@@ -60,5 +67,6 @@ my_game.json
 # Test replay files
 test_*.json
 !replay-viewer/tests/fixtures/test_replay.json
+!frontend/tests/fixtures/test_replay.json
 
 statistics.json
