@@ -72,3 +72,9 @@ test_*.json
 statistics.json
 
 my-game.json
+
+frontend/node_modules/
+
+frontend/test-results/
+
+frontend/playwright-report/
