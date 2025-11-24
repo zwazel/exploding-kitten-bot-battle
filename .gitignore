@@ -70,3 +70,5 @@ test_*.json
 !frontend/tests/fixtures/test_replay.json
 
 statistics.json
+
+my-game.json
