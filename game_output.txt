@@ -1,0 +1,367 @@
+Loading bots...
+Loaded bot: AggressiveBot
+Loaded bot: CautiousBot
+Loaded bot: RandomBot
+Loaded bot: talkative_bot
+Replay recording enabled. Will save to: debug_replay.json
+============================================================
+Setting up Exploding Kittens game...
+Players: AggressiveBot, CautiousBot, RandomBot, talkative_bot
+============================================================
+
+Deck ready with 27 cards
+Each player has 7 cards (including 1 Defuse)
+Play order: talkative_bot, AggressiveBot, RandomBot, CautiousBot
+
+
+============================================================
+Turn 1: talkative_bot's turn (1 turn(s) total)
+Hand (7 cards): Defuse, Tacocat, Attack, Skip, Cattermelon, See the Future, Favor
+Cards left in deck: 27
+💬 talkative_bot says: "Take that! ATTACK!"
+talkative_bot plays Defuse
+💬 talkative_bot says: "Take that! ATTACK!"
+talkative_bot plays Tacocat
+💬 talkative_bot says: "Take that! ATTACK!"
+talkative_bot plays Attack
+  → Attack: Next player takes 2 turn(s)
+→ Attack played - talkative_bot's all turns end
+
+============================================================
+Turn 2: AggressiveBot's turn (2 turn(s) total)
+Hand (7 cards): Defuse, Skip, Cattermelon, Rainbow-Ralphing Cat, Tacocat, Hairy Potato Cat, Defuse
+Cards left in deck: 27
+AggressiveBot ends play phase
+AggressiveBot draws a card...
+  → Drew: Hairy Potato Cat
+→ AggressiveBot has 1 turn(s) remaining
+
+============================================================
+Turn 3: AggressiveBot's turn (1 turn(s) total)
+Hand (8 cards): Defuse, Skip, Cattermelon, Rainbow-Ralphing Cat, Tacocat, Hairy Potato Cat, Defuse, Hairy Potato Cat
+Cards left in deck: 26
+AggressiveBot plays 2-of-a-kind combo: Hairy Potato Cat, Hairy Potato Cat
+  → AggressiveBot targets RandomBot
+  🚫 RandomBot plays NOPE! (Nope #1)
+  🚫 RandomBot plays NOPE! (Nope #2)
+  ✓ Action proceeds (2 Nope(s) played)
+  → AggressiveBot randomly steals See the Future from RandomBot
+AggressiveBot plays See the Future
+  → See the Future: AggressiveBot sees [Shuffle, See the Future, Cattermelon]
+AggressiveBot ends play phase
+AggressiveBot draws a card...
+  → Drew: Shuffle
+
+============================================================
+Turn 4: RandomBot's turn (1 turn(s) total)
+Hand (4 cards): Defuse, Favor, Shuffle, Favor
+Cards left in deck: 25
+RandomBot ends play phase
+RandomBot draws a card...
+  → Drew: See the Future
+
+============================================================
+Turn 5: CautiousBot's turn (1 turn(s) total)
+Hand (7 cards): Defuse, Attack, Skip, See the Future, Tacocat, Shuffle, Favor
+Cards left in deck: 24
+CautiousBot plays See the Future
+  → See the Future: CautiousBot sees [Cattermelon, Hairy Potato Cat, Tacocat]
+CautiousBot ends play phase
+CautiousBot draws a card...
+  → Drew: Cattermelon
+
+============================================================
+Turn 6: talkative_bot's turn (1 turn(s) total)
+Hand (4 cards): Skip, Cattermelon, See the Future, Favor
+Cards left in deck: 23
+💬 talkative_bot says: "Skipping my turn!"
+talkative_bot plays Skip
+  → Skip: Skips one turn without drawing
+→ Skip played - one turn skipped
+
+============================================================
+Turn 7: AggressiveBot's turn (1 turn(s) total)
+Hand (7 cards): Defuse, Skip, Cattermelon, Rainbow-Ralphing Cat, Tacocat, Defuse, Shuffle
+Cards left in deck: 23
+AggressiveBot plays Shuffle
+  → Shuffle: Deck shuffled
+AggressiveBot ends play phase
+AggressiveBot draws a card...
+  💣 AggressiveBot drew an EXPLODING KITTEN!
+  AggressiveBot has a Defuse card!
+  → Defused! Exploding Kitten inserted at position 2
+
+============================================================
+Turn 8: RandomBot's turn (1 turn(s) total)
+Hand (5 cards): Defuse, Favor, Shuffle, Favor, See the Future
+Cards left in deck: 23
+RandomBot plays See the Future
+  → See the Future: RandomBot sees [Beard Cat, Exploding Kitten, Exploding Kitten]
+RandomBot plays Favor
+  → RandomBot targets CautiousBot
+  → CautiousBot gives Tacocat to RandomBot
+RandomBot ends play phase
+RandomBot draws a card...
+  → Drew: Beard Cat
+
+============================================================
+Turn 9: CautiousBot's turn (1 turn(s) total)
+Hand (6 cards): Defuse, Attack, Skip, Shuffle, Favor, Cattermelon
+Cards left in deck: 22
+CautiousBot ends play phase
+CautiousBot draws a card...
+  💣 CautiousBot drew an EXPLODING KITTEN!
+  CautiousBot has a Defuse card!
+  → Defused! Exploding Kitten inserted at position 21
+
+============================================================
+Turn 10: talkative_bot's turn (1 turn(s) total)
+Hand (3 cards): Cattermelon, See the Future, Favor
+Cards left in deck: 22
+💬 talkative_bot says: "Do me a favor?"
+talkative_bot plays Favor
+  → talkative_bot targets AggressiveBot
+  → AggressiveBot gives Cattermelon to talkative_bot
+💬 talkative_bot says: "I have 3 cards!"
+talkative_bot ends play phase
+talkative_bot draws a card...
+  💣 talkative_bot drew an EXPLODING KITTEN!
+  💀 talkative_bot has no Defuse card and EXPLODES!
+
+============================================================
+Turn 11: AggressiveBot's turn (1 turn(s) total)
+Hand (4 cards): Skip, Rainbow-Ralphing Cat, Tacocat, Defuse
+Cards left in deck: 21
+AggressiveBot ends play phase
+AggressiveBot draws a card...
+  → Drew: Beard Cat
+
+============================================================
+Turn 12: RandomBot's turn (1 turn(s) total)
+Hand (5 cards): Defuse, Shuffle, Favor, Tacocat, Beard Cat
+Cards left in deck: 20
+RandomBot ends play phase
+RandomBot draws a card...
+  → Drew: Attack
+
+============================================================
+Turn 13: CautiousBot's turn (1 turn(s) total)
+Hand (5 cards): Attack, Skip, Shuffle, Favor, Cattermelon
+Cards left in deck: 19
+CautiousBot ends play phase
+CautiousBot draws a card...
+  → Drew: Beard Cat
+
+============================================================
+Turn 14: AggressiveBot's turn (1 turn(s) total)
+Hand (5 cards): Skip, Rainbow-Ralphing Cat, Tacocat, Defuse, Beard Cat
+Cards left in deck: 18
+AggressiveBot ends play phase
+AggressiveBot draws a card...
+  💣 AggressiveBot drew an EXPLODING KITTEN!
+  AggressiveBot has a Defuse card!
+  → Defused! Exploding Kitten inserted at position 2
+
+============================================================
+Turn 15: RandomBot's turn (1 turn(s) total)
+Hand (6 cards): Defuse, Shuffle, Favor, Tacocat, Beard Cat, Attack
+Cards left in deck: 18
+RandomBot ends play phase
+RandomBot draws a card...
+  → Drew: Skip
+
+============================================================
+Turn 16: CautiousBot's turn (1 turn(s) total)
+Hand (6 cards): Attack, Skip, Shuffle, Favor, Cattermelon, Beard Cat
+Cards left in deck: 17
+CautiousBot ends play phase
+CautiousBot draws a card...
+  → Drew: Hairy Potato Cat
+
+============================================================
+Turn 17: AggressiveBot's turn (1 turn(s) total)
+Hand (4 cards): Skip, Rainbow-Ralphing Cat, Tacocat, Beard Cat
+Cards left in deck: 16
+AggressiveBot ends play phase
+AggressiveBot draws a card...
+  💣 AggressiveBot drew an EXPLODING KITTEN!
+  💀 AggressiveBot has no Defuse card and EXPLODES!
+
+============================================================
+Turn 18: RandomBot's turn (1 turn(s) total)
+Hand (7 cards): Defuse, Shuffle, Favor, Tacocat, Beard Cat, Attack, Skip
+Cards left in deck: 15
+RandomBot ends play phase
+RandomBot draws a card...
+  → Drew: Attack
+
+============================================================
+Turn 19: CautiousBot's turn (1 turn(s) total)
+Hand (7 cards): Attack, Skip, Shuffle, Favor, Cattermelon, Beard Cat, Hairy Potato Cat
+Cards left in deck: 14
+CautiousBot ends play phase
+CautiousBot draws a card...
+  → Drew: Nope
+
+============================================================
+Turn 20: RandomBot's turn (1 turn(s) total)
+Hand (8 cards): Defuse, Shuffle, Favor, Tacocat, Beard Cat, Attack, Skip, Attack
+Cards left in deck: 13
+RandomBot ends play phase
+RandomBot draws a card...
+  → Drew: Rainbow-Ralphing Cat
+
+============================================================
+Turn 21: CautiousBot's turn (1 turn(s) total)
+Hand (8 cards): Attack, Skip, Shuffle, Favor, Cattermelon, Beard Cat, Hairy Potato Cat, Nope
+Cards left in deck: 12
+CautiousBot ends play phase
+CautiousBot draws a card...
+  → Drew: Shuffle
+
+============================================================
+Turn 22: RandomBot's turn (1 turn(s) total)
+Hand (9 cards): Defuse, Shuffle, Favor, Tacocat, Beard Cat, Attack, Skip, Attack, Rainbow-Ralphing Cat
+Cards left in deck: 11
+RandomBot ends play phase
+RandomBot draws a card...
+  → Drew: Nope
+
+============================================================
+Turn 23: CautiousBot's turn (1 turn(s) total)
+Hand (9 cards): Attack, Skip, Shuffle, Favor, Cattermelon, Beard Cat, Hairy Potato Cat, Nope, Shuffle
+Cards left in deck: 10
+CautiousBot plays 2-of-a-kind combo: Shuffle, Shuffle
+  → CautiousBot targets RandomBot
+  🚫 RandomBot plays NOPE! (Nope #1)
+  ❌ Action NOPED! (1 Nope(s) played)
+CautiousBot ends play phase
+CautiousBot draws a card...
+  → Drew: Beard Cat
+
+============================================================
+Turn 24: RandomBot's turn (1 turn(s) total)
+Hand (9 cards): Defuse, Shuffle, Favor, Tacocat, Beard Cat, Attack, Skip, Attack, Rainbow-Ralphing Cat
+Cards left in deck: 9
+RandomBot plays Attack
+  🚫 CautiousBot plays NOPE! (Nope #1)
+  ❌ Action NOPED! (1 Nope(s) played)
+RandomBot ends play phase
+RandomBot draws a card...
+  → Drew: Defuse
+
+============================================================
+Turn 25: CautiousBot's turn (1 turn(s) total)
+Hand (7 cards): Attack, Skip, Favor, Cattermelon, Beard Cat, Hairy Potato Cat, Beard Cat
+Cards left in deck: 8
+CautiousBot plays 2-of-a-kind combo: Beard Cat, Beard Cat
+  → CautiousBot targets RandomBot
+  → CautiousBot randomly steals Skip from RandomBot
+CautiousBot plays 2-of-a-kind combo: Skip, Skip
+  → CautiousBot targets RandomBot
+  → CautiousBot randomly steals Favor from RandomBot
+CautiousBot plays 2-of-a-kind combo: Favor, Favor
+  → CautiousBot targets RandomBot
+  → CautiousBot randomly steals Shuffle from RandomBot
+CautiousBot ends play phase
+CautiousBot draws a card...
+  → Drew: Nope
+
+============================================================
+Turn 26: RandomBot's turn (1 turn(s) total)
+Hand (6 cards): Defuse, Tacocat, Beard Cat, Attack, Rainbow-Ralphing Cat, Defuse
+Cards left in deck: 7
+RandomBot ends play phase
+RandomBot draws a card...
+  → Drew: Hairy Potato Cat
+
+============================================================
+Turn 27: CautiousBot's turn (1 turn(s) total)
+Hand (5 cards): Attack, Cattermelon, Hairy Potato Cat, Shuffle, Nope
+Cards left in deck: 6
+CautiousBot ends play phase
+CautiousBot draws a card...
+  → Drew: Rainbow-Ralphing Cat
+
+============================================================
+Turn 28: RandomBot's turn (1 turn(s) total)
+Hand (7 cards): Defuse, Tacocat, Beard Cat, Attack, Rainbow-Ralphing Cat, Defuse, Hairy Potato Cat
+Cards left in deck: 5
+RandomBot plays Attack
+  🚫 CautiousBot plays NOPE! (Nope #1)
+  ❌ Action NOPED! (1 Nope(s) played)
+RandomBot ends play phase
+RandomBot draws a card...
+  → Drew: Tacocat
+
+============================================================
+Turn 29: CautiousBot's turn (1 turn(s) total)
+Hand (5 cards): Attack, Cattermelon, Hairy Potato Cat, Shuffle, Rainbow-Ralphing Cat
+Cards left in deck: 4
+CautiousBot ends play phase
+CautiousBot draws a card...
+  → Drew: See the Future
+
+============================================================
+Turn 30: RandomBot's turn (1 turn(s) total)
+Hand (7 cards): Defuse, Tacocat, Beard Cat, Rainbow-Ralphing Cat, Defuse, Hairy Potato Cat, Tacocat
+Cards left in deck: 3
+RandomBot ends play phase
+RandomBot draws a card...
+  → Drew: Rainbow-Ralphing Cat
+
+============================================================
+Turn 31: CautiousBot's turn (1 turn(s) total)
+Hand (6 cards): Attack, Cattermelon, Hairy Potato Cat, Shuffle, Rainbow-Ralphing Cat, See the Future
+Cards left in deck: 2
+CautiousBot plays See the Future
+  → See the Future: CautiousBot sees [Cattermelon, Exploding Kitten]
+CautiousBot ends play phase
+CautiousBot draws a card...
+  → Drew: Cattermelon
+
+============================================================
+Turn 32: RandomBot's turn (1 turn(s) total)
+Hand (8 cards): Defuse, Tacocat, Beard Cat, Rainbow-Ralphing Cat, Defuse, Hairy Potato Cat, Tacocat, Rainbow-Ralphing Cat
+Cards left in deck: 1
+RandomBot ends play phase
+RandomBot draws a card...
+  💣 RandomBot drew an EXPLODING KITTEN!
+  RandomBot has a Defuse card!
+  → Defused! Exploding Kitten inserted at position 0
+
+============================================================
+Turn 33: CautiousBot's turn (1 turn(s) total)
+Hand (6 cards): Attack, Cattermelon, Hairy Potato Cat, Shuffle, Rainbow-Ralphing Cat, Cattermelon
+Cards left in deck: 1
+CautiousBot plays Shuffle
+  → Shuffle: Deck shuffled
+CautiousBot plays 2-of-a-kind combo: Cattermelon, Cattermelon
+  → CautiousBot targets RandomBot
+  → CautiousBot randomly steals Rainbow-Ralphing Cat from RandomBot
+CautiousBot plays 2-of-a-kind combo: Rainbow-Ralphing Cat, Rainbow-Ralphing Cat
+  → CautiousBot targets RandomBot
+  → CautiousBot randomly steals Defuse from RandomBot
+CautiousBot ends play phase
+CautiousBot draws a card...
+  💣 CautiousBot drew an EXPLODING KITTEN!
+  CautiousBot has a Defuse card!
+  → Defused! Exploding Kitten inserted at position 0
+
+============================================================
+Turn 34: RandomBot's turn (1 turn(s) total)
+Hand (5 cards): Tacocat, Beard Cat, Hairy Potato Cat, Tacocat, Rainbow-Ralphing Cat
+Cards left in deck: 1
+RandomBot ends play phase
+RandomBot draws a card...
+  💣 RandomBot drew an EXPLODING KITTEN!
+  💀 RandomBot has no Defuse card and EXPLODES!
+
+============================================================
+🎉 GAME OVER! Winner: CautiousBot 🎉
+============================================================
+
+
+✅ Replay saved to: debug_replay.json
+
+🏆 Victory goes to: CautiousBot! 🏆

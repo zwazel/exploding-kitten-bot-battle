@@ -72,20 +72,26 @@ class ReplayRecorder:
             "cards_in_deck": cards_in_deck
         })
     
-    def record_card_play(self, player_name: str, card_type: CardType) -> None:
+    def record_card_play(self, player_name: str, card_type: CardType, message: Optional[str] = None) -> None:
         """Record a single card being played."""
         if not self.enabled:
             return
         
-        self.events.append({
+        event = {
             "type": "card_play",
             "turn_number": self.turn_number,
             "player": player_name,
             "card": card_type.name
-        })
+        }
+        
+        if message:
+            event["message"] = message
+            
+        self.events.append(event)
     
     def record_combo_play(self, player_name: str, combo_type: str, 
-                         cards: List[CardType], target: Optional[str] = None) -> None:
+                         cards: List[CardType], target: Optional[str] = None,
+                         message: Optional[str] = None) -> None:
         """Record a combo being played."""
         if not self.enabled:
             return
@@ -98,6 +104,9 @@ class ReplayRecorder:
             "cards": [card.name for card in cards]
         }
         
+        if message:
+            event["message"] = message
+        
         if target:
             event["target"] = target
         
@@ -105,7 +114,8 @@ class ReplayRecorder:
     
     def record_nope(self, player_name: str, action_description: str, 
                    original_action: Optional[str] = None, 
-                   target_player: Optional[str] = None) -> None:
+                   target_player: Optional[str] = None,
+                   message: Optional[str] = None) -> None:
         """Record a Nope card being played."""
         if not self.enabled:
             return
@@ -116,6 +126,9 @@ class ReplayRecorder:
             "player": player_name,
             "action": action_description
         }
+        
+        if message:
+            event["message"] = message
         
         if original_action:
             event["original_action"] = original_action
@@ -213,17 +226,22 @@ class ReplayRecorder:
         
         self.events.append(event)
     
-    def record_favor(self, player_name: str, target: str) -> None:
+    def record_favor(self, player_name: str, target: str, message: Optional[str] = None) -> None:
         """Record a Favor card being used."""
         if not self.enabled:
             return
         
-        self.events.append({
+        event = {
             "type": "favor",
             "turn_number": self.turn_number,
             "player": player_name,
             "target": target
-        })
+        }
+        
+        if message:
+            event["message"] = message
+            
+        self.events.append(event)
     
     def record_card_steal(self, thief: str, victim: str, context: str, stolen_card: Optional[CardType] = None) -> None:
         """Record a card being stolen (from combo or favor)."""

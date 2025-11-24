@@ -91,6 +91,15 @@ def choose_target(self, state, alive_players, context):
     # ❌ BAD: Trying to find a player with a specific card
     # for p in alive_players:
     #     if CardType.DEFUSE in p.hand: ... # Will fail or return False
+
+### Bot Communication
+You can use `self.say("message")` to print messages to the game log and include them in replays.
+
+```python
+def play(self, state):
+    self.say("I'm going to win this!")
+    return state.draw_card()
+```
 ```
 
 ## Contributing

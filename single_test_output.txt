@@ -1,0 +1,20 @@
+test_double_nope_allows_action (tests.test_game.TestNopeCard.test_double_nope_allows_action)
+Test that two Nopes allow the action (nope the nope). ... FAIL
+
+======================================================================
+FAIL: test_double_nope_allows_action (tests.test_game.TestNopeCard.test_double_nope_allows_action)
+Test that two Nopes allow the action (nope the nope).
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\dev\bzz\exploding-kitten-bot-battle\tests\test_game.py", line 427, in test_double_nope_allows_action
+    self.assertFalse(was_noped)
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (failures=1)
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2', 'Bot3']
+DEBUG: Bot2 should_play_nope: True
+DEBUG: Final nope_count: 1

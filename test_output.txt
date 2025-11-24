@@ -1,0 +1,265 @@
+test_add_remove_card (tests.test_game.TestBotClass.test_add_remove_card)
+Test adding and removing cards from bot's hand. ... ok
+test_bot_initialization (tests.test_game.TestBotClass.test_bot_initialization)
+Test bot initialization. ... ok
+test_has_card_type (tests.test_game.TestBotClass.test_has_card_type)
+Test checking for card types. ... ok
+test_aggressive_bot_does_not_play_defuse_in_3_of_a_kind (tests.test_game.TestBotDefuseComboValidation.test_aggressive_bot_does_not_play_defuse_in_3_of_a_kind)
+Test that AggressiveBot doesn't try to play 3 DEFUSE cards as a combo. ... ok
+test_aggressive_bot_does_not_play_exploding_kitten_in_3_of_a_kind (tests.test_game.TestBotDefuseComboValidation.test_aggressive_bot_does_not_play_exploding_kitten_in_3_of_a_kind)
+Test that AggressiveBot doesn't try to play 3 EXPLODING_KITTEN cards as a combo. ... ok
+test_aggressive_bot_plays_valid_3_of_a_kind (tests.test_game.TestBotDefuseComboValidation.test_aggressive_bot_plays_valid_3_of_a_kind)
+Test that AggressiveBot still plays valid 3-of-a-kind combos. ... ok
+test_aggressive_bot_prefers_valid_combo_over_defuse_combo (tests.test_game.TestBotDefuseComboValidation.test_aggressive_bot_prefers_valid_combo_over_defuse_combo)
+Test that AggressiveBot plays valid combos when both valid and invalid options exist. ... ok
+test_cautious_bot_never_plays_combos (tests.test_game.TestBotDefuseComboValidation.test_cautious_bot_never_plays_combos)
+Test that CautiousBot doesn't play any combos (including with DEFUSE). ... ok
+test_card_creation (tests.test_game.TestCard.test_card_creation)
+Test creating cards of different types. ... ok
+test_card_str (tests.test_game.TestCard.test_card_str)
+Test string representation of cards. ... ok
+test_all_cat_types_exist (tests.test_game.TestCatCards.test_all_cat_types_exist)
+Test that all 5 cat types are defined. ... ok
+test_cat_cards_can_form_combos (tests.test_game.TestCatCards.test_cat_cards_can_form_combos)
+Test that cat cards can be used in combos. ... ok
+test_deck_contains_cat_cards (tests.test_game.TestCatCards.test_deck_contains_cat_cards)
+Test that deck is initialized with cat cards. ... ok
+test_2_of_a_kind_steals_card (tests.test_game.TestCombos.test_2_of_a_kind_steals_card)
+Test that 2-of-a-kind combo steals a random card. ... ok
+test_3_of_a_kind_requests_specific_card (tests.test_game.TestCombos.test_3_of_a_kind_requests_specific_card)
+Test that 3-of-a-kind combo can request specific card. ... ok
+test_5_unique_takes_from_discard (tests.test_game.TestCombos.test_5_unique_takes_from_discard)
+Test that 5-unique combo takes card from discard. ... ok
+test_invalid_2_of_a_kind_different_types (tests.test_game.TestCombos.test_invalid_2_of_a_kind_different_types)
+Test that 2 different cards are not a valid combo. ... ok
+test_invalid_5_unique_duplicates (tests.test_game.TestCombos.test_invalid_5_unique_duplicates)
+Test that 5 cards with duplicates is not valid. ... ok
+test_invalid_5_unique_with_defuse (tests.test_game.TestCombos.test_invalid_5_unique_with_defuse)
+Test that 5-unique with Defuse is invalid. ... ok
+test_invalid_combo_with_defuse (tests.test_game.TestCombos.test_invalid_combo_with_defuse)
+Test that Defuse cards cannot be used in combos. ... ok
+test_invalid_combo_with_exploding_kitten (tests.test_game.TestCombos.test_invalid_combo_with_exploding_kitten)
+Test that Exploding Kitten cards cannot be used in combos. ... ok
+test_invalid_combo_wrong_count (tests.test_game.TestCombos.test_invalid_combo_wrong_count)
+Test that invalid card counts are rejected. ... ok
+test_valid_2_of_a_kind (tests.test_game.TestCombos.test_valid_2_of_a_kind)
+Test that 2-of-a-kind combo is recognized. ... ok
+test_valid_3_of_a_kind (tests.test_game.TestCombos.test_valid_3_of_a_kind)
+Test that 3-of-a-kind combo is recognized. ... ok
+test_valid_5_unique (tests.test_game.TestCombos.test_valid_5_unique)
+Test that 5-unique combo is recognized. ... ok
+test_deck_initialization (tests.test_game.TestDeck.test_deck_initialization)
+Test deck is initialized with correct number of cards. ... ok
+test_draw_card (tests.test_game.TestDeck.test_draw_card)
+Test drawing cards from deck. ... ok
+test_insert_at (tests.test_game.TestDeck.test_insert_at)
+Test inserting cards at specific positions. ... ok
+test_peek (tests.test_game.TestDeck.test_peek)
+Test peeking at cards without removing them. ... ok
+test_shuffle (tests.test_game.TestDeck.test_shuffle)
+Test deck shuffling. ... ok
+test_custom_deck_config (tests.test_game.TestDeckConfiguration.test_custom_deck_config)
+Test that custom deck configuration works. ... ok
+test_default_deck_config (tests.test_game.TestDeckConfiguration.test_default_deck_config)
+Test that default deck configuration works. ... ok
+test_game_engine_with_custom_config (tests.test_game.TestDeckConfiguration.test_game_engine_with_custom_config)
+Test GameEngine with custom deck config. ... ok
+test_favor_asks_target_for_card (tests.test_game.TestFavorCard.test_favor_asks_target_for_card)
+Test that Favor card asks target to choose which card to give. ... ok
+test_favor_no_target_available (tests.test_game.TestFavorCard.test_favor_no_target_available)
+Test Favor when no targets are available. ... ok
+test_game_requires_minimum_players (tests.test_game.TestGameEngine.test_game_requires_minimum_players)
+Test that game requires at least 2 players. ... ok
+test_game_setup (tests.test_game.TestGameEngine.test_game_setup)
+Test game setup. ... ok
+test_game_with_two_players (tests.test_game.TestGameEngine.test_game_with_two_players)
+Test a game with two players completes. ... ok
+test_game_state_copy (tests.test_game.TestGameState.test_game_state_copy)
+Test copying game state. ... ok
+test_game_state_creation (tests.test_game.TestGameState.test_game_state_creation)
+Test creating a game state. ... ok
+test_bot_with_no_cards_can_only_draw (tests.test_game.TestMultiTurnMechanics.test_bot_with_no_cards_can_only_draw)
+Test that bot with empty hand can still draw and be notified. ... ok
+test_bot_with_no_cards_receives_notifications (tests.test_game.TestMultiTurnMechanics.test_bot_with_no_cards_receives_notifications)
+Test that bot with no cards still gets Nope notifications. ... ok
+test_double_attack_stacks (tests.test_game.TestMultiTurnMechanics.test_double_attack_stacks)
+Test that Attack ÔåÆ Attack gives next player 3 turns. ... ok
+test_single_attack_gives_2_turns (tests.test_game.TestMultiTurnMechanics.test_single_attack_gives_2_turns)
+Test that Attack card gives next player 2 turns. ... ok
+test_skip_with_multiple_turns (tests.test_game.TestMultiTurnMechanics.test_skip_with_multiple_turns)
+Test that Skip only ends one turn when bot has multiple turns. ... ok
+test_triple_attack_stacks (tests.test_game.TestMultiTurnMechanics.test_triple_attack_stacks)
+Test that Attack ÔåÆ Attack ÔåÆ Attack gives 4 turns. ... ok
+test_dead_bots_cannot_nope (tests.test_game.TestNopeCard.test_dead_bots_cannot_nope)
+Test that dead bots are not asked to nope. ... ok
+test_double_nope_allows_action (tests.test_game.TestNopeCard.test_double_nope_allows_action)
+Test that two Nopes allow the action (nope the nope). ... FAIL
+test_no_nope_without_nope_card (tests.test_game.TestNopeCard.test_no_nope_without_nope_card)
+Test that bots without Nope cards can't nope. ... ok
+test_nope_order_follows_play_order (tests.test_game.TestNopeCard.test_nope_order_follows_play_order)
+Test that bots are asked to nope in play order. ... ok
+test_single_nope_cancels_action (tests.test_game.TestNopeCard.test_single_nope_cancels_action)
+Test that a single Nope cancels an action. ... ok
+test_triple_nope_cancels_action (tests.test_game.TestNopeCard.test_triple_nope_cancels_action)
+Test that three Nopes cancel the action. ... ok
+test_actor_notified_about_own_actions (tests.test_game.TestNotificationSystem.test_actor_notified_about_own_actions)
+Test that the actor is notified about their own actions. ... ok
+test_bots_notified_about_card_plays (tests.test_game.TestNotificationSystem.test_bots_notified_about_card_plays)
+Test that all bots are notified when a card is played. ... ok
+test_bots_notified_about_combo_results (tests.test_game.TestNotificationSystem.test_bots_notified_about_combo_results)
+Test that bots are notified about combo results. ... ok
+test_bots_notified_about_draws (tests.test_game.TestNotificationSystem.test_bots_notified_about_draws)
+Test that all bots are notified when a card is drawn. ... ok
+test_bots_notified_about_elimination (tests.test_game.TestNotificationSystem.test_bots_notified_about_elimination)
+Test that bots are notified when a bot explodes. ... ok
+test_bots_notified_about_exploding_kitten (tests.test_game.TestNotificationSystem.test_bots_notified_about_exploding_kitten)
+Test that bots are notified when someone draws Exploding Kitten. ... ok
+test_bots_notified_about_favor_result (tests.test_game.TestNotificationSystem.test_bots_notified_about_favor_result)
+Test that bots are notified about Favor card results. ... ok
+test_notification_order_with_nope (tests.test_game.TestNotificationSystem.test_notification_order_with_nope)
+Test that notifications happen before Nope checks. ... ok
+test_chained_nope_logging (tests.test_game.TestReplayRecorder.test_chained_nope_logging)
+Test that chained NOPEs are logged correctly with proper target information. ... ok
+test_game_with_replay_recorder (tests.test_game.TestReplayRecorder.test_game_with_replay_recorder)
+Test that game engine works with replay recorder. ... ok
+test_replay_recorder_card_play (tests.test_game.TestReplayRecorder.test_replay_recorder_card_play)
+Test recording card plays. ... ok
+test_replay_recorder_combo_play (tests.test_game.TestReplayRecorder.test_replay_recorder_combo_play)
+Test recording combo plays. ... ok
+test_replay_recorder_creation (tests.test_game.TestReplayRecorder.test_replay_recorder_creation)
+Test creating a replay recorder. ... ok
+test_replay_recorder_disabled (tests.test_game.TestReplayRecorder.test_replay_recorder_disabled)
+Test that disabled recorder doesn't record events. ... ok
+test_replay_recorder_exploding_kitten (tests.test_game.TestReplayRecorder.test_replay_recorder_exploding_kitten)
+Test recording exploding kitten events. ... ok
+test_replay_recorder_game_setup (tests.test_game.TestReplayRecorder.test_replay_recorder_game_setup)
+Test recording game setup. ... ok
+test_replay_recorder_player_elimination (tests.test_game.TestReplayRecorder.test_replay_recorder_player_elimination)
+Test recording player elimination. ... ok
+test_replay_recorder_to_json (tests.test_game.TestReplayRecorder.test_replay_recorder_to_json)
+Test converting replay to JSON. ... ok
+test_replay_recorder_top_card_in_events (tests.test_game.TestReplayRecorder.test_replay_recorder_top_card_in_events)
+Test that top_card field is recorded in relevant events. ... ok
+test_replay_recorder_top_card_optional (tests.test_game.TestReplayRecorder.test_replay_recorder_top_card_optional)
+Test that top_card is optional in events. ... ok
+test_replay_recorder_turn_start (tests.test_game.TestReplayRecorder.test_replay_recorder_turn_start)
+Test recording turn start. ... ok
+test_triple_chained_nope_logging (tests.test_game.TestReplayRecorder.test_triple_chained_nope_logging)
+Test that triple-chained NOPEs are logged correctly. ... ok
+test_game_engine_placements (tests.test_game.TestStatistics.test_game_engine_placements)
+Test that GameEngine correctly tracks placements. ... ok
+test_statistics_initialization (tests.test_game.TestStatistics.test_statistics_initialization)
+Test creating a statistics tracker. ... ok
+test_statistics_multiple_games (tests.test_game.TestStatistics.test_statistics_multiple_games)
+Test recording multiple games. ... ok
+test_statistics_record_game (tests.test_game.TestStatistics.test_statistics_record_game)
+Test recording game results. ... ok
+test_statistics_summary (tests.test_game.TestStatistics.test_statistics_summary)
+Test generating statistics summary. ... ok
+test_statistics_mode_parallel (tests.test_game.TestStatisticsMode.test_statistics_mode_parallel)
+Test running statistics mode with parallel execution. ... ok
+test_statistics_mode_parallel_with_file (tests.test_game.TestStatisticsMode.test_statistics_mode_parallel_with_file)
+Test running statistics mode with parallel execution and file output. ... ok
+test_statistics_mode_with_file (tests.test_game.TestStatisticsMode.test_statistics_mode_with_file)
+Test running statistics mode with file saving. ... ok
+test_statistics_mode_without_file (tests.test_game.TestStatisticsMode.test_statistics_mode_without_file)
+Test running statistics mode without saving to file. ... ok
+test_statistics_parallel_vs_sequential_same_results (tests.test_game.TestStatisticsMode.test_statistics_parallel_vs_sequential_same_results)
+Test that parallel and sequential modes produce statistically similar results. ... ok
+
+======================================================================
+FAIL: test_double_nope_allows_action (tests.test_game.TestNopeCard.test_double_nope_allows_action)
+Test that two Nopes allow the action (nope the nope).
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\dev\bzz\exploding-kitten-bot-battle\tests\test_game.py", line 427, in test_double_nope_allows_action
+    self.assertFalse(was_noped)
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 84 tests in 0.092s
+
+FAILED (failures=1)
+DEBUG: Checking for nope. Current action: ActionType.COMBO_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.COMBO_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.COMBO_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Bot2 should_play_nope: True
+DEBUG: Final nope_count: 1
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2', 'Bot3']
+DEBUG: Bot2 should_play_nope: True
+DEBUG: Final nope_count: 1
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2', 'Bot3']
+DEBUG: Bot2 should_play_nope: True
+DEBUG: Final nope_count: 1
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Bot2 should_play_nope: True
+DEBUG: Final nope_count: 1
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot4
+DEBUG: Actor: Bot4, Bots in order: ['Bot1', 'Bot2', 'Bot3']
+DEBUG: Bot1 should_play_nope: True
+DEBUG: Final nope_count: 1
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2', 'Bot3']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2']
+DEBUG: Final nope_count: 0
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2', 'Bot3']
+DEBUG: Bot2 should_play_nope: True
+DEBUG: Checking for nope. Current action: ActionType.NOPE by Bot2
+DEBUG: Actor: Bot2, Bots in order: ['Bot3', 'Bot1']
+DEBUG: Bot3 should_play_nope: True
+DEBUG: Checking for nope. Current action: ActionType.NOPE by Bot3
+DEBUG: Actor: Bot3, Bots in order: ['Bot1', 'Bot2']
+DEBUG: Final nope_count: 2
+DEBUG: Checking for nope. Current action: ActionType.COMBO_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2', 'Bot3', 'Bot4']
+DEBUG: Bot2 should_play_nope: True
+DEBUG: Checking for nope. Current action: ActionType.NOPE by Bot2
+DEBUG: Actor: Bot2, Bots in order: ['Bot3', 'Bot4', 'Bot1']
+DEBUG: Bot3 should_play_nope: True
+DEBUG: Checking for nope. Current action: ActionType.NOPE by Bot3
+DEBUG: Actor: Bot3, Bots in order: ['Bot4', 'Bot1', 'Bot2']
+DEBUG: Bot4 should_play_nope: True
+DEBUG: Checking for nope. Current action: ActionType.NOPE by Bot4
+DEBUG: Actor: Bot4, Bots in order: ['Bot1', 'Bot2', 'Bot3']
+DEBUG: Final nope_count: 3

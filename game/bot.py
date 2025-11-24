@@ -83,6 +83,16 @@ class Bot(ABC):
         self.name = name
         self.hand: List[Card] = []
         self.alive = True
+        self._pending_message = None
+
+    def say(self, message: str) -> None:
+        """
+        Say something to be displayed in the game log.
+        
+        Args:
+            message: The message to display
+        """
+        self._pending_message = message
 
     @abstractmethod
     def play(self, state: GameState) -> Optional[Union[Card, List[Card]]]:

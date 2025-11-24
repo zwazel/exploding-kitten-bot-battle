@@ -129,15 +129,18 @@ class GameEngine:
         
         while True:
             # FIRST: Notify all bots about the current action
+            print(f"DEBUG: Checking for nope. Current action: {current_action.action_type} by {current_action.player}")
             self._notify_all_bots(current_action)
             
             # SECOND: Check if anyone wants to Nope
             noped = False
             actor = next((bot for bot in self.bots if bot.name == current_action.player), None)
             if not actor:
+                print("DEBUG: No actor found")
                 break
                 
             bots_in_order = self._get_bots_in_play_order_after(actor)
+            print(f"DEBUG: Actor: {actor.name}, Bots in order: {[b.name for b in bots_in_order]}")
             
             for bot in bots_in_order:
                 if not bot.alive:
@@ -146,7 +149,9 @@ class GameEngine:
                 # Check if bot wants to play Nope
                 if bot.has_card_type(CardType.NOPE):
                     try:
-                        if bot.should_play_nope(self.game_state.copy(), current_action):
+                        should_nope = bot.should_play_nope(self.game_state.copy(), current_action)
+                        print(f"DEBUG: {bot.name} should_play_nope: {should_nope}")
+                        if should_nope:
                             # Bot wants to play Nope
                             nope_card = next(c for c in bot.hand if c.card_type == CardType.NOPE)
                             bot.remove_card(nope_card)
@@ -184,20 +189,27 @@ class GameEngine:
                                 else:
                                     original_desc = "action"
                                 
+                                # Check for message attached to the nope action
+                                message = bot._pending_message
+                                bot._pending_message = None
+                                
+                                if message:
+                                    self._log(f"  💬 {bot.name} says: \"{message}\"")
+
                                 self.replay_recorder.record_nope(
                                     bot.name, 
                                     desc, 
                                     original_desc,
-                                    current_action.player
+                                    current_action.player,
+                                    message=message
                                 )
                             
-                            # Create new nope action for next round
-                            # Include target to track who is being noped (for chained NOPEs)
+                            # Update current_action for the next iteration (chained Nope)
                             current_action = GameAction(
                                 action_type=ActionType.NOPE,
                                 player=bot.name,
                                 card=CardType.NOPE,
-                                target=current_action.player  # Who is being noped
+                                target=current_action.player
                             )
                             noped = True
                             break  # Stop checking, go to notification phase for this Nope
@@ -208,6 +220,7 @@ class GameEngine:
                 break
         
         # Odd number of nopes = action is canceled
+        print(f"DEBUG: Final nope_count: {nope_count}")
         if nope_count > 0:
             if nope_count % 2 == 1:
                 self._log(f"  ❌ Action NOPED! ({nope_count} Nope(s) played)")
@@ -453,6 +466,13 @@ class GameEngine:
             try:
                 play_result = bot.play(self.game_state.copy())
                 
+                # Check for message
+                message = bot._pending_message
+                bot._pending_message = None
+                
+                if message:
+                    self._log(f"💬 {bot.name} says: \"{message}\"")
+                
                 if play_result is None:
                     self._log(f"{bot.name} ends play phase")
                     return False  # Turn doesn't end, will draw
@@ -460,7 +480,7 @@ class GameEngine:
                 # Check if it's a combo (list of cards) or single card
                 if isinstance(play_result, list):
                     # Playing a combo
-                    self._handle_combo(bot, play_result)
+                    self._handle_combo(bot, play_result, message)
                     # Continue loop to allow playing more cards
                 else:
                     # Playing a single card
@@ -471,7 +491,7 @@ class GameEngine:
                     
                     # Play the card
                     card_type = play_result.card_type
-                    card_executed = self._handle_card_play(bot, play_result)
+                    card_executed = self._handle_card_play(bot, play_result, message)
                     
                     # Attack ends ALL remaining turns (if not noped)
                     if card_executed and card_type == CardType.ATTACK:
@@ -489,13 +509,14 @@ class GameEngine:
         self._log(f"WARNING: {bot.name} reached max play attempts, ending phase")
         return False
     
-    def _handle_combo(self, bot: Bot, cards: List[Card]) -> None:
+    def _handle_combo(self, bot: Bot, cards: List[Card], message: Optional[str] = None) -> None:
         """
         Handle a combo being played.
         
         Args:
             bot: The bot playing the combo
             cards: List of cards in the combo
+            message: Optional message from the bot
         """
         # Validate bot has all cards
         for card in cards:
@@ -551,7 +572,8 @@ class GameEngine:
                 player_name=bot.name,
                 combo_type=combo_type.name,
                 cards=[card.card_type for card in cards],
-                target=target.name if target else None
+                target=target.name if target else None,
+                message=message
             )
         
         # Check for Nope with GameAction
@@ -640,13 +662,14 @@ class GameEngine:
         except Exception as e:
             self._log(f"  ERROR: {bot.name} raised exception in choose_from_discard: {e}")
 
-    def _handle_card_play(self, bot: Bot, card: Card) -> bool:
+    def _handle_card_play(self, bot: Bot, card: Card, message: Optional[str] = None) -> bool:
         """
         Handle a single card being played.
         
         Args:
             bot: The bot playing the card
             card: The card being played
+            message: Optional message from the bot
             
         Returns:
             True if card effect was executed (not noped), False if noped
@@ -659,7 +682,7 @@ class GameEngine:
         if card.card_type == CardType.SKIP:
             # Record card play before checking for nope
             if self.replay_recorder:
-                self.replay_recorder.record_card_play(bot.name, card.card_type)
+                self.replay_recorder.record_card_play(bot.name, card.card_type, message=message)
             # Check for Nope
             action = GameAction(ActionType.CARD_PLAY, bot.name, card=card.card_type)
             was_noped = self._check_for_nope(action)
@@ -671,7 +694,7 @@ class GameEngine:
         elif card.card_type == CardType.SEE_THE_FUTURE:
             # Record card play before checking for nope
             if self.replay_recorder:
-                self.replay_recorder.record_card_play(bot.name, card.card_type)
+                self.replay_recorder.record_card_play(bot.name, card.card_type, message=message)
             # Check for Nope
             action = GameAction(ActionType.CARD_PLAY, bot.name, card=card.card_type)
             was_noped = self._check_for_nope(action)
@@ -691,7 +714,7 @@ class GameEngine:
         elif card.card_type == CardType.SHUFFLE:
             # Record card play before checking for nope
             if self.replay_recorder:
-                self.replay_recorder.record_card_play(bot.name, card.card_type)
+                self.replay_recorder.record_card_play(bot.name, card.card_type, message=message)
             # Check for Nope
             action = GameAction(ActionType.CARD_PLAY, bot.name, card=card.card_type)
             was_noped = self._check_for_nope(action)
@@ -711,7 +734,7 @@ class GameEngine:
         elif card.card_type == CardType.ATTACK:
             # Record card play before checking for nope
             if self.replay_recorder:
-                self.replay_recorder.record_card_play(bot.name, card.card_type)
+                self.replay_recorder.record_card_play(bot.name, card.card_type, message=message)
             # Check for Nope
             action = GameAction(ActionType.CARD_PLAY, bot.name, card=card.card_type)
             was_noped = self._check_for_nope(action)
@@ -725,20 +748,20 @@ class GameEngine:
         elif card.card_type == CardType.FAVOR:
             # Record card play before executing favor
             if self.replay_recorder:
-                self.replay_recorder.record_card_play(bot.name, card.card_type)
-            self._execute_favor(bot)
+                self.replay_recorder.record_card_play(bot.name, card.card_type, message=message)
+            self._execute_favor(bot, message)
             return True
         elif card.card_type == CardType.NOPE:
             self._log("  → Nope can only be played in response to actions")
             if self.replay_recorder:
-                self.replay_recorder.record_card_play(bot.name, card.card_type)
+                self.replay_recorder.record_card_play(bot.name, card.card_type, message=message)
             return True
         # Cat cards have no effect when played alone
         if self.replay_recorder:
-            self.replay_recorder.record_card_play(bot.name, card.card_type)
+            self.replay_recorder.record_card_play(bot.name, card.card_type, message=message)
         return True
     
-    def _execute_favor(self, bot: Bot) -> None:
+    def _execute_favor(self, bot: Bot, message: Optional[str] = None) -> None:
         """Execute Favor card: target chooses what card to give."""
         alive_others = self._get_alive_bots_except(bot)
         if not alive_others:
@@ -763,7 +786,7 @@ class GameEngine:
             
             # Record favor event before checking for nope
             if self.replay_recorder:
-                self.replay_recorder.record_favor(bot.name, target.name)
+                self.replay_recorder.record_favor(bot.name, target.name, message=message)
             
             # Check for Nope with target information
             action = GameAction(ActionType.CARD_PLAY, bot.name, card=CardType.FAVOR, target=target.name)

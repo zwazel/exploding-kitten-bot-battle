@@ -1,0 +1,16 @@
+test_double_nope_allows_action (tests.test_game.TestNopeCard.test_double_nope_allows_action)
+Test that two Nopes allow the action (nope the nope). ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
+DEBUG: Checking for nope. Current action: ActionType.CARD_PLAY by Bot1
+DEBUG: Actor: Bot1, Bots in order: ['Bot2', 'Bot3']
+DEBUG: Bot2 should_play_nope: True
+DEBUG: Checking for nope. Current action: ActionType.NOPE by Bot2
+DEBUG: Actor: Bot2, Bots in order: ['Bot3', 'Bot1']
+DEBUG: Bot3 should_play_nope: True
+DEBUG: Checking for nope. Current action: ActionType.NOPE by Bot3
+DEBUG: Actor: Bot3, Bots in order: ['Bot1', 'Bot2']
+DEBUG: Final nope_count: 2
