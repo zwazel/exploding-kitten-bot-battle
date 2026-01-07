@@ -147,7 +147,7 @@ class GameEngine:
     
     # --- View Creation (Anti-Cheat) ---
     
-    def _create_bot_view(self, player_id: str, with_chat: bool = False) -> BotView:
+    def _create_bot_view(self, player_id: str) -> BotView:
         """
         Create a safe view of the game state for a specific bot.
         
@@ -156,7 +156,6 @@ class GameEngine:
         
         Args:
             player_id: The player to create the view for.
-            with_chat: Whether to enable chat for this view (only during turns).
             
         Returns:
             A BotView with only allowed information.
@@ -176,8 +175,8 @@ class GameEngine:
         all_events: tuple[GameEvent, ...] = self._history.get_events()
         recent: tuple[GameEvent, ...] = all_events[-10:] if all_events else ()
         
-        # Only provide chat callback during the player's turn
-        chat_callback = self._handle_chat if with_chat else None
+        # Always provide chat callback - bots can talk in any context
+        chat_callback = self._handle_chat
         
         return BotView(
             my_id=player_id,
@@ -995,8 +994,8 @@ class GameEngine:
         self._record_event(EventType.TURN_START, player_id)
         
         while True:
-            # Enable chat for the bot during their turn
-            view: BotView = self._create_bot_view(player_id, with_chat=True)
+            # Create view for the bot (chat is always enabled)
+            view: BotView = self._create_bot_view(player_id)
             action: Action = bot.take_turn(view)
             
             if isinstance(action, DrawCardAction):

@@ -62,21 +62,28 @@ Per official Exploding Kittens rules, `setup_game` follows this flow:
 
 ## Chat System
 
-Bots can "talk" during their turn using `view.say()`:
+Bots can "talk" at any time using `view.say()`:
 
 ### Key Points
-- Call `view.say(message)` during `take_turn()` to send a chat message
+- Call `view.say(message)` to send a chat message in any bot method
+- Works in `take_turn()`, `react()`, `on_event()`, `choose_defuse_position()`, and `choose_card_to_give()`
 - Messages are truncated to 200 characters to prevent spam
 - Recorded in game history as `EventType.BOT_CHAT`
 - Bots see chat via `view.recent_events` in subsequent calls to `on_event`
 - Game logs show `[GAME]` prefix, chat shows `[CHAT]` prefix
 
 ### Implementation Pattern
-The `BotView` object passed to `take_turn()` has a `say()` method:
+The `BotView` object has a `say()` method available in all contexts:
 ```python
-def take_turn(self, view: BotView) -> Action:
-    view.say("Hello everyone!")  # Send a chat message
-    return DrawCardAction()      # Continue with action
+def react(self, view: BotView, triggering_event: GameEvent) -> Action | None:
+    if self._should_play_nope(triggering_event):
+        view.say("Not so fast! 🚫")  # Trash talk during reactions
+        return PlayCardAction(card=nope_card)
+    return None
+
+def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
+    view.say("Phew, that was close! 😅")  # React to near-death experience
+    return draw_pile_size  # Put it at the bottom
 ```
 
 When `view.say()` is called, the engine:
@@ -84,5 +91,3 @@ When `view.say()` is called, the engine:
 2. Records a `BOT_CHAT` event in history
 3. Notifies all bots via `on_event`
 
-Note: Chat is only available during `take_turn()`. Views passed to other methods
-(like `on_event` or `react`) do not have chat enabled.

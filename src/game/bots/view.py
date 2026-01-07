@@ -85,21 +85,29 @@ class BotView:
     
     def say(self, message: str) -> None:
         """
-        Send a chat message during your turn.
+        Send a chat message at any time.
         
         Use this to "talk" to other bots or add personality to your bot!
         Messages are visible to all players and recorded in game history.
+        
+        You can call say() in any bot method:
+        - take_turn(): During your regular turn
+        - react(): When reacting to another player's action (e.g., playing a Nope)
+        - on_event(): When observing game events (e.g., responding to chat)
+        - choose_defuse_position(): When handling an Exploding Kitten
+        - choose_card_to_give(): When giving a card for Favor
         
         Args:
             message: The message to send (max 200 characters).
         
         Example:
-            def take_turn(self, view: BotView) -> Action:
-                view.say("Watch out, here I come!")
-                return DrawCardAction()
+            def react(self, view: BotView, event: GameEvent) -> Action | None:
+                if self._should_nope(event):
+                    view.say("Not so fast! 🚫")
+                    return PlayCardAction(card=nope_card)
+                return None
         
         Note:
-            - You can only chat during your own turn.
             - Messages are truncated to 200 characters.
             - Chat messages appear in the log with [CHAT] prefix.
         """
