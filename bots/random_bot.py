@@ -30,7 +30,6 @@ from game.bots.base import (
     Action,           # Base type for all actions
     Bot,              # The base class your bot must inherit from
     DrawCardAction,   # Action to draw a card (ends your turn)
-    PassAction,       # Action to pass (do nothing this action, but turn continues)
     PlayCardAction,   # Action to play a single card
     PlayComboAction,  # Action to play multiple cards as a combo
 )
@@ -85,10 +84,10 @@ class RandomBot(Bot):
                   - view.other_player_card_counts: How many cards each opponent has
         
         Returns:
-            An Action object: DrawCardAction, PlayCardAction, PlayComboAction, or PassAction
+            An Action object: DrawCardAction, PlayCardAction, or PlayComboAction
         
         IMPORTANT: You MUST eventually return DrawCardAction() to end your turn!
-                   If you keep returning PlayCardAction or PassAction, your turn continues.
+                   You can play cards before drawing, but must draw to end your turn.
         """
         
         # STRATEGY: This random bot has a 50% chance to play a card,

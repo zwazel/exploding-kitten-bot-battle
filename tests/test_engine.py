@@ -13,7 +13,6 @@ from game.bots.base import (
     Bot,
     Action,
     DrawCardAction,
-    PassAction,
     PlayCardAction,
     PlayComboAction,
 )

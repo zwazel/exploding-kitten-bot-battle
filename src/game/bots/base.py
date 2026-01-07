@@ -41,12 +41,6 @@ class DrawCardAction:
     pass
 
 
-@dataclass(frozen=True)
-class PassAction:
-    """Action to pass (do nothing / decline to react)."""
-    
-    pass
-
 
 @dataclass(frozen=True)
 class DefuseAction:
@@ -78,7 +72,6 @@ Action = (
     PlayCardAction
     | PlayComboAction
     | DrawCardAction
-    | PassAction
     | DefuseAction
     | GiveCardAction
 )

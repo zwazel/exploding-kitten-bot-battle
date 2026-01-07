@@ -13,7 +13,6 @@ from game.bots.base import (
     DefuseAction,
     DrawCardAction,
     GiveCardAction,
-    PassAction,
     PlayCardAction,
     PlayComboAction,
 )
@@ -28,7 +27,6 @@ __all__: list[str] = [
     # Action types
     "Action",
     "DrawCardAction",
-    "PassAction",
     "PlayCardAction",
     "PlayComboAction",
     "DefuseAction",

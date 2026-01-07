@@ -16,7 +16,6 @@ from game.bots.base import (
     DefuseAction,
     DrawCardAction,
     GiveCardAction,
-    PassAction,
     PlayCardAction,
     PlayComboAction,
 )
@@ -546,7 +545,7 @@ class GameEngine:
             view: BotView = self._create_bot_view(reactor_id)
             action: Action | None = bot.react(view, triggering_event)
             
-            if action is None or isinstance(action, PassAction):
+            if action is None:
                 self._record_event(
                     EventType.REACTION_SKIPPED,
                     reactor_id,
@@ -992,9 +991,6 @@ class GameEngine:
                 else:
                     self.log(f"{player_id} tried to play invalid combo")
             
-            elif isinstance(action, PassAction):
-                # Pass without doing anything - still need to draw to end turn
-                continue
         
         # Consume the turn (for draw actions)
         has_more_turns: bool = self._turn_manager.consume_turn(player_id)

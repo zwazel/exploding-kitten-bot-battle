@@ -13,7 +13,6 @@ from game.bots.base import (
     Bot,
     Action,
     DrawCardAction,
-    PassAction,
     PlayCardAction,
 )
 from game.bots.view import BotView
@@ -105,77 +104,4 @@ class TestSingleDrawPerTurn:
         
         assert turn_draw_count == 1, \
             f"Expected exactly 1 card drawn during turn, got {turn_draw_count}"
-    
-    def test_bot_with_passaction_then_draw_only_draws_once(self) -> None:
-        """
-        A bot that passes a few times before drawing should still only draw once.
-        """
-        
-        class PassThenDrawBot(Bot):
-            """Bot that passes twice then draws."""
-            
-            def __init__(self, name: str) -> None:
-                self._name = name
-                self._action_count = 0
-            
-            @property
-            def name(self) -> str:
-                return self._name
-            
-            def take_turn(self, view: BotView) -> Action:
-                self._action_count += 1
-                if self._action_count < 3:
-                    return PassAction()
-                return DrawCardAction()
-            
-            def on_event(self, event: GameEvent, view: BotView) -> None:
-                pass
-            
-            def react(self, view: BotView, triggering_event: GameEvent) -> Action | None:
-                return None
-            
-            def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
-                return 0
-            
-            def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
-                return view.my_hand[0]
-        
-        engine: GameEngine = GameEngine(seed=42)
-        
-        bot1 = PassThenDrawBot("Bot1")
-        bot2 = DrawCountingBot("Bot2")
-        
-        engine.add_bot(bot1)
-        engine.add_bot(bot2)
-        
-        engine.create_deck({
-            "TacoCatCard": 30,
-            "SkipCard": 10,
-        })
-        engine.setup_game(initial_hand_size=5)
-        
-        setup_draw_events = engine.history.get_events_by_type(EventType.CARD_DRAWN)
-        setup_draw_count = len(setup_draw_events)
-        
-        engine._turn_manager._turn_order = ["Bot1", "Bot2"]
-        engine._turn_manager._current_index = 0
-        engine._turn_manager._turns_remaining = {"Bot1": 1, "Bot2": 1}
-        engine._state._turn_order = ["Bot1", "Bot2"]
-        engine._state._current_player_index = 0
-        
-        # Reset action counter
-        bot1._action_count = 0
-        
-        # Run a single turn
-        engine._run_turn("Bot1")
-        
-        # Bot should have been called 3 times (2 passes + 1 draw)
-        assert bot1._action_count == 3, \
-            f"Bot should have been called 3 times, was called {bot1._action_count} times"
-        
-        # But only 1 card should have been drawn
-        all_draw_events = engine.history.get_events_by_type(EventType.CARD_DRAWN)
-        turn_draw_count = len(all_draw_events) - setup_draw_count
-        
-        assert turn_draw_count == 1, \
-            f"Expected exactly 1 card drawn, got {turn_draw_count}"
+
