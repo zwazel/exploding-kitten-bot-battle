@@ -55,7 +55,7 @@ class NopeCard(Card):
     def execute(self, engine: GameEngine, player_id: str) -> None:
         # When played on own turn, does nothing
         # When played as reaction, the cancellation is handled by engine
-        pass  # Nope effect is handled by reaction system
+        engine.log("  (no effect when played alone)")
 
 
 class AttackCard(Card):
