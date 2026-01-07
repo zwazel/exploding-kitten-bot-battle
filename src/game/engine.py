@@ -977,6 +977,8 @@ class GameEngine:
         self.shuffle_deck()
         
         self.log(f"Setup complete. {num_players} players, {num_kittens} Exploding Kittens in deck.")
+        play_order_str = " -> ".join(player_ids)
+        self.log(f"Play order: {play_order_str}")
         self.log("=== GAME START ===")
         
         self._record_event(
