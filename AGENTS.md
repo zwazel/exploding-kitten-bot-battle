@@ -60,3 +60,30 @@ Per official Exploding Kittens rules, `setup_game` follows this flow:
 
 **Note:** `ExplodingKittenCard` should NOT be in deck config - always auto-generated.
 
+## Chat System
+
+Bots can "talk" during their turn using `ChatAction`:
+
+### Key Points
+- `ChatAction` is returned from `take_turn()` like any other action
+- **Does NOT end the turn** - bot must eventually `DrawCardAction` or play a turn-ending card
+- Messages are truncated to 200 characters to prevent spam
+- Recorded in game history as `EventType.BOT_CHAT`
+- Bots see chat via `view.recent_events` in subsequent calls to `on_event`
+
+### Implementation Pattern
+When a bot returns `ChatAction`, the engine:
+1. Logs the message with `[CHAT]` prefix
+2. Records a `BOT_CHAT` event in history
+3. Notifies all bots via `on_event`
+4. **Loops back** to ask the same bot for another action
+
+Bots should track if they've chatted to avoid infinite loops:
+```python
+def take_turn(self, view: BotView) -> Action:
+    if not self._chatted_this_turn:
+        self._chatted_this_turn = True
+        return ChatAction(message="Hello!")
+    return DrawCardAction()  # Must eventually end turn
+```
+

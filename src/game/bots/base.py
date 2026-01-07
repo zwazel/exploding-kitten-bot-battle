@@ -67,6 +67,26 @@ class GiveCardAction:
     card: Card
 
 
+@dataclass(frozen=True)
+class ChatAction:
+    """
+    Action to send a chat message during your turn.
+    
+    Bots can use this to "talk" to other bots or add personality.
+    Messages are recorded in game history and visible to all players.
+    
+    Attributes:
+        message: The chat message to send (max 200 characters).
+    
+    Note:
+        - Bots can only chat during their own turn.
+        - Chatting does NOT end your turn - you must still take an action.
+        - Messages are truncated to 200 characters.
+    """
+    
+    message: str
+
+
 # Type alias for all possible actions
 Action = (
     PlayCardAction
@@ -74,6 +94,7 @@ Action = (
     | DrawCardAction
     | DefuseAction
     | GiveCardAction
+    | ChatAction
 )
 
 

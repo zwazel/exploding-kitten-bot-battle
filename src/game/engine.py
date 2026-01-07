@@ -13,6 +13,7 @@ from typing import Any
 from game.bots.base import (
     Action,
     Bot,
+    ChatAction,
     DefuseAction,
     DrawCardAction,
     GiveCardAction,
@@ -496,7 +497,7 @@ class GameEngine:
     
     def log(self, message: str) -> None:
         """Log a message to the console."""
-        print(f"[Game] {message}")
+        print(message)
     
     def shuffle_deck(self) -> None:
         """Shuffle the draw pile."""
@@ -990,6 +991,19 @@ class GameEngine:
                     self._play_combo(player_id, cards, action.target_player_id)
                 else:
                     self.log(f"{player_id} tried to play invalid combo")
+            
+            elif isinstance(action, ChatAction):
+                # Bot wants to send a chat message
+                # Truncate message to 200 characters to prevent spam
+                message: str = action.message[:200] if action.message else ""
+                if message:
+                    self.log(f"[CHAT] {player_id}: {message}")
+                    self._record_event(
+                        EventType.BOT_CHAT,
+                        player_id,
+                        {"message": message},
+                    )
+                # Chat doesn't end the turn - loop continues for next action
             
         
         # Consume the turn (for draw actions)

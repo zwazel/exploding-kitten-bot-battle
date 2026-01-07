@@ -57,6 +57,9 @@ class EventType(Enum):
     FAVOR_REQUESTED = "favor_requested"
     CARD_GIVEN = "card_given"
     CARD_STOLEN = "card_stolen"
+    
+    # Chat events
+    BOT_CHAT = "bot_chat"
 
 
 @dataclass(frozen=True)

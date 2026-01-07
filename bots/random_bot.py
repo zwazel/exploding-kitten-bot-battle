@@ -15,7 +15,7 @@ HOW TO CREATE YOUR OWN BOT:
 
 KEY CONCEPTS:
 - BotView: Your "window" into the game (only shows what you're allowed to see)
-- Action: What you want to do (play a card, draw, pass)
+- Action: What you want to do (play a card, draw, chat)
 - GameEvent: Something that happened in the game
 - Card: A card object with properties like card_type, name, etc.
 """
@@ -29,13 +29,14 @@ import random
 from game.bots.base import (
     Action,           # Base type for all actions
     Bot,              # The base class your bot must inherit from
+    ChatAction,       # Action to send a chat message (doesn't end turn)
     DrawCardAction,   # Action to draw a card (ends your turn)
     PlayCardAction,   # Action to play a single card
     PlayComboAction,  # Action to play multiple cards as a combo
 )
 from game.bots.view import BotView  # Your view of the game state
 from game.cards.base import Card     # Card objects
-from game.history import GameEvent   # Events that happen in the game
+from game.history import GameEvent, EventType   # Events that happen in the game
 
 
 # =============================================================================
@@ -50,6 +51,23 @@ class RandomBot(Bot):
     Use this as a reference for HOW to implement the methods, then write
     your own bot with actual strategy!
     """
+    
+    def __init__(self) -> None:
+        """Initialize the bot with state tracking."""
+        # Track if we've already chatted this turn
+        # (bots can only chat once per turn to avoid spam)
+        self._chatted_this_turn: bool = False
+        
+        # Some fun phrases for the bot to say
+        self._taunts: list[str] = [
+            "I have no idea what I'm doing! 🎲",
+            "Meow! 🐱",
+            "Watch out, I'm unpredictable!",
+            "Hmm... eeny, meeny, miny, moe...",
+            "Did someone say EXPLODING KITTENS?! 💣",
+            "I'm feeling lucky today!",
+            "*nervously shuffles cards*",
+        ]
     
     # =========================================================================
     # REQUIRED: The name property
@@ -82,16 +100,35 @@ class RandomBot(Bot):
                   - view.draw_pile_count: How many cards in draw pile
                   - view.discard_pile: Cards in discard (visible to all)
                   - view.other_player_card_counts: How many cards each opponent has
+                  - view.recent_events: Recent game events (including chat!)
         
         Returns:
-            An Action object: DrawCardAction, PlayCardAction, or PlayComboAction
+            An Action object: DrawCardAction, PlayCardAction, PlayComboAction,
+                             or ChatAction (which doesn't end your turn)
         
         IMPORTANT: You MUST eventually return DrawCardAction() to end your turn!
-                   You can play cards before drawing, but must draw to end your turn.
+                   You can play cards or chat before drawing, but must draw to end.
+        
+        CHAT FEATURE:
+            - Return ChatAction(message="...") to send a message
+            - Chat does NOT end your turn - you'll be asked again for an action
+            - Only chat once per turn (the engine will keep asking otherwise)
+            - Messages are recorded in history and visible to all bots
         """
         
-        # STRATEGY: This random bot has a 50% chance to play a card,
-        # and 50% chance to just draw and end the turn.
+        # =====================================================================
+        # CHAT EXAMPLE: Sometimes say something before taking an action
+        # =====================================================================
+        
+        # 20% chance to chat, but only if we haven't chatted this turn
+        if not self._chatted_this_turn and random.random() < 0.2:
+            self._chatted_this_turn = True
+            message = random.choice(self._taunts)
+            return ChatAction(message=message)
+        
+        # =====================================================================
+        # STRATEGY: 50% chance to play a card, 50% to just draw
+        # =====================================================================
         
         if random.random() < 0.5:
             # Try to find a playable card
@@ -114,6 +151,8 @@ class RandomBot(Bot):
         
         # Default: Draw a card to end the turn
         # This is the safe option and MUST be done eventually!
+        # Reset chat flag for next turn
+        self._chatted_this_turn = False
         return DrawCardAction()
     
     # =========================================================================

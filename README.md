@@ -48,7 +48,7 @@ python -m game.main --seed 42 --history game.json
 Create a Python file in `bots/` implementing the `Bot` interface:
 
 ```python
-from game.bots.base import Bot, Action, DrawCardAction, PlayCardAction
+from game.bots.base import Bot, Action, DrawCardAction, PlayCardAction, ChatAction
 from game.bots.view import BotView
 from game.cards.base import Card
 from game.history import GameEvent
@@ -59,7 +59,7 @@ class MyBot(Bot):
         return "MyBot"
     
     def take_turn(self, view: BotView) -> Action:
-        # Play a card or draw
+        # Play a card, chat, or draw
         return DrawCardAction()
     
     def on_event(self, event: GameEvent, view: BotView) -> None:
@@ -79,6 +79,25 @@ class MyBot(Bot):
         return view.my_hand[0]
 ```
 
+## Bot Chat System
+
+Bots can send chat messages during their turn using `ChatAction`:
+
+```python
+def take_turn(self, view: BotView) -> Action:
+    # Send a chat message (doesn't end your turn!)
+    return ChatAction(message="Let's gooo! 🎉")
+```
+
+**Chat Rules:**
+- Bots can only chat during their own turn
+- Chat does NOT end your turn - you'll be asked for another action
+- Messages are truncated to 200 characters
+- All bots can see chat messages via `view.recent_events`
+- Chat events appear in game logs with `[CHAT]` prefix
+
+See `bots/random_bot.py` for a working example with chat!
+
 ## Project Structure
 
 ```
@@ -90,3 +109,4 @@ class MyBot(Bot):
 ├── configs/            # Deck configurations
 └── tests/              # Test suite
 ```
+
