@@ -91,3 +91,33 @@ When `view.say()` is called, the engine:
 2. Records a `BOT_CHAT` event in history
 3. Notifies all bots via `on_event`
 
+## Reaction Round System (Nope Chains)
+
+The reaction system handles Nope cards with recursive nesting:
+
+### Key Rules
+- When a card is played, a reaction round starts
+- The **triggering player** (who played the card) is excluded from reacting
+- Each player gets ONE chance to react per round level
+- Playing a Nope starts a NEW nested reaction round
+- Result: odd number of Nopes = action negated
+
+### Critical Implementation Notes
+- **ALWAYS** pass `player_id` to `_run_reaction_round(event, player_id)`
+- If not passed, it defaults to `current_player_id` which may be WRONG
+- This bug was fixed in engine.py for both `_play_card()` and `_play_combo()`
+
+### Nope Chain Examples
+```
+Skip → Nope → Action NEGATED (1 Nope = odd)
+Skip → Nope → Nope → Action PROCEEDS (2 Nopes = even, counter-nope)
+Skip → Nope → Nope → Nope → Action NEGATED (3 Nopes = odd, re-negate)
+```
+
+### Test Coverage
+Comprehensive tests in `tests/test_nope_chains.py` verify:
+- Single Nope negation
+- Counter-Nope (double Nope) un-negation
+- Triple Nope re-negation
+- Player exclusion from own actions
+- Correct card removal and discard

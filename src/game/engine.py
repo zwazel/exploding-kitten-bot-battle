@@ -681,8 +681,8 @@ class GameEngine:
         
         # Check if the card can be reacted to (reaction cards like Nope)
         if not card.can_play_as_reaction():
-            # Run reaction round
-            if self._run_reaction_round(play_event):
+            # Run reaction round - pass player_id to ensure correct player is excluded
+            if self._run_reaction_round(play_event, player_id):
                 self.log(f"  -> {card.name} was NEGATED!")
                 return False
         
@@ -768,8 +768,8 @@ class GameEngine:
             },
         )
         
-        # Run reaction round
-        if self._run_reaction_round(combo_event):
+        # Run reaction round - pass player_id to ensure correct player is excluded
+        if self._run_reaction_round(combo_event, player_id):
             self.log(f"  -> Combo was NEGATED!")
             return False
         
