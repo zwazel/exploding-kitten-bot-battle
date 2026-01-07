@@ -535,25 +535,34 @@ class GameEngine:
     
     # --- Reaction System ---
     
-    def _run_reaction_round(self, triggering_event: GameEvent, depth: int = 0) -> bool:
+    def _run_reaction_round(
+        self,
+        triggering_event: GameEvent,
+        triggering_player_id: str | None = None,
+        depth: int = 0,
+    ) -> bool:
         """
         Run a reaction round where players can respond to an action.
         
         Args:
             triggering_event: The event that triggered reactions.
+            triggering_player_id: The player who triggered this reaction (excluded from reacting).
+                                  If None, defaults to current player.
             depth: Nesting depth for indentation (0 = top level)
             
         Returns:
             True if the action was negated, False if it proceeds.
         """
-        current_player: str | None = self._state.current_player_id
-        if not current_player:
+        # Use provided triggering player or fall back to current player
+        if triggering_player_id is None:
+            triggering_player_id = self._state.current_player_id
+        if not triggering_player_id:
             return False
         
         alive_players: list[str] = self._state.get_alive_players()
         reaction_round: ReactionRound = self._turn_manager.start_reaction_round(
             triggering_event,
-            current_player,
+            triggering_player_id,
             alive_players,
         )
         
@@ -612,10 +621,10 @@ class GameEngine:
                     nope_count += 1
                     
                     # Start a new nested reaction round for this reaction
-                    # This allows counter-nopes
-                    if self._run_reaction_round(reaction_event, depth + 1):
+                    # This allows counter-nopes (excluding the player who just NOPE'd)
+                    if self._run_reaction_round(reaction_event, reactor_id, depth + 1):
                         # The reaction was negated (counter-noped)
-                        self.log(f"{indent}  ↩️ NOPE was counter-noped!")
+                        self.log(f"{indent}↩️ NOPE was counter-noped!")
                         nope_count -= 1
         
         self._turn_manager.end_reaction_round()
