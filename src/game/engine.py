@@ -804,25 +804,45 @@ class GameEngine:
         1. Remove Exploding Kittens and Defuse cards from deck
         2. Deal initial hands from the remaining cards
         3. Give each player 1 Defuse card
-        4. Shuffle remaining Defuse cards and Exploding Kittens back into deck
+        4. Shuffle remaining Defuse cards and (num_players - 1) Exploding Kittens back into deck
+        
+        Note: Exploding Kittens are always (num_players - 1), generated at runtime.
+        Defuse cards must be at least (num_players + 1).
         
         Args:
             initial_hand_size: Number of cards to deal to each player.
         """
         self.log("=== SETUP PHASE ===")
         
-        # Remove Exploding Kittens and Defuse cards before dealing
-        exploding_kittens: list[Card] = []
+        player_ids: list[str] = list(self._bots.keys())
+        num_players = len(player_ids)
+        
+        # Remove any Exploding Kittens and Defuse cards from deck (we'll add the right amounts)
         defuse_cards: list[Card] = []
         remaining_cards: list[Card] = []
         
         for card in self._state._draw_pile:
             if card.card_type == "ExplodingKittenCard":
-                exploding_kittens.append(card)
+                # Ignore - we generate the correct amount
+                pass
             elif card.card_type == "DefuseCard":
                 defuse_cards.append(card)
             else:
                 remaining_cards.append(card)
+        
+        # Validate Defuse card count: must be at least (num_players + 1)
+        min_defuse = num_players + 1
+        if len(defuse_cards) < min_defuse:
+            self.log(f"WARNING: Config has {len(defuse_cards)} Defuse cards, need at least {min_defuse}. Adding extra Defuse cards.")
+            # Add missing Defuse cards
+            from game.cards.exploding_kitten import DefuseCard
+            while len(defuse_cards) < min_defuse:
+                defuse_cards.append(DefuseCard())
+        
+        # Generate exactly (num_players - 1) Exploding Kittens
+        num_kittens = num_players - 1
+        from game.cards.exploding_kitten import ExplodingKittenCard
+        exploding_kittens: list[Card] = [ExplodingKittenCard() for _ in range(num_kittens)]
         
         # Set up the draw pile without Exploding Kittens and Defuse
         self._state._draw_pile = remaining_cards
@@ -831,7 +851,6 @@ class GameEngine:
         self.shuffle_deck()
         
         # Set up turn order (randomized)
-        player_ids: list[str] = list(self._bots.keys())
         self._rng.shuffle(player_ids)
         self._state._turn_order = player_ids
         self._state._current_player_index = 0
@@ -850,19 +869,18 @@ class GameEngine:
                 if player_state:
                     player_state.hand.append(defuse)
         
-        # Add remaining Defuse cards and Exploding Kittens back to deck
+        # Add remaining Defuse cards back to deck
         for card in defuse_cards:
             self._state._draw_pile.append(card)
         
-        # Per rules, use (num_players - 1) Exploding Kittens
-        num_kittens_to_use = min(len(exploding_kittens), len(player_ids) - 1)
-        for i in range(num_kittens_to_use):
-            self._state._draw_pile.append(exploding_kittens[i])
+        # Add all Exploding Kittens to deck
+        for card in exploding_kittens:
+            self._state._draw_pile.append(card)
         
         # Shuffle the deck with Exploding Kittens now included
         self.shuffle_deck()
         
-        self.log(f"Setup complete. {len(player_ids)} players, {num_kittens_to_use} Exploding Kittens in deck.")
+        self.log(f"Setup complete. {num_players} players, {num_kittens} Exploding Kittens in deck.")
         self.log("=== GAME START ===")
         
         self._record_event(

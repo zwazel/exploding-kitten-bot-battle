@@ -52,9 +52,11 @@ tests/              # Test suite
 
 Per official Exploding Kittens rules, `setup_game` follows this flow:
 1. Remove Exploding Kittens and Defuse cards from deck
-2. Deal initial hands (7 cards each) from remaining cards
-3. Give each player 1 Defuse card
-4. Shuffle (num_players - 1) Exploding Kittens back into deck
-5. Shuffle remaining Defuse cards back into deck
+2. Validate Defuse count ≥ (players + 1) - **warns and auto-adds if needed**
+3. Generate exactly **(players - 1)** Exploding Kittens at runtime
+4. Deal initial hands (7 cards) from safe cards only
+5. Give each player 1 Defuse card
+6. Shuffle Exploding Kittens and remaining Defuse cards back into deck
 
-This ensures players cannot explode during initial dealing.
+**Note:** `ExplodingKittenCard` should NOT be in deck config - always auto-generated.
+

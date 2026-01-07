@@ -1,7 +1,6 @@
 {
     "description": "Standard Exploding Kittens deck for 2-5 players",
     "cards": {
-        "ExplodingKittenCard": 4,
         "DefuseCard": 6,
         "NopeCard": 5,
         "AttackCard": 4,
@@ -16,7 +15,7 @@
         "CattermelonCard": 4
     },
     "notes": {
-        "exploding_kittens": "Use (num_players - 1) in actual game",
-        "defuse": "Each player starts with 1, plus extras in deck"
+        "exploding_kittens": "Always (num_players - 1), auto-generated at runtime",
+        "defuse": "Minimum (num_players + 1), each player starts with 1"
     }
 }
