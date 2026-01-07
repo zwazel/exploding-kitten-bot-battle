@@ -101,7 +101,7 @@ def _run_single_game(
     deck_config: Path,
     chat_enabled: bool,
     quiet_mode: bool,
-) -> str | None:
+) -> list[str]:
     """
     Run a single game with fresh bot instances.
     
@@ -113,18 +113,23 @@ def _run_single_game(
         quiet_mode: Whether to suppress all console output.
         
     Returns:
-        The winner's player ID, or None if no winner.
+        List of player IDs in placement order (index 0 = 1st place/winner,
+        index -1 = last place/first eliminated). Empty list on error.
     """
+    from game.history import EventType
+    
     # Create engine
     engine = GameEngine(seed=seed, quiet_mode=quiet_mode, chat_enabled=chat_enabled)
     
     # Create fresh bot instances and add to engine
+    player_ids: list[str] = []
     for bot_class in bot_classes:
         try:
             bot = bot_class()
             engine.add_bot(bot)
+            # The engine assigns player IDs, we'll get them from the history later
         except Exception:
-            return None
+            return []
     
     # Create deck from config
     if deck_config.exists():
@@ -133,7 +138,30 @@ def _run_single_game(
         engine._rng.shuffle(engine._state._draw_pile)
     
     # Run the game
-    return engine.run()
+    winner = engine.run()
+    
+    if not winner:
+        return []
+    
+    # Extract elimination order from history
+    elimination_order: list[str] = []
+    for event in engine.history.get_events():
+        if event.event_type == EventType.PLAYER_ELIMINATED:
+            if event.player_id:
+                elimination_order.append(event.player_id)
+    
+    # Placement order: winner first, then reverse elimination order (last eliminated = 2nd place)
+    placements: list[str] = [winner] + list(reversed(elimination_order))
+    
+    return placements
+
+
+def _render_bar(value: int, max_value: int, width: int = 20) -> str:
+    """Render an ASCII bar for a value."""
+    if max_value == 0:
+        return ""
+    filled = int((value / max_value) * width)
+    return "█" * filled + "░" * (width - filled)
 
 
 def run_statistics(
@@ -150,10 +178,10 @@ def run_statistics(
         base_seed: Base seed for generating game seeds.
     """
     iterations = args.iterations
+    num_bots = len(bot_classes)
     
-    # Track statistics: bot_name -> {1st: count, 2nd: count, ...}
-    # Since we only track winner, we'll track: bot_name -> wins
-    wins: Counter[str] = Counter()
+    # Track statistics: bot_name -> {place: count} where place is 1-indexed
+    placements: dict[str, Counter[int]] = {}
     bot_names: list[str] = []
     
     # Get bot names by creating temporary instances
@@ -171,17 +199,24 @@ def run_statistics(
         except Exception:
             bot_names.append(f"Bot_{i}")
     
-    print(f"\n{'='*60}")
+    # Initialize placement counters
+    for name in bot_names:
+        placements[name] = Counter()
+    
+    # Create a mapping from player_id pattern to bot_name
+    # The engine creates IDs like "BotName", "BotName_2", etc.
+    
+    print(f"\n{'='*70}")
     print(f"STATISTICS MODE: Running {iterations} games")
     print(f"Bots: {', '.join(bot_names)}")
-    print(f"{'='*60}\n")
+    print(f"{'='*70}\n")
     
     # Run games
     for i in range(iterations):
         # Generate unique seed for each iteration
         seed = (base_seed + i) % (2**31)
         
-        winner = _run_single_game(
+        game_placements = _run_single_game(
             bot_classes=bot_classes,
             seed=seed,
             deck_config=args.deck_config,
@@ -189,8 +224,10 @@ def run_statistics(
             quiet_mode=True,      # Always quiet in stats mode
         )
         
-        if winner:
-            wins[winner] += 1
+        # Record placements
+        for place, player_id in enumerate(game_placements, 1):
+            if player_id in placements:
+                placements[player_id][place] += 1
         
         # Progress indicator (every 10% or every game if < 10)
         if iterations >= 10:
@@ -200,30 +237,60 @@ def run_statistics(
             print(f"  Game {i + 1}/{iterations} complete")
     
     # Print results
-    print(f"\n{'='*60}")
+    print(f"\n{'='*70}")
     print("STATISTICS RESULTS")
-    print(f"{'='*60}")
-    print(f"\nTotal games: {iterations}\n")
-    
-    # Sort by wins (descending)
-    sorted_results = sorted(wins.items(), key=lambda x: x[1], reverse=True)
+    print(f"{'='*70}")
+    print(f"\nTotal games: {iterations}")
+    print(f"Players: {num_bots}\n")
     
     # Calculate max name length for formatting
-    max_name_len = max(len(name) for name in wins.keys()) if wins else 10
+    max_name_len = max(len(name) for name in bot_names) if bot_names else 10
     
+    # Sort by wins (1st place count, descending)
+    sorted_bots = sorted(bot_names, key=lambda n: placements[n][1], reverse=True)
+    
+    # Print win summary
+    print("=== WIN SUMMARY ===\n")
     print(f"{'Bot Name':<{max_name_len}}  {'Wins':>6}  {'Win Rate':>10}")
     print("-" * (max_name_len + 20))
     
-    for place, (bot_name, win_count) in enumerate(sorted_results, 1):
-        win_rate = (win_count / iterations) * 100
-        print(f"{bot_name:<{max_name_len}}  {win_count:>6}  {win_rate:>9.1f}%")
+    for bot_name in sorted_bots:
+        wins = placements[bot_name][1]
+        win_rate = (wins / iterations) * 100
+        print(f"{bot_name:<{max_name_len}}  {wins:>6}  {win_rate:>9.1f}%")
     
-    # Check for bots that never won
-    never_won = set(bot_names) - set(wins.keys())
-    for bot_name in never_won:
-        print(f"{bot_name:<{max_name_len}}  {0:>6}  {0.0:>9.1f}%")
+    # Print placement breakdown with ASCII bars
+    print(f"\n{'='*70}")
+    print("=== PLACEMENT BREAKDOWN ===\n")
     
-    print(f"\n{'='*60}")
+    # Header row with place numbers
+    place_header = "  ".join(f"{p}{'st' if p==1 else 'nd' if p==2 else 'rd' if p==3 else 'th':>5}" for p in range(1, num_bots + 1))
+    print(f"{'Bot Name':<{max_name_len}}  {place_header}")
+    print("-" * (max_name_len + 8 * num_bots))
+    
+    for bot_name in sorted_bots:
+        place_counts = "  ".join(f"{placements[bot_name][p]:>5}" for p in range(1, num_bots + 1))
+        print(f"{bot_name:<{max_name_len}}  {place_counts}")
+    
+    # Print ASCII bar charts for each bot
+    print(f"\n{'='*70}")
+    print("=== PLACEMENT DISTRIBUTION (ASCII) ===\n")
+    
+    bar_width = 30
+    
+    for bot_name in sorted_bots:
+        print(f"{bot_name}:")
+        bot_placements = placements[bot_name]
+        
+        for place in range(1, num_bots + 1):
+            count = bot_placements[place]
+            percentage = (count / iterations) * 100
+            bar = _render_bar(count, iterations, bar_width)
+            place_label = f"{place}{'st' if place==1 else 'nd' if place==2 else 'rd' if place==3 else 'th'}"
+            print(f"  {place_label:>4}: {bar} {count:>4} ({percentage:>5.1f}%)")
+        print()
+    
+    print(f"{'='*70}")
 
 
 def main() -> None:
