@@ -12,10 +12,6 @@ import json
 
 from game.cards.base import Card
 from game.cards.registry import CardRegistry
-from game.cards.placeholder import (
-    DrawCard,
-    register_placeholder_cards,
-)
 from game.cards.action_cards import SkipCard, NopeCard, AttackCard
 from game.cards import register_all_cards
 from game.cards.cat_cards import TacoCatCard
@@ -186,38 +182,3 @@ class TestCardRegistry:
             assert attack_count == 2
         finally:
             Path(config_path).unlink()
-
-
-class TestPlaceholderCards:
-    """Tests for the placeholder card implementations."""
-    
-    def test_register_placeholder_cards(self) -> None:
-        """register_placeholder_cards should register placeholder cards."""
-        registry: CardRegistry = CardRegistry()
-        register_placeholder_cards(registry)
-        
-        registered: tuple[str, ...] = registry.get_registered_types()
-        
-        assert "DrawCard" in registered
-        assert "SkipCard" in registered
-        assert "NopeCard" in registered
-        assert "AttackCard" in registered
-        # ComboCard is the old placeholder - no longer used
-        # TacoCatCard is now from cat_cards, not placeholder
-    
-    def test_draw_card_properties(self) -> None:
-        """DrawCard should have correct properties."""
-        card: DrawCard = DrawCard()
-        
-        assert card.name == "Draw"
-        assert card.card_type == "DrawCard"
-        assert card.can_play_as_reaction() is False
-        assert card.can_combo() is False
-    
-    def test_attack_card_properties(self) -> None:
-        """AttackCard should have correct properties."""
-        card: AttackCard = AttackCard()
-        
-        assert card.name == "Attack"
-        assert card.card_type == "AttackCard"
-        assert card.can_play_as_reaction() is False

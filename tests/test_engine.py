@@ -19,7 +19,7 @@ from game.bots.base import (
 )
 from game.bots.view import BotView
 from game.cards.base import Card
-from game.cards.placeholder import SkipCard, NopeCard
+from game.cards.action_cards import SkipCard, NopeCard
 from game.cards.cat_cards import TacoCatCard
 from game.history import EventType, GameEvent
 

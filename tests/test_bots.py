@@ -18,7 +18,7 @@ from game.bots.base import (
 )
 from game.bots.view import BotView
 from game.bots.loader import BotLoader
-from game.cards.placeholder import SkipCard, NopeCard
+from game.cards.action_cards import SkipCard, NopeCard
 from game.cards.cat_cards import TacoCatCard
 from game.history import GameEvent, EventType
 
@@ -104,12 +104,12 @@ class TestBotView:
         
         playable = view.get_playable_cards()
         
-        # Skip and both TacoCat cards are playable on own turn
-        # (Cat cards can be played, they just have no effect alone)
-        # Nope is not playable on turn (only as reaction)
-        assert len(playable) == 3
+        # All 4 cards are playable on own turn:
+        # Skip, Nope (can play, does nothing), and both TacoCat cards
+        assert len(playable) == 4
         playable_types = [c.card_type for c in playable]
         assert "SkipCard" in playable_types
+        assert "NopeCard" in playable_types
         assert "TacoCatCard" in playable_types
     
     def test_get_reaction_cards(self) -> None:

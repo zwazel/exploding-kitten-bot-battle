@@ -343,10 +343,14 @@ class GameEngine:
         # Top of pile is end of list
         peeked: tuple[Card, ...] = tuple(draw_pile[-actual_count:]) if actual_count > 0 else ()
         
+        # Record what was actually seen for replay
         self._record_event(
             EventType.CARDS_PEEKED,
             player_id,
-            {"count": actual_count},
+            {
+                "count": actual_count,
+                "card_types": [c.card_type for c in peeked],
+            },
         )
         
         return peeked
@@ -561,6 +565,7 @@ class GameEngine:
         self,
         player_id: str,
         card: Card,
+        target_player_id: str | None = None,
     ) -> bool:
         """
         Play a single card.
@@ -568,6 +573,7 @@ class GameEngine:
         Args:
             player_id: The player playing the card.
             card: The card to play.
+            target_player_id: Target player for targeted cards (Favor, etc.)
             
         Returns:
             True if the card effect was executed, False if negated.
@@ -580,11 +586,15 @@ class GameEngine:
         player_state.hand.remove(card)
         self._state.discard(card)
         
-        # Record the play
+        # Record the play with full details for replay
+        event_data: dict[str, Any] = {"card_type": card.card_type}
+        if target_player_id:
+            event_data["target"] = target_player_id
+        
         play_event: GameEvent = self._record_event(
             EventType.CARD_PLAYED,
             player_id,
-            {"card_type": card.card_type},
+            event_data,
         )
         
         # Check if the card can be reacted to (reaction cards like Nope)
@@ -824,7 +834,7 @@ class GameEngine:
             elif isinstance(action, PlayCardAction):
                 card: Card = action.card
                 if card.can_play(view, is_own_turn=True):
-                    self._play_card(player_id, card)
+                    self._play_card(player_id, card, action.target_player_id)
                 else:
                     self.log(f"{player_id} tried to play {card.name} but it's not allowed")
             
@@ -852,9 +862,12 @@ class GameEngine:
             {"has_more_turns": has_more_turns},
         )
     
-    def run(self) -> str | None:
+    def run(self, history_file: str | Path | None = None) -> str | None:
         """
         Run the game to completion.
+        
+        Args:
+            history_file: Optional path to save game history JSON.
         
         Returns:
             The winner's player ID, or None if no winner.
@@ -880,6 +893,12 @@ class GameEngine:
                     {"winner": winner},
                 )
                 self.log(f"Game Over! Winner: {winner}")
+                
+                # Save history if requested
+                if history_file:
+                    self.save_history(history_file)
+                    self.log(f"History saved to {history_file}")
+                
                 return winner
             
             current_player_id: str | None = self._turn_manager.current_player_id
