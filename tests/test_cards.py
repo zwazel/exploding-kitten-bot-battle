@@ -14,12 +14,11 @@ from game.cards.base import Card
 from game.cards.registry import CardRegistry
 from game.cards.placeholder import (
     DrawCard,
-    SkipCard,
-    NopeCard,
-    AttackCard,
-    ComboCard,
     register_placeholder_cards,
 )
+from game.cards.action_cards import SkipCard, NopeCard, AttackCard
+from game.cards import register_all_cards
+from game.cards.cat_cards import TacoCatCard
 from game.bots.view import BotView
 from game.history import GameEvent, EventType
 
@@ -71,24 +70,26 @@ class TestCardBase:
         
         assert card.can_play_as_reaction() is False
     
-    def test_combo_card_can_combo(self) -> None:
-        """ComboCard should be usable in combos."""
-        card: Card = ComboCard()
+    def test_cat_card_can_combo(self) -> None:
+        """TacoCatCard should be usable in combos."""
+        card: Card = TacoCatCard()
         
         assert card.can_combo() is True
     
-    def test_skip_card_cannot_combo(self) -> None:
-        """SkipCard should not be usable in combos."""
+    def test_action_cards_can_combo(self) -> None:
+        """Action cards (Skip, Attack, etc.) CAN be used in combos."""
         card: Card = SkipCard()
         
-        assert card.can_combo() is False
+        # Per game design, action cards can be used in combos
+        assert card.can_combo() is True
     
-    def test_combo_card_cannot_play_individually(self) -> None:
-        """ComboCard should not be playable by itself."""
-        card: Card = ComboCard()
+    def test_cat_card_playable_alone(self) -> None:
+        """Cat cards can be played alone (no effect)."""
+        card: Card = TacoCatCard()
         view: BotView = create_test_view(is_my_turn=True)
         
-        assert card.can_play(view, is_own_turn=True) is False
+        # Cat cards can be played on own turn
+        assert card.can_play(view, is_own_turn=True) is True
     
     def test_card_repr(self) -> None:
         """Cards should have a readable repr."""
@@ -135,12 +136,12 @@ class TestCardRegistry:
     def test_create_deck_from_dict(self) -> None:
         """Registry should create a deck from configuration."""
         registry: CardRegistry = CardRegistry()
-        register_placeholder_cards(registry)
+        register_all_cards(registry)
         
         config: dict[str, int] = {
             "SkipCard": 2,
             "NopeCard": 3,
-            "ComboCard": 4,
+            "TacoCatCard": 4,
         }
         
         deck: list[Card] = registry.create_deck(config)
@@ -148,16 +149,16 @@ class TestCardRegistry:
         assert len(deck) == 9
         skip_count: int = sum(1 for c in deck if isinstance(c, SkipCard))
         nope_count: int = sum(1 for c in deck if isinstance(c, NopeCard))
-        combo_count: int = sum(1 for c in deck if isinstance(c, ComboCard))
+        cat_count: int = sum(1 for c in deck if isinstance(c, TacoCatCard))
         
         assert skip_count == 2
         assert nope_count == 3
-        assert combo_count == 4
+        assert cat_count == 4
     
     def test_create_deck_from_file(self) -> None:
         """Registry should create a deck from a JSON file."""
         registry: CardRegistry = CardRegistry()
-        register_placeholder_cards(registry)
+        register_all_cards(registry)
         
         config: dict = {
             "cards": {
@@ -191,7 +192,7 @@ class TestPlaceholderCards:
     """Tests for the placeholder card implementations."""
     
     def test_register_placeholder_cards(self) -> None:
-        """register_placeholder_cards should register all placeholders."""
+        """register_placeholder_cards should register placeholder cards."""
         registry: CardRegistry = CardRegistry()
         register_placeholder_cards(registry)
         
@@ -201,7 +202,8 @@ class TestPlaceholderCards:
         assert "SkipCard" in registered
         assert "NopeCard" in registered
         assert "AttackCard" in registered
-        assert "ComboCard" in registered
+        # ComboCard is the old placeholder - no longer used
+        # TacoCatCard is now from cat_cards, not placeholder
     
     def test_draw_card_properties(self) -> None:
         """DrawCard should have correct properties."""

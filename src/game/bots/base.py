@@ -48,8 +48,40 @@ class PassAction:
     pass
 
 
+@dataclass(frozen=True)
+class DefuseAction:
+    """
+    Action to defuse an Exploding Kitten.
+    
+    Attributes:
+        insert_position: Where to insert the kitten in the draw pile.
+                        0 = bottom, len(draw_pile) = top.
+    """
+    
+    insert_position: int
+
+
+@dataclass(frozen=True)
+class GiveCardAction:
+    """
+    Action to give a card to another player (response to Favor).
+    
+    Attributes:
+        card: The card to give.
+    """
+    
+    card: Card
+
+
 # Type alias for all possible actions
-Action = PlayCardAction | PlayComboAction | DrawCardAction | PassAction
+Action = (
+    PlayCardAction
+    | PlayComboAction
+    | DrawCardAction
+    | PassAction
+    | DefuseAction
+    | GiveCardAction
+)
 
 
 class Bot(ABC):
@@ -120,6 +152,39 @@ class Bot(ABC):
         Returns:
             An action to take (typically PlayCardAction with a reaction card),
             or None to decline reacting.
+        """
+        ...
+    
+    @abstractmethod
+    def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
+        """
+        Choose where to reinsert the Exploding Kitten after defusing.
+        
+        Called when the bot successfully defuses an Exploding Kitten.
+        The position is secret - other bots won't know where it was placed.
+        
+        Args:
+            view: The bot's view of the game state.
+            draw_pile_size: Current size of the draw pile (for bounds).
+            
+        Returns:
+            Position to insert (0 = bottom, draw_pile_size = top).
+        """
+        ...
+    
+    @abstractmethod
+    def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
+        """
+        Choose a card to give to another player (Favor card response).
+        
+        Called when another player plays a Favor card targeting this bot.
+        
+        Args:
+            view: The bot's view of the game state.
+            requester_id: The player who played the Favor card.
+            
+        Returns:
+            A card from the bot's hand to give away.
         """
         ...
     

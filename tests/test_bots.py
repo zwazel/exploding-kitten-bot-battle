@@ -18,7 +18,8 @@ from game.bots.base import (
 )
 from game.bots.view import BotView
 from game.bots.loader import BotLoader
-from game.cards.placeholder import SkipCard, NopeCard, ComboCard
+from game.cards.placeholder import SkipCard, NopeCard
+from game.cards.cat_cards import TacoCatCard
 from game.history import GameEvent, EventType
 
 
@@ -26,8 +27,8 @@ def create_test_view_with_cards() -> BotView:
     """Create a BotView with some cards in hand for testing."""
     skip_card = SkipCard()
     nope_card = NopeCard()
-    combo1 = ComboCard()
-    combo2 = ComboCard()
+    combo1 = TacoCatCard()
+    combo2 = TacoCatCard()
     
     return BotView(
         my_id="test_player",
@@ -86,7 +87,7 @@ class TestBotView:
         """get_cards_of_type should filter cards correctly."""
         view: BotView = create_test_view_with_cards()
         
-        combo_cards = view.get_cards_of_type("ComboCard")
+        combo_cards = view.get_cards_of_type("TacoCatCard")
         
         assert len(combo_cards) == 2
     
@@ -103,9 +104,13 @@ class TestBotView:
         
         playable = view.get_playable_cards()
         
-        # Skip is playable on own turn, Nope and Combo are not
-        assert len(playable) == 1
-        assert playable[0].card_type == "SkipCard"
+        # Skip and both TacoCat cards are playable on own turn
+        # (Cat cards can be played, they just have no effect alone)
+        # Nope is not playable on turn (only as reaction)
+        assert len(playable) == 3
+        playable_types = [c.card_type for c in playable]
+        assert "SkipCard" in playable_types
+        assert "TacoCatCard" in playable_types
     
     def test_get_reaction_cards(self) -> None:
         """get_reaction_cards should return only reaction cards."""
@@ -121,9 +126,9 @@ class TestBotView:
         """can_play_combo should check for valid combos."""
         view: BotView = create_test_view_with_cards()
         
-        # We have 2 ComboCards
-        assert view.can_play_combo("ComboCard", required_count=2) is True
-        assert view.can_play_combo("ComboCard", required_count=3) is False
+        # We have 2 TacoCatCards
+        assert view.can_play_combo("TacoCatCard", required_count=2) is True
+        assert view.can_play_combo("TacoCatCard", required_count=3) is False
         
         # We only have 1 SkipCard (and it can't combo)
         assert view.can_play_combo("SkipCard", required_count=2) is False
@@ -154,6 +159,7 @@ class TestBotLoader:
         bot_code: str = '''
 from game.bots.base import Bot, Action, DrawCardAction
 from game.bots.view import BotView
+from game.cards.base import Card
 from game.history import GameEvent
 
 class SimpleBot(Bot):
@@ -169,6 +175,12 @@ class SimpleBot(Bot):
     
     def react(self, view: BotView, triggering_event: GameEvent) -> Action | None:
         return None
+    
+    def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
+        return 0
+    
+    def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
+        return view.my_hand[0]
 '''
         
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -187,6 +199,7 @@ class SimpleBot(Bot):
         bot_code: str = '''
 from game.bots.base import Bot, Action, DrawCardAction
 from game.bots.view import BotView
+from game.cards.base import Card
 from game.history import GameEvent
 
 class HiddenBot(Bot):
@@ -202,6 +215,12 @@ class HiddenBot(Bot):
     
     def react(self, view: BotView, triggering_event: GameEvent) -> Action | None:
         return None
+    
+    def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
+        return 0
+    
+    def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
+        return view.my_hand[0]
 '''
         
         with tempfile.TemporaryDirectory() as tmpdir:

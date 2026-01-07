@@ -1,10 +1,22 @@
 {
-    "description": "Default deck configuration for the bot battle game",
+    "description": "Standard Exploding Kittens deck for 2-5 players",
     "cards": {
-        "DrawCard": 4,
-        "SkipCard": 4,
-        "AttackCard": 4,
+        "ExplodingKittenCard": 4,
+        "DefuseCard": 6,
         "NopeCard": 5,
-        "ComboCard": 20
+        "AttackCard": 4,
+        "SkipCard": 4,
+        "FavorCard": 4,
+        "ShuffleCard": 4,
+        "SeeTheFutureCard": 5,
+        "TacoCatCard": 4,
+        "HairyPotatoCatCard": 4,
+        "BeardCatCard": 4,
+        "RainbowRalphingCatCard": 4,
+        "CattermelonCard": 4
+    },
+    "notes": {
+        "exploding_kittens": "Use (num_players - 1) in actual game",
+        "defuse": "Each player starts with 1, plus extras in deck"
     }
 }

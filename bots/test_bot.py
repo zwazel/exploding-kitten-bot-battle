@@ -110,3 +110,35 @@ class TestBot(Bot):
                     return PlayCardAction(card=card)
         
         return None
+    
+    def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
+        """
+        Choose where to reinsert the Exploding Kitten.
+        
+        This bot places it near the top (risky for next player).
+        """
+        # Place it 3 cards from the top if possible
+        if draw_pile_size >= 3:
+            return draw_pile_size - 3
+        return 0  # Bottom if pile is small
+    
+    def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
+        """
+        Choose a card to give when targeted by Favor.
+        
+        This bot gives the least valuable card (cat cards first, then others).
+        """
+        hand: tuple[Card, ...] = view.my_hand
+        
+        # Try to give a cat card (least useful alone)
+        for card in hand:
+            if card.card_type.endswith("CatCard"):
+                return card
+        
+        # Otherwise give the first card that's not a Defuse or Nope
+        for card in hand:
+            if card.card_type not in ("DefuseCard", "NopeCard"):
+                return card
+        
+        # Last resort: give the first card
+        return hand[0]

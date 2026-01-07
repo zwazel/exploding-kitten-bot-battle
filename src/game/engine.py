@@ -13,7 +13,9 @@ from typing import Any
 from game.bots.base import (
     Action,
     Bot,
+    DefuseAction,
     DrawCardAction,
+    GiveCardAction,
     PassAction,
     PlayCardAction,
     PlayComboAction,
@@ -21,7 +23,7 @@ from game.bots.base import (
 from game.bots.loader import BotLoader
 from game.bots.view import BotView
 from game.cards.base import Card
-from game.cards.placeholder import register_placeholder_cards
+from game.cards import register_all_cards
 from game.cards.registry import CardRegistry
 from game.history import EventType, GameEvent, GameHistory
 from game.rng import DeterministicRNG
@@ -57,8 +59,8 @@ class GameEngine:
         self._bot_loader: BotLoader = BotLoader()
         self._game_running: bool = False
         
-        # Register placeholder cards by default
-        register_placeholder_cards(self._registry)
+        # Register all game cards
+        register_all_cards(self._registry)
     
     @property
     def rng(self) -> DeterministicRNG:
@@ -201,23 +203,40 @@ class GameEngine:
     
     # --- Card Actions ---
     
-    def draw_cards(self, player_id: str, count: int = 1) -> list[Card]:
+    def draw_cards(self, player_id: str, count: int = 1) -> tuple[list[Card], bool]:
         """
         Draw cards from the draw pile.
+        
+        If an Exploding Kitten is drawn, handle the explosion/defuse flow.
         
         Args:
             player_id: The player drawing cards.
             count: Number of cards to draw.
             
         Returns:
-            The drawn cards.
+            Tuple of (drawn cards, whether player exploded).
         """
         drawn: list[Card] = []
         player_state = self._state.get_player(player_id)
         
         for _ in range(count):
             card: Card | None = self._state.draw_card()
-            if card and player_state:
+            if card is None or player_state is None:
+                continue
+            
+            # Check if it's an Exploding Kitten
+            if card.card_type == "ExplodingKittenCard":
+                self._record_event(
+                    EventType.EXPLODING_KITTEN_DRAWN,
+                    player_id,
+                )
+                
+                # Check for Defuse card
+                exploded: bool = self._handle_explosion(player_id, card)
+                if exploded:
+                    return drawn, True
+                # If defused, continue (kitten is reinserted, not added to hand)
+            else:
                 player_state.hand.append(card)
                 drawn.append(card)
                 self._record_event(
@@ -226,7 +245,159 @@ class GameEngine:
                     {"card_type": card.card_type},
                 )
         
-        return drawn
+        return drawn, False
+    
+    def _handle_explosion(self, player_id: str, kitten: Card) -> bool:
+        """
+        Handle an Exploding Kitten draw.
+        
+        Args:
+            player_id: The player who drew the kitten.
+            kitten: The Exploding Kitten card.
+            
+        Returns:
+            True if player exploded, False if defused.
+        """
+        player_state = self._state.get_player(player_id)
+        bot: Bot | None = self._bots.get(player_id)
+        
+        if not player_state or not bot:
+            return True
+        
+        # Look for Defuse card
+        defuse_card: Card | None = None
+        for card in player_state.hand:
+            if card.card_type == "DefuseCard":
+                defuse_card = card
+                break
+        
+        if defuse_card is None:
+            # No Defuse - player explodes!
+            self.log(f"{player_id} drew an Exploding Kitten and has no Defuse!")
+            self._eliminate_player(player_id)
+            return True
+        
+        # Use Defuse card
+        player_state.hand.remove(defuse_card)
+        self._state.discard(defuse_card)
+        
+        self._record_event(
+            EventType.EXPLODING_KITTEN_DEFUSED,
+            player_id,
+        )
+        
+        self.log(f"{player_id} defused the Exploding Kitten!")
+        
+        # Bot chooses where to reinsert the kitten
+        view: BotView = self._create_bot_view(player_id)
+        draw_pile_size: int = self._state.draw_pile_count
+        insert_pos: int = bot.choose_defuse_position(view, draw_pile_size)
+        
+        # Clamp to valid range
+        insert_pos = max(0, min(insert_pos, draw_pile_size))
+        
+        # Insert the kitten (secretly)
+        self._state.insert_in_draw_pile(kitten, insert_pos)
+        
+        self._record_event(
+            EventType.EXPLODING_KITTEN_INSERTED,
+            player_id,
+            {"position": "secret"},  # Don't reveal position
+        )
+        
+        return False
+    
+    def _eliminate_player(self, player_id: str) -> None:
+        """Eliminate a player from the game."""
+        player_state = self._state.get_player(player_id)
+        if player_state:
+            # Move all cards to discard
+            for card in player_state.hand:
+                self._state.discard(card)
+            player_state.hand.clear()
+            player_state.is_alive = False
+        
+        self._turn_manager.remove_player(player_id)
+        
+        self._record_event(
+            EventType.PLAYER_ELIMINATED,
+            player_id,
+        )
+        
+        self.log(f"{player_id} has been eliminated!")
+    
+    def peek_draw_pile(self, player_id: str, count: int = 3) -> tuple[Card, ...]:
+        """
+        Let a player peek at the top cards of the draw pile.
+        
+        Args:
+            player_id: The player peeking.
+            count: Number of cards to peek at.
+            
+        Returns:
+            Tuple of cards (top card last).
+        """
+        draw_pile: list[Card] = self._state.draw_pile
+        actual_count: int = min(count, len(draw_pile))
+        
+        # Top of pile is end of list
+        peeked: tuple[Card, ...] = tuple(draw_pile[-actual_count:]) if actual_count > 0 else ()
+        
+        self._record_event(
+            EventType.CARDS_PEEKED,
+            player_id,
+            {"count": actual_count},
+        )
+        
+        return peeked
+    
+    def request_favor(self, requester_id: str, target_id: str) -> Card | None:
+        """
+        Request a favor from another player.
+        
+        The target player must give one card of their choice.
+        
+        Args:
+            requester_id: Player requesting the favor.
+            target_id: Player who must give a card.
+            
+        Returns:
+            The card given, or None if target has no cards.
+        """
+        target_state = self._state.get_player(target_id)
+        requester_state = self._state.get_player(requester_id)
+        target_bot: Bot | None = self._bots.get(target_id)
+        
+        if not target_state or not target_state.hand or not requester_state or not target_bot:
+            return None
+        
+        self._record_event(
+            EventType.FAVOR_REQUESTED,
+            requester_id,
+            {"target": target_id},
+        )
+        
+        # Target chooses which card to give
+        target_view: BotView = self._create_bot_view(target_id)
+        card_to_give: Card = target_bot.choose_card_to_give(target_view, requester_id)
+        
+        # Validate the card is in their hand
+        if card_to_give not in target_state.hand:
+            # If invalid choice, give a random card
+            card_to_give = target_state.hand[0]
+        
+        target_state.hand.remove(card_to_give)
+        requester_state.hand.append(card_to_give)
+        
+        self._record_event(
+            EventType.CARD_GIVEN,
+            target_id,
+            {"to": requester_id, "card_type": card_to_give.card_type},
+        )
+        
+        self.log(f"{target_id} gave a card to {requester_id}")
+        
+        return card_to_give
     
     def skip_turn(self, player_id: str) -> None:
         """Skip the current turn (consume without drawing)."""
@@ -254,25 +425,26 @@ class GameEngine:
                 {"extra_turns": extra_turns, "attacker": player_id},
             )
     
-    def steal_random_card(self, player_id: str) -> Card | None:
+    def steal_random_card(self, player_id: str, target_id: str | None = None) -> Card | None:
         """
         Steal a random card from another player.
         
         Args:
             player_id: The player stealing.
+            target_id: Specific target, or None for random target.
             
         Returns:
             The stolen card, or None if no cards to steal.
         """
-        other_players: list[str] = [
-            pid for pid in self._state.get_alive_players()
-            if pid != player_id
-        ]
+        if target_id is None:
+            other_players: list[str] = [
+                pid for pid in self._state.get_alive_players()
+                if pid != player_id
+            ]
+            if not other_players:
+                return None
+            target_id = self._rng.choice(other_players)
         
-        if not other_players:
-            return None
-        
-        target_id: str = self._rng.choice(other_players)
         target_state = self._state.get_player(target_id)
         player_state = self._state.get_player(player_id)
         
@@ -284,9 +456,9 @@ class GameEngine:
         player_state.hand.append(stolen_card)
         
         self._record_event(
-            EventType.CARD_PLAYED,
+            EventType.CARD_STOLEN,
             player_id,
-            {"action": "steal", "target": target_id, "card_type": stolen_card.card_type},
+            {"target": target_id, "card_type": stolen_card.card_type},
         )
         
         return stolen_card
@@ -294,6 +466,11 @@ class GameEngine:
     def log(self, message: str) -> None:
         """Log a message to the console."""
         print(f"[Game] {message}")
+    
+    def shuffle_deck(self) -> None:
+        """Shuffle the draw pile."""
+        self._rng.shuffle(self._state.draw_pile)
+        self._record_event(EventType.DECK_SHUFFLED)
     
     # --- Reaction System ---
     
@@ -638,7 +815,10 @@ class GameEngine:
             
             if isinstance(action, DrawCardAction):
                 # End turn by drawing a card
-                self.draw_cards(player_id, 1)
+                _, exploded = self.draw_cards(player_id, 1)
+                if exploded:
+                    # Player was eliminated, exit turn
+                    return
                 break
             
             elif isinstance(action, PlayCardAction):

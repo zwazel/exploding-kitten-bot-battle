@@ -18,7 +18,9 @@ from game.bots.base import (
     PlayComboAction,
 )
 from game.bots.view import BotView
-from game.cards.placeholder import SkipCard, NopeCard, ComboCard
+from game.cards.base import Card
+from game.cards.placeholder import SkipCard, NopeCard
+from game.cards.cat_cards import TacoCatCard
 from game.history import EventType, GameEvent
 
 
@@ -40,6 +42,12 @@ class SimpleTestBot(Bot):
     
     def react(self, view: BotView, triggering_event: GameEvent) -> Action | None:
         return None
+    
+    def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
+        return 0  # Bottom
+    
+    def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
+        return view.my_hand[0]
 
 
 class SkipPlayingBot(Bot):
@@ -63,6 +71,12 @@ class SkipPlayingBot(Bot):
     
     def react(self, view: BotView, triggering_event: GameEvent) -> Action | None:
         return None
+    
+    def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
+        return 0
+    
+    def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
+        return view.my_hand[0]
 
 
 class TestGameEngineSetup:
@@ -116,7 +130,7 @@ class TestDeterministicGameplay:
             engine.create_deck({
                 "SkipCard": 5,
                 "NopeCard": 5,
-                "ComboCard": 10,
+                "TacoCatCard": 10,
             })
             engine.setup_game(initial_hand_size=3)
             
@@ -141,7 +155,7 @@ class TestTurnHandling:
         engine: GameEngine = GameEngine(seed=42)
         engine.add_bot(SimpleTestBot("Bot1"))
         engine.add_bot(SimpleTestBot("Bot2"))
-        engine.create_deck({"SkipCard": 10, "ComboCard": 10})
+        engine.create_deck({"SkipCard": 10, "TacoCatCard": 10})
         engine.setup_game(initial_hand_size=3)
         
         # Run the turn for current player
@@ -198,6 +212,12 @@ class TestEventNotification:
             
             def react(self, view: BotView, triggering_event: GameEvent) -> Action | None:
                 return None
+            
+            def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
+                return 0
+            
+            def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
+                return view.my_hand[0]
         
         engine: GameEngine = GameEngine(seed=42)
         bot1 = EventTrackingBot("Bot1")
@@ -225,7 +245,7 @@ class TestComboSystem:
         engine: GameEngine = GameEngine(seed=42)
         engine.add_bot(SimpleTestBot("Bot1"))
         engine.add_bot(SimpleTestBot("Bot2"))
-        engine.create_deck({"ComboCard": 20})
+        engine.create_deck({"TacoCatCard": 20})
         engine.setup_game(initial_hand_size=5)
         
         # Get a player with combo cards
@@ -233,7 +253,7 @@ class TestComboSystem:
         player_state = engine._state.get_player(player_id)
         
         if player_state and len(player_state.hand) >= 2:
-            # All cards are ComboCards, so we can make a 2-of-a-kind
+            # All cards are TacoCatCards, so we can make a 2-of-a-kind
             cards = player_state.hand[:2]
             
             # This should work

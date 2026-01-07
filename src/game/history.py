@@ -46,6 +46,17 @@ class EventType(Enum):
     # Turn modification
     TURNS_ADDED = "turns_added"
     TURN_SKIPPED = "turn_skipped"
+    
+    # Exploding Kitten events
+    EXPLODING_KITTEN_DRAWN = "exploding_kitten_drawn"
+    EXPLODING_KITTEN_DEFUSED = "exploding_kitten_defused"
+    EXPLODING_KITTEN_INSERTED = "exploding_kitten_inserted"
+    
+    # Special card events
+    CARDS_PEEKED = "cards_peeked"
+    FAVOR_REQUESTED = "favor_requested"
+    CARD_GIVEN = "card_given"
+    CARD_STOLEN = "card_stolen"
 
 
 @dataclass(frozen=True)
