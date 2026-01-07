@@ -8,17 +8,89 @@ Usage:
     python -m game.main --bot bots/my_bot.py:2 --bot bots/other_bot.py
     python -m game.main --history game.json --seed 42
     python -m game.main --stats --iterations 100   # Run statistics mode
+    python -m game.main --stats --workers 8        # Parallel statistics with 8 workers
     python -m game.main --no-chat                  # Disable chat output
 """
 
 import argparse
+import os
 import time
 from collections import Counter
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
+from typing import Any
 
 from game.engine import GameEngine
 from game.bots.loader import BotLoader
 from game.bots.base import Bot
+
+
+# Module-level worker function for multiprocessing (must be picklable)
+def _run_game_worker(args: tuple[list[tuple[str, int]], int, Path]) -> list[str]:
+    """
+    Worker function for running a single game in a separate process.
+    
+    Args:
+        args: Tuple of (bot_specs, seed, deck_config_path)
+               bot_specs is list of (file_path, count) tuples
+        
+    Returns:
+        List of player IDs in placement order.
+    """
+    import sys
+    from io import StringIO
+    from game.history import EventType
+    
+    bot_specs, seed, deck_config = args
+    
+    # Suppress stdout to avoid bot loader messages cluttering output
+    old_stdout = sys.stdout
+    sys.stdout = StringIO()
+    
+    try:
+        # Create engine
+        engine = GameEngine(seed=seed, quiet_mode=True, chat_enabled=False)
+        
+        # Load bots fresh in this process
+        loader = BotLoader()
+        for file_path, count in bot_specs:
+            path = Path(file_path)
+            if path.exists():
+                loaded = loader.load_from_file(path)
+                if loaded:
+                    bot_class = type(loaded[0])
+                    engine.add_bot(loaded[0])
+                    for _ in range(count - 1):
+                        try:
+                            engine.add_bot(bot_class())
+                        except Exception:
+                            pass
+        
+        # Create deck from config
+        if deck_config.exists():
+            deck = engine.registry.create_deck_from_file(deck_config)
+            engine._state._draw_pile = deck
+            engine._rng.shuffle(engine._state._draw_pile)
+        
+        # Run the game
+        winner = engine.run()
+        
+        if not winner:
+            return []
+        
+        # Extract elimination order from history
+        elimination_order: list[str] = []
+        for event in engine.history.get_events():
+            if event.event_type == EventType.PLAYER_ELIMINATED:
+                if event.player_id:
+                    elimination_order.append(event.player_id)
+        
+        # Placement order: winner first, then reverse elimination order
+        placements: list[str] = [winner] + list(reversed(elimination_order))
+        
+        return placements
+    finally:
+        sys.stdout = old_stdout
 
 
 def _load_bots(args: argparse.Namespace, loader: BotLoader, verbose: bool = True) -> list[Bot]:
@@ -95,6 +167,43 @@ def _get_bot_classes(bots: list[Bot]) -> list[type[Bot]]:
     return [type(bot) for bot in bots]
 
 
+def _get_bot_specs(args: argparse.Namespace) -> list[tuple[str, int]]:
+    """
+    Extract bot file specifications from CLI arguments.
+    
+    Returns:
+        List of (file_path, count) tuples for each bot.
+    """
+    specs: list[tuple[str, int]] = []
+    
+    has_bot_files = args.bot_files is not None and len(args.bot_files) > 0
+    has_bots_dir = args.bots_dir is not None
+    
+    # Get bots from directory
+    if has_bots_dir or (not has_bot_files and not has_bots_dir):
+        bots_dir = args.bots_dir or Path("bots")
+        if bots_dir.exists():
+            for py_file in sorted(bots_dir.glob("*.py")):
+                if not py_file.name.startswith("_"):
+                    specs.append((str(py_file.absolute()), 1))
+    
+    # Get individual bot files
+    if has_bot_files:
+        for bot_spec in args.bot_files:
+            if ":" in bot_spec:
+                path_str, count_str = bot_spec.rsplit(":", 1)
+                count = int(count_str)
+            else:
+                path_str = bot_spec
+                count = 1
+            
+            path = Path(path_str)
+            if path.exists():
+                specs.append((str(path.absolute()), count))
+    
+    return specs
+
+
 def _run_single_game(
     bot_classes: list[type[Bot]],
     seed: int,
@@ -166,7 +275,9 @@ def _render_bar(value: int, max_value: int, width: int = 20) -> str:
 
 def run_statistics(
     args: argparse.Namespace,
-    bot_classes: list[type[Bot]],
+    bot_specs: list[tuple[str, int]],
+    bot_names: list[str],
+    num_bots: int,
     base_seed: int,
 ) -> None:
     """
@@ -174,30 +285,15 @@ def run_statistics(
     
     Args:
         args: Parsed CLI arguments.
-        bot_classes: List of bot classes to use.
+        bot_specs: List of (file_path, count) tuples for loading bots.
+        bot_names: List of bot names (for display/tracking).
+        num_bots: Total number of bots.
         base_seed: Base seed for generating game seeds.
     """
     iterations = args.iterations
-    num_bots = len(bot_classes)
     
     # Track statistics: bot_name -> {place: count} where place is 1-indexed
     placements: dict[str, Counter[int]] = {}
-    bot_names: list[str] = []
-    
-    # Get bot names by creating temporary instances
-    for i, bot_class in enumerate(bot_classes):
-        try:
-            temp_bot = bot_class()
-            # Handle duplicate names by suffixing with index
-            base_name = temp_bot.name
-            name = base_name
-            suffix = 1
-            while name in bot_names:
-                suffix += 1
-                name = f"{base_name}_{suffix}"
-            bot_names.append(name)
-        except Exception:
-            bot_names.append(f"Bot_{i}")
     
     # Initialize placement counters
     for name in bot_names:
@@ -209,32 +305,58 @@ def run_statistics(
     print(f"\n{'='*70}")
     print(f"STATISTICS MODE: Running {iterations} games")
     print(f"Bots: {', '.join(bot_names)}")
+    
+    # Determine number of workers
+    workers = getattr(args, 'workers', 1) or 1
+    if workers > 1:
+        print(f"Using {workers} parallel workers")
     print(f"{'='*70}\n")
     
-    # Run games
-    for i in range(iterations):
-        # Generate unique seed for each iteration
-        seed = (base_seed + i) % (2**31)
-        
-        game_placements = _run_single_game(
-            bot_classes=bot_classes,
-            seed=seed,
-            deck_config=args.deck_config,
-            chat_enabled=False,  # Always disable chat in stats mode
-            quiet_mode=True,      # Always quiet in stats mode
-        )
-        
-        # Record placements
-        for place, player_id in enumerate(game_placements, 1):
-            if player_id in placements:
-                placements[player_id][place] += 1
-        
-        # Progress indicator (every 10% or every game if < 10)
-        if iterations >= 10:
-            if (i + 1) % (iterations // 10) == 0:
-                print(f"  Progress: {(i + 1) * 100 // iterations}% ({i + 1}/{iterations} games)")
-        else:
-            print(f"  Game {i + 1}/{iterations} complete")
+    # Prepare all game arguments (pass bot_specs instead of bot_classes)
+    game_args: list[tuple[list[tuple[str, int]], int, Path]] = [
+        (bot_specs, (base_seed + i) % (2**31), args.deck_config)
+        for i in range(iterations)
+    ]
+    
+    completed = 0
+    progress_step = max(1, iterations // 10)
+    
+    if workers > 1:
+        # Parallel execution with ProcessPoolExecutor
+        with ProcessPoolExecutor(max_workers=workers) as executor:
+            # Submit all tasks
+            futures = {executor.submit(_run_game_worker, arg): i for i, arg in enumerate(game_args)}
+            
+            for future in as_completed(futures):
+                game_placements = future.result()
+                
+                # Record placements
+                for place, player_id in enumerate(game_placements, 1):
+                    if player_id in placements:
+                        placements[player_id][place] += 1
+                
+                completed += 1
+                
+                # Progress indicator
+                if iterations >= 10 and completed % progress_step == 0:
+                    print(f"  Progress: {completed * 100 // iterations}% ({completed}/{iterations} games)")
+    else:
+        # Sequential execution (original behavior)
+        for i, arg in enumerate(game_args):
+            game_placements = _run_game_worker(arg)
+            
+            # Record placements
+            for place, player_id in enumerate(game_placements, 1):
+                if player_id in placements:
+                    placements[player_id][place] += 1
+            
+            completed += 1
+            
+            # Progress indicator
+            if iterations >= 10 and completed % progress_step == 0:
+                print(f"  Progress: {completed * 100 // iterations}% ({completed}/{iterations} games)")
+            elif iterations < 10:
+                print(f"  Game {completed}/{iterations} complete")
     
     # Print results
     print(f"\n{'='*70}")
@@ -357,6 +479,12 @@ Examples:
         default=100,
         help="Number of games to run in statistics mode (default: 100)",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Number of parallel workers for statistics mode (default: CPU count)",
+    )
     # Chat control argument
     parser.add_argument(
         "--no-chat",
@@ -385,8 +513,25 @@ Examples:
     
     # Statistics mode
     if args.stats:
-        bot_classes = _get_bot_classes(bots)
-        run_statistics(args, bot_classes, seed)
+        # Set default workers to CPU count if not specified
+        if args.workers is None:
+            args.workers = os.cpu_count() or 4
+        
+        # Get bot specs for multiprocessing
+        bot_specs = _get_bot_specs(args)
+        
+        # Get bot names from loaded bots
+        bot_names: list[str] = []
+        for bot in bots:
+            base_name = bot.name
+            name = base_name
+            suffix = 1
+            while name in bot_names:
+                suffix += 1
+                name = f"{base_name}_{suffix}"
+            bot_names.append(name)
+        
+        run_statistics(args, bot_specs, bot_names, len(bots), seed)
         return
     
     # Normal single-game mode

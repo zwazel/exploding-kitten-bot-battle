@@ -38,6 +38,9 @@ python -m game.main --stats
 # Run statistics with custom iteration count
 python -m game.main --stats --iterations 500
 
+# Run statistics with parallel workers for speed
+python -m game.main --stats --iterations 10000 --workers 8
+
 # Disable chat output for cleaner logs
 python -m game.main --no-chat
 ```
@@ -53,6 +56,7 @@ python -m game.main --no-chat
 | `--history` | - | Save history JSON |
 | `--stats` | Off | Run statistics mode (multiple games, collect win rates) |
 | `--iterations` | `100` | Number of games to run in statistics mode |
+| `--workers` | CPU count | Parallel workers for statistics mode |
 | `--no-chat` | Off | Disable chat output (keeps console cleaner) |
 
 ## Creating a Bot

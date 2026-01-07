@@ -128,8 +128,16 @@ Comprehensive tests in `tests/test_nope_chains.py` verify:
 Run multiple games with identical bots and deck config but different seeds to collect win rate statistics:
 - Uses `GameEngine(quiet_mode=True, chat_enabled=False)` to suppress all output
 - Creates fresh bot instances for each game to ensure clean state
-- Tracks wins per bot name (handles duplicates by suffixing with `_2`, `_3`, etc.)
+- Tracks placement distribution (1st, 2nd, 3rd, etc.) per bot with ASCII bar charts
 - Use `--iterations N` to control the number of games (default: 100)
+- Use `--workers N` to control parallel execution (default: CPU count)
+
+### Parallel Execution
+Statistics mode uses `ProcessPoolExecutor` for parallel game execution:
+- Each worker process loads bots fresh from file paths (avoids pickling issues)
+- Worker stdout is suppressed to avoid cluttering output
+- Default workers = `os.cpu_count()` when `--stats` is enabled
+- Use `--workers 1` to force sequential execution if needed
 
 ### Quiet Mode / Chat Control
 `GameEngine` supports two flags:
@@ -139,4 +147,3 @@ Run multiple games with identical bots and deck config but different seeds to co
 CLI usage:
 - `--no-chat`: Sets `chat_enabled=False` in normal mode
 - `--stats`: Automatically enables both `quiet_mode=True` and `chat_enabled=False`
-
