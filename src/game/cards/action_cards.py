@@ -85,17 +85,19 @@ class AttackCard(Card):
         return True
     
     def execute(self, engine: GameEngine, player_id: str) -> None:
-        # Get current player's remaining turns to stack
+        # Get extra turns beyond the normal 1 turn (for attack stacking)
+        # If player has 2 turns remaining, they have 1 extra turn to transfer
         current_remaining: int = engine._turn_manager.get_turns_remaining(player_id)
+        extra_from_stacking: int = max(0, current_remaining - 1)
         
-        # End current player's turn
+        # End current player's turn without drawing
         engine._turn_manager.set_turns_remaining(player_id, 0)
         
-        # Stack attack: remaining turns + 2 go to next player
-        stacked_turns: int = current_remaining + 2
-        engine.attack_next_player(player_id, stacked_turns)
+        # Next player takes 2 turns + any stacked extra turns
+        total_turns: int = 2 + extra_from_stacking
+        engine.attack_next_player(player_id, total_turns)
         
-        engine.log(f"{player_id} played Attack! Next player takes {stacked_turns} turns.")
+        engine.log(f"{player_id} played Attack! Next player takes {total_turns} turns.")
 
 
 class SkipCard(Card):
