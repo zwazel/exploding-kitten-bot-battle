@@ -84,6 +84,9 @@ class AttackCard(Card):
     def can_combo(self) -> bool:
         return True
     
+    def ends_turn(self) -> bool:
+        return True
+    
     def execute(self, engine: GameEngine, player_id: str) -> None:
         # Get extra turns beyond the normal 1 turn (for attack stacking)
         # If player has 2 turns remaining, they have 1 extra turn to transfer
@@ -123,6 +126,9 @@ class SkipCard(Card):
         return False
     
     def can_combo(self) -> bool:
+        return True
+    
+    def ends_turn(self) -> bool:
         return True
     
     def execute(self, engine: GameEngine, player_id: str) -> None:

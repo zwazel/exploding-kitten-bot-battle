@@ -834,18 +834,15 @@ class GameEngine:
             elif isinstance(action, PlayCardAction):
                 card: Card = action.card
                 if card.can_play(view, is_own_turn=True):
-                    # Track turns before playing to detect turn-ending cards
-                    turns_before: int = self._turn_manager.get_turns_remaining(player_id)
                     self._play_card(player_id, card, action.target_player_id)
-                    turns_after: int = self._turn_manager.get_turns_remaining(player_id)
                     
-                    # If turns decreased, a turn-ending card was played (Skip/Attack)
-                    if turns_after < turns_before:
-                        # Don't consume turn again - Skip already consumed it
+                    # Card signals if it ends the turn (Skip/Attack)
+                    if card.ends_turn():
+                        has_more: bool = self._turn_manager.get_turns_remaining(player_id) > 0
                         self._record_event(
                             EventType.TURN_END,
                             player_id,
-                            {"has_more_turns": turns_after > 0},
+                            {"has_more_turns": has_more},
                         )
                         return
                 else:
@@ -861,15 +858,6 @@ class GameEngine:
             elif isinstance(action, PassAction):
                 # Pass without doing anything - still need to draw to end turn
                 continue
-            
-            # Check if turn should end due to attack (turns set to 0)
-            if self._turn_manager.get_turns_remaining(player_id) == 0:
-                self._record_event(
-                    EventType.TURN_END,
-                    player_id,
-                    {"has_more_turns": False},
-                )
-                return
         
         # Consume the turn (for draw actions)
         has_more_turns: bool = self._turn_manager.consume_turn(player_id)

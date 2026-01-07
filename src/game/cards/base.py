@@ -105,6 +105,18 @@ class Card(ABC):
         """
         return False
     
+    def ends_turn(self) -> bool:
+        """
+        Check if playing this card ends the player's current turn.
+        
+        Cards like Skip and Attack end the turn without requiring a draw.
+        Override this in card implementations that end the turn.
+        
+        Returns:
+            True if playing this card ends the current turn.
+        """
+        return False
+    
     def __repr__(self) -> str:
         """String representation for debugging."""
         return f"{self.__class__.__name__}(name={self.name!r})"
