@@ -229,7 +229,11 @@ class SeeTheFutureCard(Card):
         return True
     
     def execute(self, engine: GameEngine, player_id: str) -> None:
-        # Peek at top 3 cards
+        # Peek at top 3 cards (returned in draw order: first = next to draw)
         top_cards = engine.peek_draw_pile(player_id, count=3)
-        card_names: str = ", ".join(c.name for c in top_cards)
-        engine.log(f"{player_id} saw the future: {card_names}")
+        if top_cards:
+            # Display as "1st: X, 2nd: Y, 3rd: Z" for clarity
+            card_strs: list[str] = []
+            for i, card in enumerate(top_cards, 1):
+                card_strs.append(f"{i}: {card.name}")
+            engine.log(f"{player_id} saw the future: {', '.join(card_strs)}")

@@ -201,14 +201,14 @@ class RandomBot(Bot):
         
         Returns:
             An integer position:
-            - 0 = bottom of the pile (safest for you)
-            - draw_pile_size = top of the pile (next player gets it!)
+            - 0 = top of the pile (next player gets it!)
+            - draw_pile_size = bottom of the pile (safest for you)
             - Anywhere in between
         
         STRATEGY TIP: Put it where your opponent will draw it!
         """
         
-        # Random position from bottom to top
+        # Random position from top to bottom
         return random.randint(0, draw_pile_size)
     
     # =========================================================================

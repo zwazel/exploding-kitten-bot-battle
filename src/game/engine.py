@@ -344,13 +344,13 @@ class GameEngine:
             count: Number of cards to peek at.
             
         Returns:
-            Tuple of cards (top card last).
+            Tuple of cards in draw order (first = next to draw).
         """
         draw_pile: list[Card] = self._state.draw_pile
         actual_count: int = min(count, len(draw_pile))
         
-        # Top of pile is end of list
-        peeked: tuple[Card, ...] = tuple(draw_pile[-actual_count:]) if actual_count > 0 else ()
+        # Index 0 is the top (next card to draw)
+        peeked: tuple[Card, ...] = tuple(draw_pile[:actual_count]) if actual_count > 0 else ()
         
         # Record what was actually seen for replay
         self._record_event(

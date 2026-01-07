@@ -75,12 +75,12 @@ class GameState:
             The drawn card, or None if the pile is empty.
         """
         if self._draw_pile:
-            return self._draw_pile.pop()
+            return self._draw_pile.pop(0)  # Index 0 is the top
         return None
     
     def add_to_draw_pile(self, card: Card) -> None:
         """Add a card to the top of the draw pile."""
-        self._draw_pile.append(card)
+        self._draw_pile.insert(0, card)  # Index 0 is the top
     
     def insert_in_draw_pile(self, card: Card, position: int) -> None:
         """
@@ -88,7 +88,7 @@ class GameState:
         
         Args:
             card: The card to insert.
-            position: 0 = bottom, len(draw_pile) = top.
+            position: 0 = top (next to draw), len(draw_pile) = bottom.
         """
         position = max(0, min(position, len(self._draw_pile)))
         self._draw_pile.insert(position, card)

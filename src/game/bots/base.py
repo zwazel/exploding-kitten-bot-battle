@@ -55,7 +55,7 @@ class DefuseAction:
     
     Attributes:
         insert_position: Where to insert the kitten in the draw pile.
-                        0 = bottom, len(draw_pile) = top.
+                        0 = top (next to draw), len(draw_pile) = bottom.
     """
     
     insert_position: int
@@ -168,7 +168,7 @@ class Bot(ABC):
             draw_pile_size: Current size of the draw pile (for bounds).
             
         Returns:
-            Position to insert (0 = bottom, draw_pile_size = top).
+            Position to insert (0 = top/next to draw, draw_pile_size = bottom).
         """
         ...
     
