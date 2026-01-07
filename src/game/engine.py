@@ -91,7 +91,15 @@ class GameEngine:
         Args:
             bot: The bot to add.
         """
-        player_id: str = bot.name
+        base_name: str = bot.name
+        player_id: str = base_name
+        
+        # Generate unique player ID if name already exists
+        counter: int = 1
+        while player_id in self._bots:
+            counter += 1
+            player_id = f"{base_name}_{counter}"
+        
         self._bots[player_id] = bot
         self._state.add_player(player_id)
         self._record_event(EventType.PLAYER_JOINED, player_id)

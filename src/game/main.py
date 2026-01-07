@@ -111,14 +111,20 @@ Examples:
                 print(f"Error: Bot file not found: {path}")
                 return
             
-            for i in range(count):
-                loaded = loader.load_from_file(path)
-                if loaded:
-                    bot_instance = loaded[0]
-                    bots.append(bot_instance)
-                else:
-                    print(f"Warning: No bot found in {path}")
-                    break
+            loaded = loader.load_from_file(path)
+            if loaded:
+                # Get the bot class from the first loaded instance
+                bot_class = type(loaded[0])
+                bots.append(loaded[0])  # Add the first instance
+                # Create additional instances for the remaining count
+                for i in range(count - 1):
+                    try:
+                        bots.append(bot_class())
+                    except Exception as e:
+                        print(f"Warning: Could not create additional instance of {bot_class.__name__}: {e}")
+                        break
+            else:
+                print(f"Warning: No bot found in {path}")
     
     print(f"Total bots loaded: {len(bots)}")
     
