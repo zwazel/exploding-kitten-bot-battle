@@ -273,6 +273,8 @@ class GameEngine:
         if not player_state or not bot:
             return True
         
+        self.log(f"{player_id} drew an EXPLODING KITTEN! 💣")
+        
         # Look for Defuse card
         defuse_card: Card | None = None
         for card in player_state.hand:
@@ -282,11 +284,12 @@ class GameEngine:
         
         if defuse_card is None:
             # No Defuse - player explodes!
-            self.log(f"{player_id} drew an Exploding Kitten and has no Defuse!")
+            self.log(f"  -> {player_id} has NO DEFUSE! 💀")
             self._eliminate_player(player_id)
             return True
         
         # Use Defuse card
+        self.log(f"  -> {player_id} has a Defuse card!")
         player_state.hand.remove(defuse_card)
         self._state.discard(defuse_card)
         
@@ -295,7 +298,7 @@ class GameEngine:
             player_id,
         )
         
-        self.log(f"{player_id} defused the Exploding Kitten!")
+        self.log(f"  -> {player_id} used Defuse to survive!")
         
         # Bot chooses where to reinsert the kitten
         view: BotView = self._create_bot_view(player_id)
@@ -305,13 +308,22 @@ class GameEngine:
         # Clamp to valid range
         insert_pos = max(0, min(insert_pos, draw_pile_size))
         
-        # Insert the kitten (secretly)
+        # Insert the kitten
         self._state.insert_in_draw_pile(kitten, insert_pos)
+        
+        # Log position hint (0 = top, draw_pile_size = bottom)
+        if insert_pos == 0:
+            pos_desc = "at the TOP (next draw!)"
+        elif insert_pos >= draw_pile_size:
+            pos_desc = "at the BOTTOM"
+        else:
+            pos_desc = f"at position {insert_pos} of {draw_pile_size}"
+        self.log(f"  -> Exploding Kitten reinserted {pos_desc}")
         
         self._record_event(
             EventType.EXPLODING_KITTEN_INSERTED,
             player_id,
-            {"position": "secret"},  # Don't reveal position
+            {"position": insert_pos, "pile_size": draw_pile_size},
         )
         
         return False
@@ -1006,7 +1018,10 @@ class GameEngine:
                 self._run_turn(current_player_id)
                 
                 # Move to next player if current player is done
-                if self._turn_manager.get_turns_remaining(current_player_id) == 0:
+                # BUT only if the current player didn't change during _run_turn
+                # (e.g. Attack card advances the turn itself)
+                new_current = self._turn_manager.current_player_id
+                if new_current == current_player_id and self._turn_manager.get_turns_remaining(current_player_id) == 0:
                     self._turn_manager.advance_to_next_player(alive_players)
         
         return None
