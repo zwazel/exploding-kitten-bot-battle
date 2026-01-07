@@ -1,0 +1,10 @@
+{
+    "description": "Default deck configuration for the bot battle game",
+    "cards": {
+        "DrawCard": 4,
+        "SkipCard": 4,
+        "AttackCard": 4,
+        "NopeCard": 5,
+        "ComboCard": 20
+    }
+}
