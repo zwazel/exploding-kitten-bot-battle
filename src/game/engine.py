@@ -393,7 +393,12 @@ class GameEngine:
         requester_state = self._state.get_player(requester_id)
         target_bot: Bot | None = self._bots.get(target_id)
         
-        if not target_state or not target_state.hand or not requester_state or not target_bot:
+        if not target_state or not requester_state or not target_bot:
+            self.log(f"  -> {target_id} is not available!")
+            return None
+        
+        if not target_state.hand:
+            self.log(f"  -> {target_id} has no cards to give!")
             return None
         
         self._record_event(
@@ -420,7 +425,7 @@ class GameEngine:
             {"to": requester_id, "card_type": card_to_give.card_type},
         )
         
-        self.log(f"{target_id} gave {card_to_give.name} to {requester_id}")
+        self.log(f"  -> {target_id} gives {card_to_give.name} to {requester_id}")
         
         return card_to_give
     
@@ -641,6 +646,11 @@ class GameEngine:
         
         # Execute the card effect
         card.execute(self, player_id)
+        
+        # Special handling for Favor card - needs to request the favor
+        if card.card_type == "FavorCard" and target_player_id:
+            self.request_favor(player_id, target_player_id)
+        
         return True
     
     def _play_combo(
@@ -679,6 +689,7 @@ class GameEngine:
         # Determine combo type
         card_types: list[str] = [c.card_type for c in cards]
         unique_types: set[str] = set(card_types)
+        card_names = [c.name for c in cards]
         
         combo_type: str
         if len(cards) == 5 and len(unique_types) == 5:
@@ -691,6 +702,12 @@ class GameEngine:
         else:
             self.log(f"{player_id} tried invalid combo: {card_types}")
             return False
+        
+        # Log the combo being played
+        if target_player_id:
+            self.log(f"{player_id} plays COMBO: {len(cards)}x {cards[0].name} targeting {target_player_id}")
+        else:
+            self.log(f"{player_id} plays COMBO: {', '.join(set(card_names))}")
         
         # Remove and discard all cards
         for card in cards:
@@ -711,7 +728,7 @@ class GameEngine:
         
         # Run reaction round
         if self._run_reaction_round(combo_event):
-            self.log(f"{player_id}'s combo was negated!")
+            self.log(f"  -> Combo was NEGATED!")
             return False
         
         # Execute combo effect based on pattern
@@ -735,25 +752,38 @@ class GameEngine:
         """
         if combo_type == "two_of_a_kind":
             # Steal a random card from target player
+            stolen_card: Card | None = None
             if target_player_id:
-                self._steal_card_from_player(player_id, target_player_id)
+                stolen_card = self._steal_card_from_player(player_id, target_player_id)
             else:
-                self.steal_random_card(player_id)
-            self.log(f"{player_id} played 2-of-a-kind and stole a card!")
+                stolen_card = self.steal_random_card(player_id)
+            
+            if stolen_card:
+                self.log(f"  -> Stole: {stolen_card.name}")
+            else:
+                self.log(f"  -> Target has no cards to steal!")
         
         elif combo_type == "three_of_a_kind":
             # In the real game, player names a card to steal
             # For placeholder, just steal a random card from target
+            stolen_card = None
             if target_player_id:
-                self._steal_card_from_player(player_id, target_player_id)
+                stolen_card = self._steal_card_from_player(player_id, target_player_id)
             else:
-                self.steal_random_card(player_id)
-            self.log(f"{player_id} played 3-of-a-kind and stole a specific card!")
+                stolen_card = self.steal_random_card(player_id)
+            
+            if stolen_card:
+                self.log(f"  -> Named and stole: {stolen_card.name}")
+            else:
+                self.log(f"  -> Target doesn't have that card!")
         
         elif combo_type == "five_different":
             # Draw a card from the discard pile
-            self._draw_from_discard(player_id)
-            self.log(f"{player_id} played 5-different and drew from discard!")
+            drawn_card = self._draw_from_discard(player_id)
+            if drawn_card:
+                self.log(f"  -> Drew from discard: {drawn_card.name}")
+            else:
+                self.log(f"  -> Discard pile is empty!")
     
     def _steal_card_from_player(
         self,
