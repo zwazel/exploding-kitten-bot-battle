@@ -809,6 +809,8 @@ class GameEngine:
         Args:
             initial_hand_size: Number of cards to deal to each player.
         """
+        self.log("=== SETUP PHASE ===")
+        
         # Remove Exploding Kittens and Defuse cards before dealing
         exploding_kittens: list[Card] = []
         defuse_cards: list[Card] = []
@@ -836,6 +838,7 @@ class GameEngine:
         self._turn_manager.setup(player_ids)
         
         # Deal initial hands (safe - no explosions possible)
+        self.log("Dealing initial hands...")
         for player_id in player_ids:
             self.draw_cards(player_id, initial_hand_size)
         
@@ -858,6 +861,9 @@ class GameEngine:
         
         # Shuffle the deck with Exploding Kittens now included
         self.shuffle_deck()
+        
+        self.log(f"Setup complete. {len(player_ids)} players, {num_kittens_to_use} Exploding Kittens in deck.")
+        self.log("=== GAME START ===")
         
         self._record_event(
             EventType.GAME_START,
