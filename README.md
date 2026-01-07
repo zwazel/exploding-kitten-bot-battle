@@ -81,17 +81,20 @@ class MyBot(Bot):
 
 ## Bot Chat System
 
-Bots can send chat messages during their turn using `ChatAction`:
+Bots can send chat messages during their turn using `view.say()`:
 
 ```python
 def take_turn(self, view: BotView) -> Action:
-    # Send a chat message (doesn't end your turn!)
-    return ChatAction(message="Let's gooo! 🎉")
+    # Send a chat message - simple!
+    view.say("Let's gooo! 🎉")
+    
+    # Then continue with your action
+    return DrawCardAction()
 ```
 
 **Chat Rules:**
 - Bots can only chat during their own turn
-- Chat does NOT end your turn - you'll be asked for another action
+- Just call `view.say()` and continue with your action
 - Messages are truncated to 200 characters
 - All bots can see chat messages via `view.recent_events`
 - Chat events appear in game logs with `[CHAT]` prefix

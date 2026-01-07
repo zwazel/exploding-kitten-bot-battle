@@ -8,18 +8,16 @@ cannot access hidden information like other players' hands or the draw pile.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from game.cards.base import Card
     from game.history import GameEvent
 
 
-@dataclass(frozen=True)
 class BotView:
     """
-    An immutable, safe view of the game state for a specific bot.
+    A safe view of the game state for a specific bot.
     
     This is what bots receive instead of the full GameState. It only
     contains information the bot is allowed to see.
@@ -40,17 +38,73 @@ class BotView:
         recent_events: Recent game events for context.
     """
     
-    my_id: str
-    my_hand: tuple[Card, ...]
-    my_turns_remaining: int
-    discard_pile: tuple[Card, ...]
-    draw_pile_count: int
-    other_players: tuple[str, ...]
-    other_player_card_counts: dict[str, int]
-    current_player: str
-    turn_order: tuple[str, ...]
-    is_my_turn: bool
-    recent_events: tuple[GameEvent, ...]
+    def __init__(
+        self,
+        my_id: str,
+        my_hand: tuple[Card, ...],
+        my_turns_remaining: int,
+        discard_pile: tuple[Card, ...],
+        draw_pile_count: int,
+        other_players: tuple[str, ...],
+        other_player_card_counts: dict[str, int],
+        current_player: str,
+        turn_order: tuple[str, ...],
+        is_my_turn: bool,
+        recent_events: tuple[GameEvent, ...],
+        chat_callback: Callable[[str, str], None] | None = None,
+    ) -> None:
+        """
+        Initialize the bot view.
+        
+        Args:
+            my_id: The ID of the bot this view is for.
+            my_hand: The cards in this bot's hand.
+            my_turns_remaining: Number of turns this bot must still take.
+            discard_pile: All discarded cards.
+            draw_pile_count: Number of cards in draw pile.
+            other_players: IDs of other players still in the game.
+            other_player_card_counts: Card counts for other players.
+            current_player: ID of the player whose turn it is.
+            turn_order: The order of play.
+            is_my_turn: Whether it's currently this bot's turn.
+            recent_events: Recent game events for context.
+            chat_callback: Internal callback for chat (set by engine).
+        """
+        self.my_id: str = my_id
+        self.my_hand: tuple[Card, ...] = my_hand
+        self.my_turns_remaining: int = my_turns_remaining
+        self.discard_pile: tuple[Card, ...] = discard_pile
+        self.draw_pile_count: int = draw_pile_count
+        self.other_players: tuple[str, ...] = other_players
+        self.other_player_card_counts: dict[str, int] = other_player_card_counts
+        self.current_player: str = current_player
+        self.turn_order: tuple[str, ...] = turn_order
+        self.is_my_turn: bool = is_my_turn
+        self.recent_events: tuple[GameEvent, ...] = recent_events
+        self._chat_callback: Callable[[str, str], None] | None = chat_callback
+    
+    def say(self, message: str) -> None:
+        """
+        Send a chat message during your turn.
+        
+        Use this to "talk" to other bots or add personality to your bot!
+        Messages are visible to all players and recorded in game history.
+        
+        Args:
+            message: The message to send (max 200 characters).
+        
+        Example:
+            def take_turn(self, view: BotView) -> Action:
+                view.say("Watch out, here I come!")
+                return DrawCardAction()
+        
+        Note:
+            - You can only chat during your own turn.
+            - Messages are truncated to 200 characters.
+            - Chat messages appear in the log with [CHAT] prefix.
+        """
+        if self._chat_callback is not None:
+            self._chat_callback(self.my_id, message)
     
     def get_cards_of_type(self, card_type: str) -> tuple[Card, ...]:
         """

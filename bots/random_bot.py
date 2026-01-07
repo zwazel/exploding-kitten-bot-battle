@@ -29,7 +29,6 @@ import random
 from game.bots.base import (
     Action,           # Base type for all actions
     Bot,              # The base class your bot must inherit from
-    ChatAction,       # Action to send a chat message (doesn't end turn)
     DrawCardAction,   # Action to draw a card (ends your turn)
     PlayCardAction,   # Action to play a single card
     PlayComboAction,  # Action to play multiple cards as a combo
@@ -54,10 +53,6 @@ class RandomBot(Bot):
     
     def __init__(self) -> None:
         """Initialize the bot with state tracking."""
-        # Track if we've already chatted this turn
-        # (bots can only chat once per turn to avoid spam)
-        self._chatted_this_turn: bool = False
-        
         # Some fun phrases for the bot to say
         self._taunts: list[str] = [
             "I have no idea what I'm doing! 🎲",
@@ -101,30 +96,28 @@ class RandomBot(Bot):
                   - view.discard_pile: Cards in discard (visible to all)
                   - view.other_player_card_counts: How many cards each opponent has
                   - view.recent_events: Recent game events (including chat!)
+                  - view.say(message): Send a chat message!
         
         Returns:
-            An Action object: DrawCardAction, PlayCardAction, PlayComboAction,
-                             or ChatAction (which doesn't end your turn)
+            An Action object: DrawCardAction, PlayCardAction, or PlayComboAction
         
         IMPORTANT: You MUST eventually return DrawCardAction() to end your turn!
-                   You can play cards or chat before drawing, but must draw to end.
+                   You can play cards before drawing, but must draw to end.
         
         CHAT FEATURE:
-            - Return ChatAction(message="...") to send a message
-            - Chat does NOT end your turn - you'll be asked again for an action
-            - Only chat once per turn (the engine will keep asking otherwise)
+            - Call view.say("your message") to send a chat message
+            - You can chat multiple times, but keep it reasonable!
             - Messages are recorded in history and visible to all bots
         """
         
         # =====================================================================
-        # CHAT EXAMPLE: Sometimes say something before taking an action
+        # CHAT EXAMPLE: Sometimes say something during your turn
         # =====================================================================
         
-        # 20% chance to chat, but only if we haven't chatted this turn
-        if not self._chatted_this_turn and random.random() < 0.2:
-            self._chatted_this_turn = True
+        # 20% chance to chat
+        if random.random() < 0.2:
             message = random.choice(self._taunts)
-            return ChatAction(message=message)
+            view.say(message)  # Just call say() - no need to return anything!
         
         # =====================================================================
         # STRATEGY: 50% chance to play a card, 50% to just draw
@@ -151,8 +144,6 @@ class RandomBot(Bot):
         
         # Default: Draw a card to end the turn
         # This is the safe option and MUST be done eventually!
-        # Reset chat flag for next turn
-        self._chatted_this_turn = False
         return DrawCardAction()
     
     # =========================================================================

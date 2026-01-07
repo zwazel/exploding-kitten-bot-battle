@@ -13,7 +13,6 @@ from typing import Any
 from game.bots.base import (
     Action,
     Bot,
-    ChatAction,
     DefuseAction,
     DrawCardAction,
     GiveCardAction,
@@ -148,7 +147,7 @@ class GameEngine:
     
     # --- View Creation (Anti-Cheat) ---
     
-    def _create_bot_view(self, player_id: str) -> BotView:
+    def _create_bot_view(self, player_id: str, with_chat: bool = False) -> BotView:
         """
         Create a safe view of the game state for a specific bot.
         
@@ -157,6 +156,7 @@ class GameEngine:
         
         Args:
             player_id: The player to create the view for.
+            with_chat: Whether to enable chat for this view (only during turns).
             
         Returns:
             A BotView with only allowed information.
@@ -176,6 +176,9 @@ class GameEngine:
         all_events: tuple[GameEvent, ...] = self._history.get_events()
         recent: tuple[GameEvent, ...] = all_events[-10:] if all_events else ()
         
+        # Only provide chat callback during the player's turn
+        chat_callback = self._handle_chat if with_chat else None
+        
         return BotView(
             my_id=player_id,
             my_hand=tuple(player_state.hand) if player_state else (),
@@ -188,6 +191,7 @@ class GameEngine:
             turn_order=self._turn_manager.turn_order,
             is_my_turn=(player_id == current_player_id),
             recent_events=recent,
+            chat_callback=chat_callback,
         )
     
     # --- Event Recording ---
@@ -496,8 +500,33 @@ class GameEngine:
         return stolen_card
     
     def log(self, message: str) -> None:
-        """Log a message to the console."""
-        print(message)
+        """Log a game message to the console with [GAME] prefix."""
+        print(f"[GAME] {message}")
+    
+    def _handle_chat(self, player_id: str, message: str) -> None:
+        """
+        Handle a chat message from a bot.
+        
+        This is called when a bot uses view.say() during their turn.
+        
+        Args:
+            player_id: The player sending the message.
+            message: The chat message (will be truncated to 200 chars).
+        """
+        # Truncate message to prevent spam
+        message = message[:200] if message else ""
+        if not message:
+            return
+        
+        # Log with [CHAT] prefix instead of [GAME]
+        print(f"[CHAT] {player_id}: {message}")
+        
+        # Record in history so other bots can see it
+        self._record_event(
+            EventType.BOT_CHAT,
+            player_id,
+            {"message": message},
+        )
     
     def shuffle_deck(self) -> None:
         """Shuffle the draw pile."""
@@ -957,7 +986,8 @@ class GameEngine:
         self._record_event(EventType.TURN_START, player_id)
         
         while True:
-            view: BotView = self._create_bot_view(player_id)
+            # Enable chat for the bot during their turn
+            view: BotView = self._create_bot_view(player_id, with_chat=True)
             action: Action = bot.take_turn(view)
             
             if isinstance(action, DrawCardAction):
@@ -991,20 +1021,6 @@ class GameEngine:
                     self._play_combo(player_id, cards, action.target_player_id)
                 else:
                     self.log(f"{player_id} tried to play invalid combo")
-            
-            elif isinstance(action, ChatAction):
-                # Bot wants to send a chat message
-                # Truncate message to 200 characters to prevent spam
-                message: str = action.message[:200] if action.message else ""
-                if message:
-                    self.log(f"[CHAT] {player_id}: {message}")
-                    self._record_event(
-                        EventType.BOT_CHAT,
-                        player_id,
-                        {"message": message},
-                    )
-                # Chat doesn't end the turn - loop continues for next action
-            
         
         # Consume the turn (for draw actions)
         has_more_turns: bool = self._turn_manager.consume_turn(player_id)

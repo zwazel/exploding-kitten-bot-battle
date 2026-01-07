@@ -48,11 +48,15 @@ class TestBotView:
     """Tests for the BotView class (anti-cheat)."""
     
     def test_view_is_immutable(self) -> None:
-        """BotView should be immutable (frozen dataclass)."""
+        """BotView collections should be immutable tuples."""
         view: BotView = create_test_view_with_cards()
         
-        with pytest.raises(Exception):  # FrozenInstanceError
-            view.my_id = "hacker"  # type: ignore[misc]
+        # Collections should be tuples (immutable)
+        assert isinstance(view.my_hand, tuple)
+        assert isinstance(view.discard_pile, tuple)
+        assert isinstance(view.other_players, tuple)
+        assert isinstance(view.turn_order, tuple)
+        assert isinstance(view.recent_events, tuple)
     
     def test_hand_is_immutable(self) -> None:
         """The hand tuple should be immutable."""

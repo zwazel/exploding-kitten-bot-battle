@@ -10,7 +10,6 @@ Contains:
 from game.bots.base import (
     Action,
     Bot,
-    ChatAction,
     DefuseAction,
     DrawCardAction,
     GiveCardAction,
@@ -32,5 +31,4 @@ __all__: list[str] = [
     "PlayComboAction",
     "DefuseAction",
     "GiveCardAction",
-    "ChatAction",
 ]

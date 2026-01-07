@@ -62,28 +62,27 @@ Per official Exploding Kittens rules, `setup_game` follows this flow:
 
 ## Chat System
 
-Bots can "talk" during their turn using `ChatAction`:
+Bots can "talk" during their turn using `view.say()`:
 
 ### Key Points
-- `ChatAction` is returned from `take_turn()` like any other action
-- **Does NOT end the turn** - bot must eventually `DrawCardAction` or play a turn-ending card
+- Call `view.say(message)` during `take_turn()` to send a chat message
 - Messages are truncated to 200 characters to prevent spam
 - Recorded in game history as `EventType.BOT_CHAT`
 - Bots see chat via `view.recent_events` in subsequent calls to `on_event`
+- Game logs show `[GAME]` prefix, chat shows `[CHAT]` prefix
 
 ### Implementation Pattern
-When a bot returns `ChatAction`, the engine:
+The `BotView` object passed to `take_turn()` has a `say()` method:
+```python
+def take_turn(self, view: BotView) -> Action:
+    view.say("Hello everyone!")  # Send a chat message
+    return DrawCardAction()      # Continue with action
+```
+
+When `view.say()` is called, the engine:
 1. Logs the message with `[CHAT]` prefix
 2. Records a `BOT_CHAT` event in history
 3. Notifies all bots via `on_event`
-4. **Loops back** to ask the same bot for another action
 
-Bots should track if they've chatted to avoid infinite loops:
-```python
-def take_turn(self, view: BotView) -> Action:
-    if not self._chatted_this_turn:
-        self._chatted_this_turn = True
-        return ChatAction(message="Hello!")
-    return DrawCardAction()  # Must eventually end turn
-```
-
+Note: Chat is only available during `take_turn()`. Views passed to other methods
+(like `on_event` or `react`) do not have chat enabled.
