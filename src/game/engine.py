@@ -252,6 +252,7 @@ class GameEngine:
                     player_id,
                     {"card_type": card.card_type},
                 )
+                self.log(f"{player_id} drew: {card.name}")
         
         return drawn, False
     
@@ -407,7 +408,7 @@ class GameEngine:
             {"to": requester_id, "card_type": card_to_give.card_type},
         )
         
-        self.log(f"{target_id} gave a card to {requester_id}")
+        self.log(f"{target_id} gave {card_to_give.name} to {requester_id}")
         
         return card_to_give
     
@@ -472,6 +473,8 @@ class GameEngine:
             player_id,
             {"target": target_id, "card_type": stolen_card.card_type},
         )
+        
+        self.log(f"{player_id} stole {stolen_card.name} from {target_id}")
         
         return stolen_card
     
@@ -824,6 +827,12 @@ class GameEngine:
         bot: Bot | None = self._bots.get(player_id)
         if not bot:
             return
+        
+        turns_remaining: int = self._turn_manager.get_turns_remaining(player_id)
+        if turns_remaining > 1:
+            self.log(f"--- {player_id}'s turn ({turns_remaining} turns remaining) ---")
+        else:
+            self.log(f"--- {player_id}'s turn ---")
         
         self._record_event(EventType.TURN_START, player_id)
         
