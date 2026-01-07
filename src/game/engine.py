@@ -501,12 +501,13 @@ class GameEngine:
     
     # --- Reaction System ---
     
-    def _run_reaction_round(self, triggering_event: GameEvent) -> bool:
+    def _run_reaction_round(self, triggering_event: GameEvent, depth: int = 0) -> bool:
         """
         Run a reaction round where players can respond to an action.
         
         Args:
             triggering_event: The event that triggered reactions.
+            depth: Nesting depth for indentation (0 = top level)
             
         Returns:
             True if the action was negated, False if it proceeds.
@@ -528,6 +529,7 @@ class GameEngine:
         )
         
         nope_count: int = 0
+        indent = "  " * (depth + 1)  # Indentation for nested reactions
         
         while reaction_round.pending_players:
             reactor_id: str = reaction_round.pending_players.pop(0)
@@ -563,6 +565,9 @@ class GameEngine:
                     player_state.hand.remove(card)
                     self._state.discard(card)
                     
+                    # Log the Nope being played
+                    self.log(f"{indent}🚫 {reactor_id} plays NOPE!")
+                    
                     reaction_event: GameEvent = self._record_event(
                         EventType.REACTION_PLAYED,
                         reactor_id,
@@ -574,8 +579,9 @@ class GameEngine:
                     
                     # Start a new nested reaction round for this reaction
                     # This allows counter-nopes
-                    if self._run_reaction_round(reaction_event):
-                        # The reaction was negated
+                    if self._run_reaction_round(reaction_event, depth + 1):
+                        # The reaction was negated (counter-noped)
+                        self.log(f"{indent}  ↩️ NOPE was counter-noped!")
                         nope_count -= 1
         
         self._turn_manager.end_reaction_round()
