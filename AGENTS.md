@@ -1,43 +1,49 @@
 # Agent Guidelines
 
-This repository contains the Exploding Kitten Bot Battle project, consisting of a Python game engine, a FastAPI backend, and a Vite+TypeScript frontend.
+## Project Overview
 
-## Project Structure
+This is a Python-based bot battle card game framework. Students write bots that compete against each other.
 
-- `game/` and `bots/`: Core game engine and reference bots.
-- `backend/`: FastAPI arena backend (`backend/app`).
-- `frontend/`: Vite+TypeScript single page application.
-- `tests/`: Unit tests for the game engine.
+## Key Patterns
 
-## General Guidelines
+### Type Safety
+- **Always** declare types for all variables, parameters, and return values
+- Use `pyright` in strict mode for type checking
+- Prefer `tuple` over `list` for immutable sequences exposed to bots
 
-- **Tests**: Prefer adding automated tests.
-  - Backend: `backend/app/tests/` (pytest).
-  - Frontend: `frontend/tests/` (Playwright).
-  - Game Engine: `tests/` (unittest).
-- **Local Execution**: Ensure all changes allow the project to be run locally as documented in `README.md`.
-- **Documentation**: Keep `README.md` and other docs updated when changing features. Ensure backend and frontend docs stay aligned.
-- **Artifacts**: Do not commit build artifacts (`dist/`, `coverage/`, `__pycache__`, etc.).
+### Anti-Cheat Architecture
+- `GameState` is **never** exposed directly to bots
+- Bots receive a `BotView` - a safe, read-only snapshot
+- `BotView` only contains information the bot is allowed to see
 
-## Backend Guidelines (`backend/`)
+### Card System
+- Each card type is a class extending `Card` base class
+- Cards define their own behavior via `can_play()`, `execute()`, etc.
+- Card instances are created from the `CardRegistry` based on config
 
-- **Framework**: FastAPI with Pydantic models.
-- **Database**: PostgreSQL with SQLAlchemy (async) and Alembic for migrations.
-- **Testing**: Use `pytest`. Tests can use an in-memory SQLite database for speed.
-- **Configuration**: All secrets and config must be handled via environment variables (see `backend/app/config.py`).
-- **API**: Update OpenAPI documentation (auto-generated) and `backend/README.md` when adding/changing routes.
+### Event History
+- Every game action creates a `GameEvent`
+- Events are recorded in `GameHistory` for future replay
+- Use `GameEvent` for both history and bot notifications
 
-## Frontend Guidelines (`frontend/`)
+### Deterministic RNG
+- All randomness goes through `DeterministicRNG`
+- Same seed = same game outcome (given same bot behavior)
+- Useful for testing and debugging
 
-- **Framework**: Vite + TypeScript.
-- **State**: Minimal state management, prefer simple React/local state or lightweight stores if needed.
-- **API**: Route all API requests through helpers in `src/api/`.
-- **Responsiveness**: UI must work on screens down to 360px wide.
-- **Local Replay**: The "Local Replay" feature must work without a backend connection.
+## File Organization
 
-## Bot Development (AI Context)
+```
+src/game/           # Core engine (protected)
+  ├── cards/        # Card base class and registry
+  └── bots/         # Bot interface and loader
+bots/               # User bots (loaded at runtime)
+configs/            # Deck configurations
+tests/              # Test suite
+```
 
-If asked to write a bot:
-- Bots must inherit from `game.Bot`.
-- Respect `BotProxy` limitations (cannot access opponent hands directly).
-- Use `len(bot.hand)` for decision making regarding opponents.
+## Testing
+
+- Use seeded RNG for deterministic tests
+- Test cards in isolation before integration
+- Verify `BotView` doesn't leak protected information

@@ -1,0 +1,30 @@
+[project]
+name = "exploding-kitten-bot-battle"
+version = "0.1.0"
+description = "A bot battle card game framework for educational coding exercises"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+
+[tool.pyright]
+include = ["src", "tests", "bots"]
+pythonVersion = "3.11"
+typeCheckingMode = "strict"
