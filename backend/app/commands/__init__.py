@@ -1,1 +1,0 @@
-"""Management command entry points."""
