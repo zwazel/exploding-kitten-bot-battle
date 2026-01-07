@@ -126,6 +126,16 @@ class RandomBot(Bot):
             "GG everyone!",
             "I'll be back! ...wait, no I won't.",
         ]
+        
+        # Phrases when playing a combo
+        self._combo_phrases: list[str] = [
+            "Combo time!",
+            "How about THIS?!",
+            "Surprise!",
+            "Watch this!",
+            "Behold my power!",
+            "*dramatic card slam*",
+        ]
     
     # =========================================================================
     # REQUIRED: The name property
@@ -139,6 +149,57 @@ class RandomBot(Bot):
         TIP: Make it unique so you can identify your bot in the logs!
         """
         return "RandomBot"
+    
+    # =========================================================================
+    # HELPER: Find possible combos in hand
+    # =========================================================================
+    
+    def _find_possible_combos(
+        self, hand: tuple[Card, ...]
+    ) -> list[tuple[str, tuple[Card, ...]]]:
+        """
+        Find all possible combos in the given hand.
+        
+        Inputs: hand - The bot's current hand
+        Returns: List of (combo_type, cards) tuples for each valid combo
+        
+        Combo types:
+        - "two_of_a_kind": 2 cards of same type (steal random from target)
+        - "three_of_a_kind": 3 cards of same type (name + steal from target)  
+        - "five_different": 5 different card types (draw from discard)
+        """
+        combos: list[tuple[str, tuple[Card, ...]]] = []
+        
+        # Filter to only cards that can combo
+        combo_cards = [c for c in hand if c.can_combo()]
+        
+        if not combo_cards:
+            return combos
+        
+        # Group cards by type
+        by_type: dict[str, list[Card]] = {}
+        for card in combo_cards:
+            if card.card_type not in by_type:
+                by_type[card.card_type] = []
+            by_type[card.card_type].append(card)
+        
+        # Check for two-of-a-kind and three-of-a-kind
+        for card_type, cards_of_type in by_type.items():
+            if len(cards_of_type) >= 3:
+                # Three of a kind takes priority (stronger effect)
+                combos.append(("three_of_a_kind", tuple(cards_of_type[:3])))
+            elif len(cards_of_type) >= 2:
+                combos.append(("two_of_a_kind", tuple(cards_of_type[:2])))
+        
+        # Check for five different card types
+        if len(by_type) >= 5:
+            # Pick one card from each of the first 5 different types
+            five_cards: list[Card] = []
+            for card_type in list(by_type.keys())[:5]:
+                five_cards.append(by_type[card_type][0])
+            combos.append(("five_different", tuple(five_cards)))
+        
+        return combos
     
     # =========================================================================
     # REQUIRED: take_turn - Called when it's your turn
@@ -181,6 +242,30 @@ class RandomBot(Bot):
         if random.random() < 0.2:
             message = random.choice(self._taunts)
             view.say(message)  # Just call say() - no need to return anything!
+        
+        # =====================================================================
+        # COMBO CHECK: 20% chance to play a combo if one is possible
+        # =====================================================================
+        
+        possible_combos = self._find_possible_combos(view.my_hand)
+        
+        if possible_combos and random.random() < 0.2:
+            # Pick a random combo from the available ones
+            combo_type, combo_cards = random.choice(possible_combos)
+            
+            # 50% chance to taunt when playing a combo
+            if random.random() < 0.5:
+                phrase = random.choice(self._combo_phrases)
+                view.say(phrase)
+            
+            # Two-of-a-kind and three-of-a-kind need a target player
+            if combo_type in ("two_of_a_kind", "three_of_a_kind"):
+                if view.other_players:
+                    target = random.choice(view.other_players)
+                    return PlayComboAction(cards=combo_cards, target_player_id=target)
+            # Five different doesn't need a target (draws from discard)
+            elif combo_type == "five_different":
+                return PlayComboAction(cards=combo_cards)
         
         # =====================================================================
         # STRATEGY: 50% chance to play a card, 50% to just draw
