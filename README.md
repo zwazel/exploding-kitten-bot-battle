@@ -31,6 +31,15 @@ python -m game.main --bots-dir ./bots --bot bots/test_bot.py:2
 
 # Save game history for replay
 python -m game.main --seed 42 --history game.json
+
+# Run statistics mode (100 games by default)
+python -m game.main --stats
+
+# Run statistics with custom iteration count
+python -m game.main --stats --iterations 500
+
+# Disable chat output for cleaner logs
+python -m game.main --no-chat
 ```
 
 ### CLI Options
@@ -42,6 +51,9 @@ python -m game.main --seed 42 --history game.json
 | `--deck-config` | `configs/default_deck.json` | Deck configuration |
 | `--seed` | Random | Seed for reproducibility |
 | `--history` | - | Save history JSON |
+| `--stats` | Off | Run statistics mode (multiple games, collect win rates) |
+| `--iterations` | `100` | Number of games to run in statistics mode |
+| `--no-chat` | Off | Disable chat output (keeps console cleaner) |
 
 ## Creating a Bot
 

@@ -42,12 +42,19 @@ class GameEngine:
     - Enforcing game rules
     """
     
-    def __init__(self, seed: int = 42) -> None:
+    def __init__(
+        self,
+        seed: int = 42,
+        quiet_mode: bool = False,
+        chat_enabled: bool = True,
+    ) -> None:
         """
         Initialize the game engine.
         
         Args:
             seed: Seed for deterministic randomness.
+            quiet_mode: If True, suppress all console output (for statistics runs).
+            chat_enabled: If True, chat messages are printed to console.
         """
         self._rng: DeterministicRNG = DeterministicRNG(seed)
         self._state: GameState = GameState()
@@ -57,6 +64,8 @@ class GameEngine:
         self._bots: dict[str, Bot] = {}
         self._bot_loader: BotLoader = BotLoader()
         self._game_running: bool = False
+        self._quiet_mode: bool = quiet_mode
+        self._chat_enabled: bool = chat_enabled
         
         # Register all game cards
         register_all_cards(self._registry)
@@ -505,7 +514,8 @@ class GameEngine:
     
     def log(self, message: str) -> None:
         """Log a game message to the console with [GAME] prefix."""
-        print(f"[GAME] {message}")
+        if not self._quiet_mode:
+            print(f"[GAME] {message}")
     
     def _handle_chat(self, player_id: str, message: str) -> None:
         """
@@ -523,7 +533,8 @@ class GameEngine:
             return
         
         # Log with [CHAT] prefix instead of [GAME]
-        print(f"[CHAT] {player_id}: {message}")
+        if not self._quiet_mode and self._chat_enabled:
+            print(f"[CHAT] {player_id}: {message}")
         
         # Record in history so other bots can see it
         self._record_event(

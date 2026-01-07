@@ -121,3 +121,22 @@ Comprehensive tests in `tests/test_nope_chains.py` verify:
 - Triple Nope re-negation
 - Player exclusion from own actions
 - Correct card removal and discard
+
+## CLI Modes
+
+### Statistics Mode (`--stats`)
+Run multiple games with identical bots and deck config but different seeds to collect win rate statistics:
+- Uses `GameEngine(quiet_mode=True, chat_enabled=False)` to suppress all output
+- Creates fresh bot instances for each game to ensure clean state
+- Tracks wins per bot name (handles duplicates by suffixing with `_2`, `_3`, etc.)
+- Use `--iterations N` to control the number of games (default: 100)
+
+### Quiet Mode / Chat Control
+`GameEngine` supports two flags:
+- `quiet_mode`: When `True`, suppresses ALL console output (both `[GAME]` and `[CHAT]`)
+- `chat_enabled`: When `False`, suppresses only `[CHAT]` messages while keeping `[GAME]` logs
+
+CLI usage:
+- `--no-chat`: Sets `chat_enabled=False` in normal mode
+- `--stats`: Automatically enables both `quiet_mode=True` and `chat_enabled=False`
+
