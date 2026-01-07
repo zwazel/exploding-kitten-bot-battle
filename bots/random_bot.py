@@ -55,38 +55,38 @@ class RandomBot(Bot):
         """Initialize the bot with state tracking."""
         # Some fun phrases for the bot to say during turns
         self._taunts: list[str] = [
-            "I have no idea what I'm doing! 🎲",
-            "Meow! 🐱",
+            "I have no idea what I'm doing!",
+            "Meow!",
             "Watch out, I'm unpredictable!",
             "Hmm... eeny, meeny, miny, moe...",
-            "Did someone say EXPLODING KITTENS?! 💣",
+            "Did someone say EXPLODING KITTENS?!",
             "I'm feeling lucky today!",
             "*nervously shuffles cards*",
         ]
         
         # Phrases when playing a Nope card
         self._nope_phrases: list[str] = [
-            "NOPE! 🚫",
+            "NOPE!",
             "Not so fast!",
             "I don't think so!",
-            "Nice try! 😏",
+            "Nice try!",
             "Denied!",
             "Counter that!",
         ]
         
         # Phrases when defusing an Exploding Kitten
         self._defuse_phrases: list[str] = [
-            "Phew, that was close! 😅",
-            "Nice try, kitty! 🐱💣",
+            "Phew, that was close!",
+            "Nice try, kitty!",
             "Not today, death!",
             "I'm still here!",
             "Ha! You thought!",
-            "*defuses calmly* 😎",
+            "*defuses calmly*",
         ]
         
         # Phrases when forced to give a card (Favor)
         self._give_card_phrases: list[str] = [
-            "Fine, take it... 😒",
+            "Fine, take it...",
             "Here you go, I guess...",
             "You're welcome!",
             "Don't spend it all in one place!",
@@ -96,15 +96,15 @@ class RandomBot(Bot):
         # Phrases when observing events
         self._reaction_phrases: dict[str, list[str]] = {
             "elimination": [
-                "Goodbye! 👋",
-                "Rest in pieces! 💀",
+                "Goodbye!",
+                "Rest in pieces!",
                 "Another one bites the dust!",
                 "F",
             ],
             "explosion": [
-                "Uh oh! 💣",
+                "Uh oh!",
                 "RIP?",
-                "*grabs popcorn* 🍿",
+                "*grabs popcorn*",
             ],
             "attack": [
                 "Ouch!",
@@ -115,14 +115,14 @@ class RandomBot(Bot):
         
         # Last words when exploding
         self._explosion_phrases: list[str] = [
-            "NOOOOO! 💥",
-            "Tell my family I love them... 💔",
-            "This is fine. 🔥",
+            "NOOOOO!",
+            "Tell my family I love them...",
+            "This is fine.",
             "I regret nothing!",
-            "*dramatic death sounds* 💀",
+            "*dramatic death sounds*",
             "Why me?! WHY?!",
             "Curse you, kittens!",
-            "At least I tried... 😢",
+            "At least I tried...",
             "GG everyone!",
             "I'll be back! ...wait, no I won't.",
         ]

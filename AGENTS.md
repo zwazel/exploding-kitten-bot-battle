@@ -77,12 +77,12 @@ The `BotView` object has a `say()` method available in all contexts:
 ```python
 def react(self, view: BotView, triggering_event: GameEvent) -> Action | None:
     if self._should_play_nope(triggering_event):
-        view.say("Not so fast! 🚫")  # Trash talk during reactions
+        view.say("Not so fast!")  # Trash talk during reactions
         return PlayCardAction(card=nope_card)
     return None
 
 def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
-    view.say("Phew, that was close! 😅")  # React to near-death experience
+    view.say("Phew, that was close!")  # React to near-death experience
     return draw_pile_size  # Put it at the bottom
 ```
 

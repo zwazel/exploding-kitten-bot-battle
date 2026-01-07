@@ -157,7 +157,7 @@ Examples:
     
     print(f"\n{'='*50}")
     if winner:
-        print(f"🎉 Winner: {winner}")
+        print(f"Winner: {winner}")
     else:
         print("No winner (game ended abnormally)")
     print(f"{'='*50}")

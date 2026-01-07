@@ -276,7 +276,7 @@ class GameEngine:
         if not player_state or not bot:
             return True
         
-        self.log(f"{player_id} drew an EXPLODING KITTEN! 💣")
+        self.log(f"{player_id} drew an EXPLODING KITTEN!")
         
         # Look for Defuse card
         defuse_card: Card | None = None
@@ -287,7 +287,7 @@ class GameEngine:
         
         if defuse_card is None:
             # No Defuse - player explodes!
-            self.log(f"  -> {player_id} has NO DEFUSE! 💀")
+            self.log(f"  -> {player_id} has NO DEFUSE!")
             
             # Give bot a chance to say their last words
             view: BotView = self._create_bot_view(player_id)
@@ -613,7 +613,7 @@ class GameEngine:
                     self._state.discard(card)
                     
                     # Log the Nope being played
-                    self.log(f"{indent}🚫 {reactor_id} plays NOPE!")
+                    self.log(f"{indent}[NOPE] {reactor_id} plays NOPE!")
                     
                     reaction_event: GameEvent = self._record_event(
                         EventType.REACTION_PLAYED,
@@ -628,7 +628,7 @@ class GameEngine:
                     # This allows counter-nopes (excluding the player who just NOPE'd)
                     if self._run_reaction_round(reaction_event, reactor_id, depth + 1):
                         # The reaction was negated (counter-noped)
-                        self.log(f"{indent}↩️ NOPE was counter-noped!")
+                        self.log(f"{indent}<- NOPE was counter-noped!")
                         nope_count -= 1
         
         self._turn_manager.end_reaction_round()

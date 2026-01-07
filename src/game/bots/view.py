@@ -103,7 +103,7 @@ class BotView:
         Example:
             def react(self, view: BotView, event: GameEvent) -> Action | None:
                 if self._should_nope(event):
-                    view.say("Not so fast! 🚫")
+                    view.say("Not so fast!")
                     return PlayCardAction(card=nope_card)
                 return None
         

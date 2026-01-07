@@ -86,7 +86,7 @@ Bots can send chat messages during their turn using `view.say()`:
 ```python
 def take_turn(self, view: BotView) -> Action:
     # Send a chat message - simple!
-    view.say("Let's gooo! 🎉")
+    view.say("Let's gooo!")
     
     # Then continue with your action
     return DrawCardAction()
