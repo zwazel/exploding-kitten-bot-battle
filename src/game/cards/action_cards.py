@@ -55,7 +55,7 @@ class NopeCard(Card):
     def execute(self, engine: GameEngine, player_id: str) -> None:
         # When played on own turn, does nothing
         # When played as reaction, the cancellation is handled by engine
-        engine.log(f"{player_id} played Nope!")
+        pass  # Nope effect is handled by reaction system
 
 
 class AttackCard(Card):
@@ -100,7 +100,7 @@ class AttackCard(Card):
         total_turns: int = 2 + extra_from_stacking
         engine.attack_next_player(player_id, total_turns)
         
-        engine.log(f"{player_id} played Attack! Next player takes {total_turns} turns.")
+        engine.log(f"  -> Next player takes {total_turns} turns!")
 
 
 class SkipCard(Card):
@@ -135,7 +135,6 @@ class SkipCard(Card):
         # Skip just ends this turn without drawing
         # The turn manager will handle decrementing turns_remaining
         engine.skip_turn(player_id)
-        engine.log(f"{player_id} played Skip!")
 
 
 class FavorCard(Card):
@@ -169,7 +168,7 @@ class FavorCard(Card):
     def execute(self, engine: GameEngine, player_id: str) -> None:
         # The actual favor logic requires target selection
         # This is handled by the engine with the action's target_player_id
-        engine.log(f"{player_id} played Favor!")
+        pass  # Favor effect is handled by the engine's request_favor
 
 
 class ShuffleCard(Card):
@@ -200,7 +199,7 @@ class ShuffleCard(Card):
     
     def execute(self, engine: GameEngine, player_id: str) -> None:
         engine.shuffle_deck()
-        engine.log(f"{player_id} shuffled the draw pile!")
+        engine.log("  -> Draw pile shuffled!")
 
 
 class SeeTheFutureCard(Card):
@@ -236,4 +235,4 @@ class SeeTheFutureCard(Card):
             card_strs: list[str] = []
             for i, card in enumerate(top_cards, 1):
                 card_strs.append(f"{i}: {card.name}")
-            engine.log(f"{player_id} saw the future: {', '.join(card_strs)}")
+            engine.log(f"  -> Saw: {', '.join(card_strs)}")

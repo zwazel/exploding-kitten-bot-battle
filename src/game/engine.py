@@ -597,6 +597,12 @@ class GameEngine:
         player_state.hand.remove(card)
         self._state.discard(card)
         
+        # Log the card play immediately so users see what's being played
+        if target_player_id:
+            self.log(f"{player_id} played {card.name} targeting {target_player_id}")
+        else:
+            self.log(f"{player_id} played {card.name}")
+        
         # Record the play with full details for replay
         event_data: dict[str, Any] = {"card_type": card.card_type}
         if target_player_id:
@@ -612,7 +618,7 @@ class GameEngine:
         if not card.can_play_as_reaction():
             # Run reaction round
             if self._run_reaction_round(play_event):
-                self.log(f"{player_id}'s {card.name} was negated!")
+                self.log(f"  -> {card.name} was NEGATED!")
                 return False
         
         # Execute the card effect

@@ -39,8 +39,8 @@ class CatCard(Card):
         return True
     
     def execute(self, engine: GameEngine, player_id: str) -> None:
-        # No effect when played alone
-        engine.log(f"{player_id} played {self.name} (no effect alone)")
+        # No effect when played alone - just note this
+        engine.log("  (no effect when played alone)")
 
 
 class TacoCatCard(CatCard):
