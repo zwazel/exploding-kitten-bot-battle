@@ -181,6 +181,20 @@ class Bot(ABC):
         """
         ...
     
+    @abstractmethod
+    def on_explode(self, view: BotView) -> None:
+        """
+        Called when this bot is about to explode (no Defuse card).
+        
+        This is the bot's last chance to say something before being eliminated.
+        Use view.say() to send a final message!
+        
+        Args:
+            view: The bot's view of the game state.
+        """
+        ...
+    
     def __repr__(self) -> str:
         """String representation for debugging."""
         return f"{self.__class__.__name__}(name={self.name!r})"
+

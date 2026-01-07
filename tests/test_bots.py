@@ -184,6 +184,9 @@ class SimpleBot(Bot):
     
     def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
         return view.my_hand[0]
+    
+    def on_explode(self, view: BotView) -> None:
+        pass
 '''
         
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -224,6 +227,9 @@ class HiddenBot(Bot):
     
     def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
         return view.my_hand[0]
+    
+    def on_explode(self, view: BotView) -> None:
+        pass
 '''
         
         with tempfile.TemporaryDirectory() as tmpdir:

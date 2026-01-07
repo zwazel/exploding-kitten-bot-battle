@@ -47,6 +47,9 @@ class SimpleTestBot(Bot):
     
     def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
         return view.my_hand[0]
+    
+    def on_explode(self, view: BotView) -> None:
+        pass
 
 
 class SkipPlayingBot(Bot):
@@ -76,6 +79,9 @@ class SkipPlayingBot(Bot):
     
     def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
         return view.my_hand[0]
+    
+    def on_explode(self, view: BotView) -> None:
+        pass
 
 
 class TestGameEngineSetup:
@@ -217,6 +223,9 @@ class TestEventNotification:
             
             def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
                 return view.my_hand[0]
+            
+            def on_explode(self, view: BotView) -> None:
+                pass
         
         engine: GameEngine = GameEngine(seed=42)
         bot1 = EventTrackingBot("Bot1")

@@ -288,6 +288,11 @@ class GameEngine:
         if defuse_card is None:
             # No Defuse - player explodes!
             self.log(f"  -> {player_id} has NO DEFUSE! 💀")
+            
+            # Give bot a chance to say their last words
+            view: BotView = self._create_bot_view(player_id)
+            bot.on_explode(view)
+            
             self._eliminate_player(player_id)
             return True
         

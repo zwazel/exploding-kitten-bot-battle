@@ -53,7 +53,7 @@ class RandomBot(Bot):
     
     def __init__(self) -> None:
         """Initialize the bot with state tracking."""
-        # Some fun phrases for the bot to say
+        # Some fun phrases for the bot to say during turns
         self._taunts: list[str] = [
             "I have no idea what I'm doing! 🎲",
             "Meow! 🐱",
@@ -62,6 +62,69 @@ class RandomBot(Bot):
             "Did someone say EXPLODING KITTENS?! 💣",
             "I'm feeling lucky today!",
             "*nervously shuffles cards*",
+        ]
+        
+        # Phrases when playing a Nope card
+        self._nope_phrases: list[str] = [
+            "NOPE! 🚫",
+            "Not so fast!",
+            "I don't think so!",
+            "Nice try! 😏",
+            "Denied!",
+            "Counter that!",
+        ]
+        
+        # Phrases when defusing an Exploding Kitten
+        self._defuse_phrases: list[str] = [
+            "Phew, that was close! 😅",
+            "Nice try, kitty! 🐱💣",
+            "Not today, death!",
+            "I'm still here!",
+            "Ha! You thought!",
+            "*defuses calmly* 😎",
+        ]
+        
+        # Phrases when forced to give a card (Favor)
+        self._give_card_phrases: list[str] = [
+            "Fine, take it... 😒",
+            "Here you go, I guess...",
+            "You're welcome!",
+            "Don't spend it all in one place!",
+            "*reluctantly hands over card*",
+        ]
+        
+        # Phrases when observing events
+        self._reaction_phrases: dict[str, list[str]] = {
+            "elimination": [
+                "Goodbye! 👋",
+                "Rest in pieces! 💀",
+                "Another one bites the dust!",
+                "F",
+            ],
+            "explosion": [
+                "Uh oh! 💣",
+                "RIP?",
+                "*grabs popcorn* 🍿",
+            ],
+            "attack": [
+                "Ouch!",
+                "That's rough!",
+                "Glad it's not me!",
+            ],
+        }
+        
+        # Last words when exploding
+        self._explosion_phrases: list[str] = [
+            "NOOOOO! 💥",
+            "Tell my family I love them... 💔",
+            "This is fine. 🔥",
+            "I regret nothing!",
+            "*dramatic death sounds* 💀",
+            "Why me?! WHY?!",
+            "Curse you, kittens!",
+            "At least I tried... 😢",
+            "GG everyone!",
+            "I'll be back! ...wait, no I won't.",
         ]
     
     # =========================================================================
@@ -171,13 +234,29 @@ class RandomBot(Bot):
             - EventType.CARD_PLAYED: Someone played a card
             - EventType.CARD_DRAWN: Someone drew a card
             - EventType.PLAYER_ELIMINATED: Someone exploded!
+        
+        NOTE: Do NOT chat in response to BOT_CHAT events to avoid infinite loops!
         """
         
-        # This random bot doesn't track anything, but a smart bot might:
-        # - Remember which cards opponents have played
-        # - Count how many Defuse cards are left
-        # - Track where Exploding Kittens might be in the deck
-        pass
+        # Skip chat events to avoid infinite chat loops!
+        if event.event_type == EventType.BOT_CHAT:
+            return
+        
+        # 15% chance to comment on interesting events
+        if random.random() < 0.15:
+            if event.event_type == EventType.PLAYER_ELIMINATED:
+                phrase = random.choice(self._reaction_phrases["elimination"])
+                view.say(phrase)
+            elif event.event_type == EventType.EXPLODING_KITTEN_DRAWN:
+                # Only comment if it's not us
+                if event.player_id != view.my_id:
+                    phrase = random.choice(self._reaction_phrases["explosion"])
+                    view.say(phrase)
+            elif event.event_type == EventType.TURNS_ADDED:
+                # Someone got attacked
+                if event.player_id != view.my_id:
+                    phrase = random.choice(self._reaction_phrases["attack"])
+                    view.say(phrase)
     
     # =========================================================================
     # REQUIRED: react - Called when you can play a Nope card
@@ -208,6 +287,10 @@ class RandomBot(Bot):
         if nope_cards:
             # Random bot: 30% chance to use Nope
             if random.random() < 0.3:
+                # 50% chance to taunt when playing Nope
+                if random.random() < 0.5:
+                    phrase = random.choice(self._nope_phrases)
+                    view.say(phrase)
                 return PlayCardAction(card=nope_cards[0])
         
         # Don't react
@@ -237,6 +320,11 @@ class RandomBot(Bot):
         STRATEGY TIP: Put it where your opponent will draw it!
         """
         
+        # 40% chance to say something when defusing
+        if random.random() < 0.4:
+            phrase = random.choice(self._defuse_phrases)
+            view.say(phrase)
+        
         # Random position from top to bottom
         return random.randint(0, draw_pile_size)
     
@@ -263,6 +351,11 @@ class RandomBot(Bot):
         
         hand = list(view.my_hand)
         
+        # 30% chance to comment when giving a card
+        if random.random() < 0.3:
+            phrase = random.choice(self._give_card_phrases)
+            view.say(phrase)
+        
         # Priority: Keep valuable cards, give away junk
         # 1. Try to give a cat card (useless alone)
         cat_cards = [c for c in hand if "Cat" in c.card_type]
@@ -276,3 +369,24 @@ class RandomBot(Bot):
         
         # 3. Last resort: give something (can't keep it)
         return random.choice(hand)
+    
+    # =========================================================================
+    # REQUIRED: on_explode - Called when you're about to die
+    # =========================================================================
+    
+    def on_explode(self, view: BotView) -> None:
+        """
+        Say your last words before being eliminated.
+        
+        This is called when you draw an Exploding Kitten with no Defuse.
+        You're about to explode - this is your final chance to chat!
+        
+        Args:
+            view: Current game state
+        
+        TIP: Use view.say() to leave a memorable last message!
+        """
+        
+        # Always say something dramatic when exploding!
+        phrase = random.choice(self._explosion_phrases)
+        view.say(phrase)
