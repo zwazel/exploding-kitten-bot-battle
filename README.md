@@ -88,7 +88,7 @@ class MyBot(Bot):
         return None
     
     def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
-        # Where to put Exploding Kitten after defusing (0=bottom)
+        # Where to put Exploding Kitten after defusing (0=top, next draw)
         return 0
     
     def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:

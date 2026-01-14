@@ -161,14 +161,16 @@ The engine enforces time limits on bot method calls to prevent games from hangin
 | Method | On Timeout |
 |--------|------------|
 | `take_turn()` | Bot eliminated, Exploding Kitten removed from deck |
-| `react()` | Bot eliminated, reaction skipped |
-| `choose_card_to_give()` | Bot eliminated, favor fails |
+| `react()` | Reaction skipped (no penalty, bot stays alive) |
+| `choose_card_to_give()` | Random card given to requester, then bot eliminated |
 | `choose_defuse_position()` | Random position chosen, game continues |
 | `on_event()` | Notification skipped (no penalty) |
 | `on_explode()` | Last words skipped (no additional penalty) |
 
-### Game Balance
-When a bot is eliminated for timeout, one Exploding Kitten is removed from the deck to maintain balance (since normally a player dies by drawing a kitten, consuming it).
+### Game Balance (N-1 Rule)
+The game always maintains exactly **(players - 1)** Exploding Kittens. When a bot is eliminated for timeout (or any other reason outside of normal explosion), one Exploding Kitten is removed from the deck to maintain this balance.
+
+**Kitten Removal Priority:** The **bottom-most** Exploding Kitten (furthest from being drawn) is removed. This ensures that if there are kittens at both position 1 (top) and position 5 (bottom), position 5 is removed first.
 
 ### Event Recording
 Timeout eliminations are recorded as `EventType.BOT_TIMEOUT` events with method name and timeout duration in the data.

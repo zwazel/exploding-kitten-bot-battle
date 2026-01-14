@@ -236,16 +236,17 @@ class GameEngine:
         
         # Remove one Exploding Kitten from the deck to maintain balance
         # (normally a player dies by drawing a kitten, consuming it)
+        # We remove the BOTTOM-MOST kitten (furthest from being drawn)
         draw_pile = self._state._draw_pile
         kitten_index = None
-        for i, card in enumerate(draw_pile):
-            if card.card_type == "ExplodingKittenCard":
+        for i in range(len(draw_pile) - 1, -1, -1):  # Iterate from bottom to top
+            if draw_pile[i].card_type == "ExplodingKittenCard":
                 kitten_index = i
                 break
         
         if kitten_index is not None:
             removed_kitten = draw_pile.pop(kitten_index)
-            self.log(f"  -> Removed 1 Exploding Kitten from deck (game balance)")
+            self.log(f"  -> Removed 1 Exploding Kitten from deck (bottom-most, position {kitten_index})")
         else:
             self.log(f"  -> No Exploding Kitten to remove (deck already safe)")
     
@@ -580,9 +581,19 @@ class GameEngine:
                 "choose_card_to_give",
             )
         except BotTimeoutError:
-            # Target timed out - eliminate them and fail the favor
+            # Target timed out - give a random card to requester, then eliminate
+            self.log(f"⚠️ {target_id} TIMED OUT in choose_card_to_give!")
+            card_to_give = self._rng.choice(target_state.hand)
+            target_state.hand.remove(card_to_give)
+            requester_state.hand.append(card_to_give)
+            self.log(f"  -> Random card {card_to_give.name} given to {requester_id}")
+            self._record_event(
+                EventType.CARD_GIVEN,
+                target_id,
+                {"to": requester_id, "card_type": card_to_give.card_type},
+            )
             self._eliminate_for_timeout(target_id, "choose_card_to_give")
-            return None
+            return card_to_give
         
         # Validate the card is in their hand
         if card_to_give not in target_state.hand:
@@ -762,7 +773,13 @@ class GameEngine:
                     "react",
                 )
             except BotTimeoutError:
-                self._eliminate_for_timeout(reactor_id, "react")
+                # Just skip the reaction, don't eliminate the bot
+                self.log(f"  -> {reactor_id} timed out reacting, skipping")
+                self._record_event(
+                    EventType.REACTION_SKIPPED,
+                    reactor_id,
+                    {"reason": "timeout"},
+                )
                 continue
             
             if action is None:
