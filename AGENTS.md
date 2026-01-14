@@ -147,3 +147,28 @@ Statistics mode uses `ProcessPoolExecutor` for parallel game execution:
 CLI usage:
 - `--no-chat`: Sets `chat_enabled=False` in normal mode
 - `--stats`: Automatically enables both `quiet_mode=True` and `chat_enabled=False`
+
+## Bot Timeout System
+
+The engine enforces time limits on bot method calls to prevent games from hanging:
+
+### Configuration
+- `GameEngine(bot_timeout=5.0)`: Sets timeout in seconds (default: 5.0)
+- `GameEngine(bot_timeout=None)`: Disables timeout entirely
+- CLI: `--timeout 5` or `--timeout 0` (0 = disabled)
+
+### Timeout Behavior by Method
+| Method | On Timeout |
+|--------|------------|
+| `take_turn()` | Bot eliminated, Exploding Kitten removed from deck |
+| `react()` | Bot eliminated, reaction skipped |
+| `choose_card_to_give()` | Bot eliminated, favor fails |
+| `choose_defuse_position()` | Random position chosen, game continues |
+| `on_event()` | Notification skipped (no penalty) |
+| `on_explode()` | Last words skipped (no additional penalty) |
+
+### Game Balance
+When a bot is eliminated for timeout, one Exploding Kitten is removed from the deck to maintain balance (since normally a player dies by drawing a kitten, consuming it).
+
+### Event Recording
+Timeout eliminations are recorded as `EventType.BOT_TIMEOUT` events with method name and timeout duration in the data.

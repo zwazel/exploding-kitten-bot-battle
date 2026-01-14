@@ -8,7 +8,9 @@ coordinates bots, handles card plays, and records all events.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, TypeVar
+import threading
+import queue
 
 from game.bots.base import (
     Action,
@@ -30,6 +32,22 @@ from game.state import GameState
 from game.turns import ReactionRound, RoundPhase, TurnManager
 
 
+# Type variable for generic timeout wrapper
+T = TypeVar("T")
+
+
+class BotTimeoutError(Exception):
+    """Exception raised when a bot takes too long to respond."""
+    
+    def __init__(self, player_id: str, method_name: str, timeout: float) -> None:
+        self.player_id = player_id
+        self.method_name = method_name
+        self.timeout = timeout
+        super().__init__(
+            f"Bot {player_id} timed out in {method_name} after {timeout}s"
+        )
+
+
 class GameEngine:
     """
     The main game engine that orchestrates the entire game.
@@ -40,6 +58,7 @@ class GameEngine:
     - Handling card plays and reactions
     - Recording all events for replay
     - Enforcing game rules
+    - Enforcing bot time limits (with timeout elimination)
     """
     
     def __init__(
@@ -47,6 +66,7 @@ class GameEngine:
         seed: int = 42,
         quiet_mode: bool = False,
         chat_enabled: bool = True,
+        bot_timeout: float | None = 5.0,
     ) -> None:
         """
         Initialize the game engine.
@@ -55,6 +75,8 @@ class GameEngine:
             seed: Seed for deterministic randomness.
             quiet_mode: If True, suppress all console output (for statistics runs).
             chat_enabled: If True, chat messages are printed to console.
+            bot_timeout: Maximum time in seconds for bot method calls.
+                        If None, no timeout is enforced. Default: 5.0 seconds.
         """
         self._rng: DeterministicRNG = DeterministicRNG(seed)
         self._state: GameState = GameState()
@@ -66,6 +88,7 @@ class GameEngine:
         self._game_running: bool = False
         self._quiet_mode: bool = quiet_mode
         self._chat_enabled: bool = chat_enabled
+        self._bot_timeout: float | None = bot_timeout
         
         # Register all game cards
         register_all_cards(self._registry)
@@ -126,6 +149,105 @@ class GameEngine:
         for bot in bots:
             self.add_bot(bot)
         return bots
+    
+    # --- Timeout Handling ---
+    
+    def _call_with_timeout(
+        self,
+        func: Callable[[], T],
+        player_id: str,
+        method_name: str,
+    ) -> T:
+        """
+        Call a bot method with a timeout.
+        
+        Runs the function in a separate thread and waits for completion
+        up to the configured timeout. If the bot takes too long, raises
+        BotTimeoutError.
+        
+        Args:
+            func: The bot method to call (wrapped in a lambda with args).
+            player_id: The bot's player ID (for error reporting).
+            method_name: Name of the method being called (for error reporting).
+            
+        Returns:
+            The result of the function call.
+            
+        Raises:
+            BotTimeoutError: If the function doesn't complete within the timeout.
+        """
+        if self._bot_timeout is None:
+            # No timeout configured, call directly
+            return func()
+        
+        result_queue: queue.Queue[tuple[bool, Any]] = queue.Queue()
+        
+        def worker() -> None:
+            try:
+                result = func()
+                result_queue.put((True, result))
+            except Exception as e:
+                result_queue.put((False, e))
+        
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        thread.join(timeout=self._bot_timeout)
+        
+        if thread.is_alive():
+            # Bot timed out!
+            raise BotTimeoutError(player_id, method_name, self._bot_timeout)
+        
+        # Get result from queue
+        try:
+            success, value = result_queue.get_nowait()
+            if success:
+                return value
+            else:
+                # Re-raise any exception from the bot
+                raise value
+        except queue.Empty:
+            # Thread finished but no result - shouldn't happen
+            raise BotTimeoutError(player_id, method_name, self._bot_timeout)
+    
+    def _eliminate_for_timeout(self, player_id: str, method_name: str) -> None:
+        """
+        Eliminate a bot for timing out and remove an Exploding Kitten.
+        
+        When a bot times out, they are immediately eliminated. To maintain
+        game balance (since normally elimination consumes an Exploding Kitten),
+        we also remove one Exploding Kitten from the draw pile.
+        
+        Args:
+            player_id: The player who timed out.
+            method_name: The method where the timeout occurred.
+        """
+        self.log(f"⚠️ {player_id} TIMED OUT in {method_name}!")
+        self.log(f"  -> {player_id} is eliminated for taking too long!")
+        
+        # Record the timeout event
+        self._record_event(
+            EventType.BOT_TIMEOUT,
+            player_id,
+            {"method": method_name, "timeout": self._bot_timeout},
+        )
+        
+        # Eliminate the player
+        self._eliminate_player(player_id)
+        
+        # Remove one Exploding Kitten from the deck to maintain balance
+        # (normally a player dies by drawing a kitten, consuming it)
+        draw_pile = self._state._draw_pile
+        kitten_index = None
+        for i, card in enumerate(draw_pile):
+            if card.card_type == "ExplodingKittenCard":
+                kitten_index = i
+                break
+        
+        if kitten_index is not None:
+            removed_kitten = draw_pile.pop(kitten_index)
+            self.log(f"  -> Removed 1 Exploding Kitten from deck (game balance)")
+        else:
+            self.log(f"  -> No Exploding Kitten to remove (deck already safe)")
     
     # --- Deck Management ---
     
@@ -213,11 +335,20 @@ class GameEngine:
         """Record an event and notify all bots."""
         event: GameEvent = self._history.record(event_type, player_id, data)
         
-        # Notify all bots about the event
+        # Notify all bots about the event (with timeout - skip if too slow)
         for pid, bot in self._bots.items():
-            if self._state.players.get(pid, None) is not None:
+            player_state = self._state.players.get(pid, None)
+            if player_state is not None and player_state.is_alive:
                 view: BotView = self._create_bot_view(pid)
-                bot.on_event(event, view)
+                try:
+                    self._call_with_timeout(
+                        lambda: bot.on_event(event, view),
+                        pid,
+                        "on_event",
+                    )
+                except BotTimeoutError:
+                    # Just skip notification for slow bots, don't eliminate
+                    pass
         
         return event
     
@@ -298,9 +429,16 @@ class GameEngine:
             # No Defuse - player explodes!
             self.log(f"  -> {player_id} has NO DEFUSE!")
             
-            # Give bot a chance to say their last words
+            # Give bot a chance to say their last words (with timeout)
             view: BotView = self._create_bot_view(player_id)
-            bot.on_explode(view)
+            try:
+                self._call_with_timeout(
+                    lambda: bot.on_explode(view),
+                    player_id,
+                    "on_explode",
+                )
+            except BotTimeoutError:
+                self.log(f"  -> {player_id} timed out saying last words")
             
             self._eliminate_player(player_id)
             return True
@@ -317,10 +455,19 @@ class GameEngine:
         
         self.log(f"  -> {player_id} used Defuse to survive!")
         
-        # Bot chooses where to reinsert the kitten
+        # Bot chooses where to reinsert the kitten (with timeout)
         view: BotView = self._create_bot_view(player_id)
         draw_pile_size: int = self._state.draw_pile_count
-        insert_pos: int = bot.choose_defuse_position(view, draw_pile_size)
+        try:
+            insert_pos: int = self._call_with_timeout(
+                lambda: bot.choose_defuse_position(view, draw_pile_size),
+                player_id,
+                "choose_defuse_position",
+            )
+        except BotTimeoutError:
+            # Default to random position if bot times out
+            self.log(f"  -> {player_id} timed out choosing position, using random")
+            insert_pos = self._rng.randint(0, draw_pile_size)
         
         # Clamp to valid range
         insert_pos = max(0, min(insert_pos, draw_pile_size))
@@ -424,9 +571,18 @@ class GameEngine:
             {"target": target_id},
         )
         
-        # Target chooses which card to give
+        # Target chooses which card to give (with timeout)
         target_view: BotView = self._create_bot_view(target_id)
-        card_to_give: Card = target_bot.choose_card_to_give(target_view, requester_id)
+        try:
+            card_to_give: Card = self._call_with_timeout(
+                lambda: target_bot.choose_card_to_give(target_view, requester_id),
+                target_id,
+                "choose_card_to_give",
+            )
+        except BotTimeoutError:
+            # Target timed out - eliminate them and fail the favor
+            self._eliminate_for_timeout(target_id, "choose_card_to_give")
+            return None
         
         # Validate the card is in their hand
         if card_to_give not in target_state.hand:
@@ -597,7 +753,17 @@ class GameEngine:
                 continue
             
             view: BotView = self._create_bot_view(reactor_id)
-            action: Action | None = bot.react(view, triggering_event)
+            
+            # Call react with timeout protection
+            try:
+                action: Action | None = self._call_with_timeout(
+                    lambda: bot.react(view, triggering_event),
+                    reactor_id,
+                    "react",
+                )
+            except BotTimeoutError:
+                self._eliminate_for_timeout(reactor_id, "react")
+                continue
             
             if action is None:
                 self._record_event(
@@ -1014,7 +1180,17 @@ class GameEngine:
         while True:
             # Create view for the bot (chat is always enabled)
             view: BotView = self._create_bot_view(player_id)
-            action: Action = bot.take_turn(view)
+            
+            # Call take_turn with timeout protection
+            try:
+                action: Action = self._call_with_timeout(
+                    lambda: bot.take_turn(view),
+                    player_id,
+                    "take_turn",
+                )
+            except BotTimeoutError:
+                self._eliminate_for_timeout(player_id, "take_turn")
+                return
             
             if isinstance(action, DrawCardAction):
                 # End turn by drawing a card

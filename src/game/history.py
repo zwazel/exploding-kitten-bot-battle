@@ -60,6 +60,9 @@ class EventType(Enum):
     
     # Chat events
     BOT_CHAT = "bot_chat"
+    
+    # Timeout events
+    BOT_TIMEOUT = "bot_timeout"
 
 
 @dataclass(frozen=True)

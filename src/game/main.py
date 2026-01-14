@@ -10,6 +10,8 @@ Usage:
     python -m game.main --stats --iterations 100   # Run statistics mode
     python -m game.main --stats --workers 8        # Parallel statistics with 8 workers
     python -m game.main --no-chat                  # Disable chat output
+    python -m game.main --timeout 5                 # 5 second timeout per bot call
+    python -m game.main --timeout 0                 # Disable timeout
 """
 
 import argparse
@@ -26,12 +28,12 @@ from game.bots.base import Bot
 
 
 # Module-level worker function for multiprocessing (must be picklable)
-def _run_game_worker(args: tuple[list[tuple[str, int]], int, Path]) -> list[str]:
+def _run_game_worker(args: tuple[list[tuple[str, int]], int, Path, float | None]) -> list[str]:
     """
     Worker function for running a single game in a separate process.
     
     Args:
-        args: Tuple of (bot_specs, seed, deck_config_path)
+        args: Tuple of (bot_specs, seed, deck_config_path, bot_timeout)
                bot_specs is list of (file_path, count) tuples
         
     Returns:
@@ -41,15 +43,15 @@ def _run_game_worker(args: tuple[list[tuple[str, int]], int, Path]) -> list[str]
     from io import StringIO
     from game.history import EventType
     
-    bot_specs, seed, deck_config = args
+    bot_specs, seed, deck_config, bot_timeout = args
     
     # Suppress stdout to avoid bot loader messages cluttering output
     old_stdout = sys.stdout
     sys.stdout = StringIO()
     
     try:
-        # Create engine
-        engine = GameEngine(seed=seed, quiet_mode=True, chat_enabled=False)
+        # Create engine with timeout
+        engine = GameEngine(seed=seed, quiet_mode=True, chat_enabled=False, bot_timeout=bot_timeout)
         
         # Load bots fresh in this process
         loader = BotLoader()
@@ -312,9 +314,12 @@ def run_statistics(
         print(f"Using {workers} parallel workers")
     print(f"{'='*70}\n")
     
+    # Get timeout (0 means disabled)
+    bot_timeout: float | None = args.timeout if args.timeout > 0 else None
+    
     # Prepare all game arguments (pass bot_specs instead of bot_classes)
-    game_args: list[tuple[list[tuple[str, int]], int, Path]] = [
-        (bot_specs, (base_seed + i) % (2**31), args.deck_config)
+    game_args: list[tuple[list[tuple[str, int]], int, Path, float | None]] = [
+        (bot_specs, (base_seed + i) % (2**31), args.deck_config, bot_timeout)
         for i in range(iterations)
     ]
     
@@ -492,6 +497,14 @@ Examples:
         default=False,
         help="Disable chat message output (keeps game logs clean)",
     )
+    # Timeout argument
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=5.0,
+        metavar="SECONDS",
+        help="Bot timeout in seconds (0 to disable). Bots that take too long are eliminated. Default: 5.0",
+    )
     
     args = parser.parse_args()
     
@@ -537,9 +550,10 @@ Examples:
     # Normal single-game mode
     print(f"Using seed: {seed}")
     
-    # Create engine with chat setting
+    # Create engine with chat and timeout settings
     chat_enabled = not args.no_chat
-    engine = GameEngine(seed=seed, chat_enabled=chat_enabled)
+    bot_timeout: float | None = args.timeout if args.timeout > 0 else None
+    engine = GameEngine(seed=seed, chat_enabled=chat_enabled, bot_timeout=bot_timeout)
     
     # Add bots
     for bot in bots:

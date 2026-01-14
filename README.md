@@ -58,6 +58,7 @@ python -m game.main --no-chat
 | `--iterations` | `100` | Number of games to run in statistics mode |
 | `--workers` | CPU count | Parallel workers for statistics mode |
 | `--no-chat` | Off | Disable chat output (keeps console cleaner) |
+| `--timeout` | `5.0` | Bot timeout in seconds (0 to disable). Slow bots are eliminated |
 
 ## Creating a Bot
 
