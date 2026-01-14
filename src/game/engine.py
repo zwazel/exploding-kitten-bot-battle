@@ -1195,7 +1195,18 @@ class GameEngine:
         
         self._record_event(EventType.TURN_START, player_id)
         
+        # Safety limit: prevent infinite loops from bots returning invalid actions
+        MAX_ACTIONS_PER_TURN = 1000
+        action_count = 0
+        
         while True:
+            action_count += 1
+            if action_count > MAX_ACTIONS_PER_TURN:
+                self.log(f"⚠️ {player_id} exceeded {MAX_ACTIONS_PER_TURN} actions - forcing draw")
+                _, exploded = self.draw_cards(player_id, 1)
+                if exploded:
+                    return
+                break
             # Create view for the bot (chat is always enabled)
             view: BotView = self._create_bot_view(player_id)
             

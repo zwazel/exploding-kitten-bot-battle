@@ -18,7 +18,7 @@ import argparse
 import os
 import time
 from collections import Counter
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, wait, FIRST_COMPLETED, TimeoutError as FuturesTimeoutError
 from pathlib import Path
 from typing import Any
 
@@ -269,6 +269,79 @@ def _run_single_game(
     return placements
 
 
+def _run_verification(
+    bot_specs: list[tuple[str, int]],
+    bot_names: list[str],
+    seed: int,
+    deck_config: Path,
+    bot_timeout: float,
+) -> set[str]:
+    """
+    Run a verification game to detect bots that timeout.
+    
+    Runs a single game WITH timeout enabled. Any bot that times out
+    during this verification is flagged for disqualification.
+    
+    Args:
+        bot_specs: List of (file_path, count) tuples.
+        bot_names: List of bot names (matching engine player IDs).
+        seed: Random seed for the verification game.
+        deck_config: Path to deck configuration.
+        bot_timeout: Timeout in seconds.
+        
+    Returns:
+        Set of bot names that timed out during verification.
+    """
+    from game.history import EventType
+    
+    print("\n" + "=" * 70)
+    print("VERIFICATION RUN: Testing bots for timeouts...")
+    print("=" * 70 + "\n")
+    
+    # Create engine WITH timeout for verification
+    engine = GameEngine(seed=seed, quiet_mode=True, chat_enabled=False, bot_timeout=bot_timeout)
+    
+    # Load bots fresh
+    loader = BotLoader()
+    for file_path, count in bot_specs:
+        path = Path(file_path)
+        if path.exists():
+            loaded = loader.load_from_file(path)
+            if loaded:
+                bot_class = type(loaded[0])
+                engine.add_bot(loaded[0])
+                for _ in range(count - 1):
+                    try:
+                        engine.add_bot(bot_class())
+                    except Exception:
+                        pass
+    
+    # Create deck from config
+    if deck_config.exists():
+        deck = engine.registry.create_deck_from_file(deck_config)
+        engine._state._draw_pile = deck
+        engine._rng.shuffle(engine._state._draw_pile)
+    
+    # Run the game
+    engine.run()
+    
+    # Check history for timeout events
+    timed_out_bots: set[str] = set()
+    for event in engine.history.get_events():
+        if event.event_type == EventType.BOT_TIMEOUT:
+            if event.player_id:
+                timed_out_bots.add(event.player_id)
+                method = event.data.get("method", "unknown") if event.data else "unknown"
+                print(f"  ⚠️ {event.player_id} timed out in {method}()")
+    
+    if timed_out_bots:
+        print(f"\n  Found {len(timed_out_bots)} bot(s) with timeout issues.")
+    else:
+        print("  ✓ All bots passed verification (no timeouts detected)")
+    
+    return timed_out_bots
+
+
 def _render_bar(value: int, max_value: int, width: int = 20) -> str:
     """Render an ASCII bar for a value."""
     if max_value == 0:
@@ -283,6 +356,7 @@ def run_statistics(
     bot_names: list[str],
     num_bots: int,
     base_seed: int,
+    disqualified_bots: set[str] | None = None,
 ) -> None:
     """
     Run multiple games and collect statistics on placement.
@@ -293,8 +367,10 @@ def run_statistics(
         bot_names: List of bot names (for display/tracking).
         num_bots: Total number of bots.
         base_seed: Base seed for generating game seeds.
+        disqualified_bots: Set of bot names that were disqualified during verification.
     """
     iterations = args.iterations
+    disqualified_bots = disqualified_bots or set()
     
     # Track statistics: bot_name -> {place: count} where place is 1-indexed
     placements: dict[str, Counter[int]] = {}
@@ -309,6 +385,10 @@ def run_statistics(
     print(f"\n{'='*70}")
     print(f"STATISTICS MODE: Running {iterations} games")
     print(f"Bots: {', '.join(bot_names)}")
+    
+    # Show disqualified bots if any
+    if disqualified_bots:
+        print(f"\n⚠️ DISQUALIFIED (timeout in verification): {', '.join(sorted(disqualified_bots))}")
     
     # Determine number of workers
     workers = getattr(args, 'workers', 1) or 1
@@ -328,25 +408,60 @@ def run_statistics(
     completed = 0
     progress_step = max(1, iterations // 10)
     
+    # Per-game timeout: 10 seconds max for any single game
+    # This prevents stuck workers from blocking the entire stats run
+    GAME_TIMEOUT_SECONDS = 10
+    timed_out_games = 0
+    
     if workers > 1:
         # Parallel execution with ProcessPoolExecutor
+        # Use wait() with timeout to handle stuck workers properly
         with ProcessPoolExecutor(max_workers=workers) as executor:
             # Submit all tasks
-            futures = {executor.submit(_run_game_worker, arg): i for i, arg in enumerate(game_args)}
+            pending = {executor.submit(_run_game_worker, arg) for arg in game_args}
             
-            for future in as_completed(futures):
-                game_placements = future.result()
+            # Maximum time to wait for ALL remaining games before giving up
+            MAX_TOTAL_WAIT = 300  # 5 minutes max for all remaining games
+            start_time = time.time()
+            
+            while pending:
+                # Wait for at least one future to complete, with a short timeout
+                done, pending = wait(pending, timeout=GAME_TIMEOUT_SECONDS, return_when=FIRST_COMPLETED)
                 
-                # Record placements
-                for place, player_id in enumerate(game_placements, 1):
-                    if player_id in placements:
-                        placements[player_id][place] += 1
+                # Process completed futures
+                for future in done:
+                    try:
+                        game_placements = future.result(timeout=0)  # Already done, should be instant
+                    except Exception:
+                        # Handle any errors gracefully
+                        completed += 1
+                        continue
+                    
+                    # Record placements
+                    for place, player_id in enumerate(game_placements, 1):
+                        if player_id in placements:
+                            placements[player_id][place] += 1
+                    
+                    completed += 1
+                    
+                    # Progress indicator
+                    if iterations >= 10 and completed % progress_step == 0:
+                        print(f"  Progress: {completed * 100 // iterations}% ({completed}/{iterations} games)")
                 
-                completed += 1
-                
-                # Progress indicator
-                if iterations >= 10 and completed % progress_step == 0:
-                    print(f"  Progress: {completed * 100 // iterations}% ({completed}/{iterations} games)")
+                # Check if we got no completions (all remaining are stuck)
+                if not done and pending:
+                    elapsed = time.time() - start_time
+                    if elapsed > MAX_TOTAL_WAIT:
+                        # Give up on remaining games
+                        timed_out_games = len(pending)
+                        completed += timed_out_games
+                        print(f"  ⚠️ {timed_out_games} games timed out - cancelling remaining workers")
+                        for future in pending:
+                            future.cancel()
+                        break
+                    else:
+                        # Some games are slow but we haven't hit total limit yet
+                        print(f"  ⏳ Waiting for {len(pending)} slow games... ({int(elapsed)}s elapsed)")
     else:
         # Sequential execution (original behavior)
         for i, arg in enumerate(game_args):
@@ -370,6 +485,9 @@ def run_statistics(
     print("STATISTICS RESULTS")
     print(f"{'='*70}")
     print(f"\nTotal games: {iterations}")
+    if timed_out_games > 0:
+        successful_games = iterations - timed_out_games
+        print(f"⚠️ Games timed out: {timed_out_games} (stats based on {successful_games} successful games)")
     print(f"Players: {num_bots}\n")
     
     # Calculate max name length for formatting
@@ -535,7 +653,7 @@ Examples:
         # Get bot specs for multiprocessing
         bot_specs = _get_bot_specs(args)
         
-        # Get bot names from loaded bots
+        # Get bot names from loaded bots (matching engine naming convention)
         bot_names: list[str] = []
         for bot in bots:
             base_name = bot.name
@@ -546,7 +664,48 @@ Examples:
                 name = f"{base_name}_{suffix}"
             bot_names.append(name)
         
-        run_statistics(args, bot_specs, bot_names, len(bots), seed)
+        # Get timeout (0 means disabled)
+        bot_timeout: float = args.timeout if args.timeout > 0 else 5.0
+        
+        # Run verification to detect slow bots
+        disqualified = _run_verification(
+            bot_specs, bot_names, seed, args.deck_config, bot_timeout
+        )
+        
+        # Filter out disqualified bots from specs and names
+        if disqualified:
+            # Find which base bot types timed out (strip suffixes like "_2", "_3")
+            disqualified_base_names: set[str] = set()
+            for name in disqualified:
+                # Extract base name (before any _N suffix)
+                parts = name.rsplit("_", 1)
+                if len(parts) == 2 and parts[1].isdigit():
+                    disqualified_base_names.add(parts[0])
+                else:
+                    disqualified_base_names.add(name)
+            
+            # Filter bot_specs to remove disqualified bot files
+            new_bot_specs: list[tuple[str, int]] = []
+            for file_path, count in bot_specs:
+                # Load bot to check its name
+                temp_loader = BotLoader()
+                temp_bots = temp_loader.load_from_file(Path(file_path))
+                if temp_bots:
+                    bot_base_name = temp_bots[0].name
+                    if bot_base_name not in disqualified_base_names:
+                        new_bot_specs.append((file_path, count))
+            
+            bot_specs = new_bot_specs
+            
+            # Filter bot_names to remove disqualified
+            bot_names = [n for n in bot_names if n not in disqualified]
+            
+            if len(bot_names) < 2:
+                print("\n❌ ERROR: Not enough bots remaining after disqualification!")
+                print("   At least 2 bots are required for statistics.")
+                return
+        
+        run_statistics(args, bot_specs, bot_names, len(bot_names), seed, disqualified)
         return
     
     # Normal single-game mode

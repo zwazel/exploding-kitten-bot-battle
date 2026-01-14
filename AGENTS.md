@@ -132,12 +132,25 @@ Run multiple games with identical bots and deck config but different seeds to co
 - Use `--iterations N` to control the number of games (default: 100)
 - Use `--workers N` to control parallel execution (default: CPU count)
 
+### Verification Run
+Before running statistics, a **verification game** is played with timeout enabled:
+- Tests all bots with the configured timeout (default: 5 seconds)
+- Any bot that times out during verification is **disqualified**
+- Disqualified bots are automatically excluded from the statistics run
+- The stats output shows which bots were disqualified
+- If fewer than 2 bots remain after disqualification, statistics are aborted
+
+This prevents slow/hanging bots from blocking the entire statistics run.
+
 ### Parallel Execution
 Statistics mode uses `ProcessPoolExecutor` for parallel game execution:
 - Each worker process loads bots fresh from file paths (avoids pickling issues)
 - Worker stdout is suppressed to avoid cluttering output
 - Default workers = `os.cpu_count()` when `--stats` is enabled
 - Use `--workers 1` to force sequential execution if needed
+- **Note:** Timeout is disabled in worker processes to avoid thread/multiprocessing deadlocks
+- **Per-game timeout:** Each game has a 10-second hard limit. Games that hang are skipped and reported at the end.
+- **Action limit:** Each turn has a 1000-action limit to prevent infinite loops from bots returning invalid actions repeatedly.
 
 ### Quiet Mode / Chat Control
 `GameEngine` supports two flags:

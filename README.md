@@ -54,11 +54,11 @@ python -m game.main --no-chat
 | `--deck-config` | `configs/default_deck.json` | Deck configuration |
 | `--seed` | Random | Seed for reproducibility |
 | `--history` | - | Save history JSON |
-| `--stats` | Off | Run statistics mode (multiple games, collect win rates) |
+| `--stats` | Off | Run statistics mode (runs verification first, disqualifies slow bots) |
 | `--iterations` | `100` | Number of games to run in statistics mode |
 | `--workers` | CPU count | Parallel workers for statistics mode |
 | `--no-chat` | Off | Disable chat output (keeps console cleaner) |
-| `--timeout` | `5.0` | Bot timeout in seconds (0 to disable). Slow bots are eliminated |
+| `--timeout` | `5.0` | Bot timeout in seconds (0 to disable). Used in verification run |
 
 ## Creating a Bot
 
