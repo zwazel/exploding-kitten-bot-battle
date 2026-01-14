@@ -343,7 +343,7 @@ class GameEngine:
                 view: BotView = self._create_bot_view(pid)
                 try:
                     self._call_with_timeout(
-                        lambda: bot.on_event(event, view),
+                        lambda b=bot, e=event, v=view: b.on_event(e, v),
                         pid,
                         "on_event",
                     )
@@ -434,7 +434,7 @@ class GameEngine:
             view: BotView = self._create_bot_view(player_id)
             try:
                 self._call_with_timeout(
-                    lambda: bot.on_explode(view),
+                    lambda b=bot, v=view: b.on_explode(v),
                     player_id,
                     "on_explode",
                 )
@@ -461,7 +461,7 @@ class GameEngine:
         draw_pile_size: int = self._state.draw_pile_count
         try:
             insert_pos: int = self._call_with_timeout(
-                lambda: bot.choose_defuse_position(view, draw_pile_size),
+                lambda b=bot, v=view, dps=draw_pile_size: b.choose_defuse_position(v, dps),
                 player_id,
                 "choose_defuse_position",
             )
@@ -576,7 +576,7 @@ class GameEngine:
         target_view: BotView = self._create_bot_view(target_id)
         try:
             card_to_give: Card = self._call_with_timeout(
-                lambda: target_bot.choose_card_to_give(target_view, requester_id),
+                lambda tb=target_bot, tv=target_view, ri=requester_id: tb.choose_card_to_give(tv, ri),
                 target_id,
                 "choose_card_to_give",
             )
@@ -766,9 +766,10 @@ class GameEngine:
             view: BotView = self._create_bot_view(reactor_id)
             
             # Call react with timeout protection
+            # Note: Lambda captures by value (default args) to avoid closure bugs with threads
             try:
                 action: Action | None = self._call_with_timeout(
-                    lambda: bot.react(view, triggering_event),
+                    lambda b=bot, v=view, te=triggering_event: b.react(v, te),
                     reactor_id,
                     "react",
                 )
@@ -1199,9 +1200,10 @@ class GameEngine:
             view: BotView = self._create_bot_view(player_id)
             
             # Call take_turn with timeout protection
+            # Note: Lambda captures by value (default args) to avoid closure bugs with threads
             try:
                 action: Action = self._call_with_timeout(
-                    lambda: bot.take_turn(view),
+                    lambda b=bot, v=view: b.take_turn(v),
                     player_id,
                     "take_turn",
                 )

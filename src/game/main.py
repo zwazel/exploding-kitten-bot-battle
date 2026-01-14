@@ -50,8 +50,10 @@ def _run_game_worker(args: tuple[list[tuple[str, int]], int, Path, float | None]
     sys.stdout = StringIO()
     
     try:
-        # Create engine with timeout
-        engine = GameEngine(seed=seed, quiet_mode=True, chat_enabled=False, bot_timeout=bot_timeout)
+        # Create engine WITHOUT timeout in worker processes.
+        # Threads + multiprocessing can cause deadlocks on Windows.
+        # Stats mode runs silent and fast, so timeout isn't needed.
+        engine = GameEngine(seed=seed, quiet_mode=True, chat_enabled=False, bot_timeout=None)
         
         # Load bots fresh in this process
         loader = BotLoader()

@@ -174,3 +174,16 @@ The game always maintains exactly **(players - 1)** Exploding Kittens. When a bo
 
 ### Event Recording
 Timeout eliminations are recorded as `EventType.BOT_TIMEOUT` events with method name and timeout duration in the data.
+
+### ⚠️ Multiprocessing Gotcha
+**Timeout is DISABLED in stats mode worker processes.** The timeout system uses `threading.Thread` which can cause deadlocks when combined with `ProcessPoolExecutor` on Windows. Stats mode runs games in parallel using multiprocessing, so timeout is disabled in workers to prevent hangs.
+
+**Lambda Closure Pitfall:** When passing lambdas to `_call_with_timeout`, always capture variables by value using default arguments:
+```python
+# WRONG (captures by reference - causes race conditions):
+lambda: bot.on_event(event, view)
+
+# CORRECT (captures by value):
+lambda b=bot, e=event, v=view: b.on_event(e, v)
+```
+This is critical in loops where the lambda is executed in a thread after the loop variable has changed.
