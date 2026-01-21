@@ -1,21 +1,22 @@
 """
 ==============================================================================
-EINSTEIN BOT v3 - The Probability Mastermind
+EINSTEIN BOT v4 - The Survival Mastermind
 ==============================================================================
 
-Einstein uses probability calculations and strategic reasoning to dominate.
+Einstein uses probability calculations and strategic reasoning to SURVIVE.
 
 Core Strategy:
-1. Calculate explosion probability to make informed decisions
-2. Defensive: Nope any hurtful actions against himself
-3. Evasive: Use Attack > Skip > Shuffle when danger is known (prefer Attack)
-4. After Shuffle, consider risk lower (deck is randomized)
-5. Combo Priority:
-   a. 5-different: ONLY if we KNOW FOR SURE there's a Defuse in discard
-   b. 3-of-a-kind: Target player who should have Defuse, name "DefuseCard"
+1. SURVIVAL FIRST: When no Defuse, enter PANIC MODE - steal or evade at all costs
+2. Calculate explosion probability with LOWER thresholds (15% without Defuse)
+3. Defensive: Nope any hurtful actions against himself
+4. Evasive: Use Attack > Skip > Shuffle when danger is known (prefer Attack)
+5. After Shuffle, consider risk lower (deck is randomized)
+6. Combo Priority (ONLY when no Defuse):
+   a. 3-of-a-kind: Target player who should have Defuse, name "DefuseCard"
+   b. 5-different: If we KNOW FOR SURE there's a Defuse in discard
    c. 2-of-a-kind: Target player likely with Defuse, random steal
-   d. Favor: As backup to get good cards
-6. Strategic defuse placement to maximize opponent elimination
+7. Late-game: Force See-the-Future when deck <= 5 cards
+8. Strategic defuse placement to maximize opponent elimination
 """
 
 from game.bots.base import (
@@ -441,21 +442,29 @@ class Einstein(Bot):
         """
         Decide if we should nope this event.
         
-        Einstein:
+        Einstein v4:
         1. ALWAYS nopes hurtful actions against himself
-        2. Nopes opponents' See the Future when we have 2+ Nopes
-        3. Nopes opponents' Shuffle when we know safe draws
+        2. Aggressively nope NEXT player's STF (even with 1 Nope)
+        3. Nopes opponents' See the Future when we have 2+ Nopes
+        4. Nopes opponents' Shuffle when we know safe draws
         """
         # Always protect ourselves
         if self._is_hurtful_to_me(event, view):
             return True
         
-        # Strategic noping with spare Nopes
         nope_count = view.count_cards_of_type("NopeCard")
+        card_type = event.data.get("card_type")
+        
+        # AGGRESSIVE: Deny intel to the NEXT player even with just 1 Nope
+        # The next player seeing the future is a direct threat to us
+        if card_type == "SeeTheFutureCard" and nope_count >= 1:
+            next_player = self._get_next_player(view)
+            if event.player_id == next_player:
+                return True  # Critical: deny immediate threat's intel
+        
+        # Strategic noping with spare Nopes
         if nope_count >= 2:
-            card_type = event.data.get("card_type")
-            
-            # Nope See the Future by opponents (deny them intel)
+            # Nope See the Future by any opponent (deny them intel)
             if card_type == "SeeTheFutureCard" and event.player_id != view.my_id:
                 return True
             
@@ -471,11 +480,12 @@ class Einstein(Bot):
     
     def take_turn(self, view: BotView) -> Action:
         """
-        Einstein's turn strategy:
+        Einstein v4 turn strategy:
         
+        0. PANIC MODE: If no Defuse, desperately try to get one or avoid drawing
         1. DANGER KNOWN: If top is exploding kitten, use Attack > Skip > Shuffle
-        2. INTEL GATHERING: Use See-the-Future if we don't know what's coming
-        3. COMBO PRIORITY: 5-diff (if Defuse in discard) > 3-of-kind > 2-of-kind > Favor
+        2. INTEL GATHERING: Use See-the-Future (especially late-game)
+        3. COMBO PRIORITY: Only steal if we don't have Defuse
         4. HIGH PROBABILITY: Use evasion cards if explosion prob > threshold
         5. DRAW: If safe enough
         """
@@ -488,6 +498,58 @@ class Einstein(Bot):
         
         # Reset "just shuffled" flag at start of decision
         self._just_shuffled = False
+        
+        # =====================================================================
+        # PHASE 0: PANIC MODE - No Defuse = Maximum Survival Priority
+        # =====================================================================
+        
+        if not has_defuse:
+            # CRITICAL: Try to steal a Defuse first!
+            three_combo = self._can_play_three_of_kind(view)
+            if three_combo:
+                cards, target = three_combo
+                view.say("CRITICAL: I need that Defuse!")
+                return PlayComboAction(cards=cards, target_player_id=target)
+            
+            # Try 2-of-a-kind steal
+            two_combo = self._can_play_two_of_kind(view)
+            if two_combo:
+                cards, target = two_combo
+                target_count = view.other_player_card_counts.get(target, 0)
+                if target_count >= 1:  # Any cards = try to steal
+                    view.say("Desperate times call for desperate measures!")
+                    return PlayComboAction(cards=cards, target_player_id=target)
+            
+            # 5-different to get Defuse from discard
+            five_cards = self._can_play_five_different(view)
+            if five_cards:
+                view.say("Retrieving that Defuse from the discard!")
+                return PlayComboAction(cards=five_cards)
+            
+            # Use Favor to try to get cards (maybe Defuse)
+            favors = view.get_cards_of_type("FavorCard")
+            if favors and view.other_players:
+                target = self._get_players_with_likely_defuse(view)
+                if target:
+                    view.say("I really need a card from you...")
+                    return PlayCardAction(card=favors[0], target_player_id=target[0])
+            
+            # Evade at VERY low threshold (10%) - any risk is too much
+            if explosion_prob > 0.10:
+                attacks = view.get_cards_of_type("AttackCard")
+                if attacks and view.other_players:
+                    view.say("Can't risk it without a Defuse!")
+                    return PlayCardAction(card=attacks[0])
+                
+                skips = view.get_cards_of_type("SkipCard")
+                if skips:
+                    view.say("Skipping - too risky without Defuse!")
+                    return PlayCardAction(card=skips[0])
+                
+                shuffles = view.get_cards_of_type("ShuffleCard")
+                if shuffles:
+                    view.say("Reshuffling my fate!")
+                    return PlayCardAction(card=shuffles[0])
         
         # =====================================================================
         # PHASE 1: KNOWN DANGER - Use Attack > Skip > Shuffle
@@ -526,11 +588,15 @@ class Einstein(Bot):
             self._deck_shuffled_since_peek or not self._known_top_cards
         )
         
+        # LATE GAME: Always use STF when deck is small (high variance)
+        deck_is_small = view.draw_pile_count <= 5
+        
         # Use STF aggressively when:
         # 1. We don't have current intel, OR
-        # 2. Risk is above 20% and we're uncertain
-        risk_threshold = 0.20
-        should_use_stf = no_current_intel or (
+        # 2. Deck is small (late game - every draw matters), OR
+        # 3. Risk is above 15% and we're uncertain
+        risk_threshold = 0.15
+        should_use_stf = no_current_intel or deck_is_small or (
             explosion_prob > risk_threshold and safe_draws == 0
         )
         
@@ -553,39 +619,20 @@ class Einstein(Bot):
                     break
         
         # =====================================================================
-        # PHASE 3: COMBOS (priority order)
+        # PHASE 3: COMBOS - Only steal if we DON'T have a Defuse
+        # (Panic mode already handled stealing above when no Defuse)
         # =====================================================================
         
-        # 3a. Five Different - ONLY if Defuse is in discard pile
-        five_cards = self._can_play_five_different(view)
-        if five_cards:
-            view.say("Retrieving that Defuse from the discard!")
-            return PlayComboAction(cards=five_cards)
+        # If we have a Defuse, conserve combo cards - they're valuable
+        # Only use Favor for card advantage, not combos
         
-        # 3b. Three of a Kind - Target player with Defuse, steal it
-        three_combo = self._can_play_three_of_kind(view)
-        if three_combo:
-            cards, target = three_combo
-            view.say(f"I require your Defuse, {target}!")
-            return PlayComboAction(cards=cards, target_player_id=target)
-        
-        # 3c. Two of a Kind - Random steal from likely Defuse holder
-        two_combo = self._can_play_two_of_kind(view)
-        if two_combo:
-            cards, target = two_combo
-            target_count = view.other_player_card_counts.get(target, 0)
-            # Use if target has at least 2 cards
-            if target_count >= 2:
-                view.say(random.choice(self._steal_quotes))
-                return PlayComboAction(cards=cards, target_player_id=target)
-        
-        # 3d. Favor - Use more aggressively to get cards
+        # 3a. Favor - Use to get cards from strong opponents
         favors = view.get_cards_of_type("FavorCard")
         if favors and view.other_players:
             target = self._get_strongest_opponent(view)
             if target:
                 target_count = view.other_player_card_counts.get(target, 0)
-                if target_count >= 2:
+                if target_count >= 3:  # Only if they have plenty
                     view.say("Hand over something good!")
                     return PlayCardAction(card=favors[0], target_player_id=target)
         
@@ -611,8 +658,10 @@ class Einstein(Bot):
         # PHASE 4: HIGH PROBABILITY - Evasive action
         # =====================================================================
         
-        # Lower thresholds for being more cautious
-        danger_threshold = 0.35 if has_defuse else 0.25
+        # LOWERED thresholds for maximum survival
+        # With Defuse: 25% (we have insurance)
+        # Without Defuse: 15% (be extremely cautious)
+        danger_threshold = 0.25 if has_defuse else 0.15
         
         if explosion_prob > danger_threshold:
             view.say(random.choice(self._danger_quotes))
