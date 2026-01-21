@@ -174,63 +174,69 @@ class TestQueueObjectInspection:
     """
     Test that bots cannot manipulate the chat queue improperly.
     
-    VULNERABILITY: The _chat_queue is passed directly to BotView. A malicious
-    bot could inspect or manipulate this queue object.
+    MITIGATED: BotView now uses ChatProxy instead of raw queue access.
     """
     
     def test_chat_queue_is_not_accessible(self) -> None:
         """
-        BotView should not expose the chat queue in a way that allows
-        tampering with internal engine state.
+        BotView should not expose the raw chat queue.
+        It should use ChatProxy instead.
         """
         engine = create_minimal_engine()
         view = engine._create_bot_view("Bot1")
         
-        # The queue should either be:
-        # 1. Not accessible at all (attribute error)
-        # 2. A proxy that doesn't expose internal state
+        # Raw queue should NOT be accessible
+        assert not hasattr(view, '_chat_queue'), \
+            "BotView still has _chat_queue attribute (should use _chat_proxy)"
         
-        # Currently _chat_queue IS accessible - this test should FAIL
-        # until we properly encapsulate it
+        # ChatProxy should be present
+        assert hasattr(view, '_chat_proxy'), "BotView missing _chat_proxy"
         
-        # Check that we can't access internal attributes of the queue
-        if hasattr(view, '_chat_queue'):
-            q = view._chat_queue
-            if q is not None:
-                # These should not be usable to affect the engine
-                # A malicious bot could drain the queue:
-                try:
-                    while True:
-                        q.get_nowait()  # Drain all messages
-                except queue.Empty:
-                    pass
-                
-                # This is a problem if the queue is the same instance
-                assert q is not engine._chat_queue, \
-                    "Chat queue is the same instance as engine's queue - can be manipulated!"
+        proxy = view._chat_proxy
+        assert proxy is not None, "ChatProxy is None"
+        
+        # ChatProxy should NOT expose the internal queue
+        assert not hasattr(proxy, 'get'), "ChatProxy exposes get() method"
+        assert not hasattr(proxy, 'get_nowait'), "ChatProxy exposes get_nowait() method"
+        assert not hasattr(proxy, 'put'), "ChatProxy exposes put() method directly"
+        
+        # ChatProxy should only expose send()
+        assert hasattr(proxy, 'send'), "ChatProxy missing send() method"
     
-    def test_cannot_put_malicious_data_in_queue(self) -> None:
-        """Bot should not be able to inject arbitrary data into chat queue."""
+    def test_chat_proxy_cannot_be_modified(self) -> None:
+        """ChatProxy should be immutable to prevent tampering."""
         engine = create_minimal_engine()
         view = engine._create_bot_view("Bot1")
         
-        if not hasattr(view, '_chat_queue') or view._chat_queue is None:
-            pytest.skip("Chat queue not accessible")
+        proxy = view._chat_proxy
+        if proxy is None:
+            pytest.skip("No chat proxy")
         
-        # Malicious bot could put non-tuple data
-        q = view._chat_queue
+        # Attempt to modify the proxy
+        with pytest.raises(AttributeError):
+            proxy._player_id = "HackedPlayer"  # type: ignore
         
-        # Try to inject something that might crash the engine
+        with pytest.raises(AttributeError):
+            proxy._queue = None  # type: ignore
+        
+        with pytest.raises(AttributeError):
+            del proxy._player_id  # type: ignore
+    
+    def test_chat_proxy_enforces_correct_player_id(self) -> None:
+        """ChatProxy should always use the correct player ID, not allow spoofing."""
+        engine = create_minimal_engine()
+        view = engine._create_bot_view("Bot1")
+        
+        # Send a message via the proxy
+        view.say("Test message")
+        
+        # Check what was put in the queue
         try:
-            q.put(None)  # Invalid format
-            q.put(("fake_player", "message"))  # Spoof player ID
-            q.put(("Bot1", "x" * 10000))  # Massive message
-        except Exception:
-            pass
-        
-        # If we got here, the queue accepts arbitrary data
-        # The engine should validate queue contents
-        assert False, "Queue accepts arbitrary data without validation!"
+            player_id, message = engine._chat_queue.get_nowait()
+            assert player_id == "Bot1", f"Player ID should be 'Bot1', got '{player_id}'"
+            assert message == "Test message"
+        except queue.Empty:
+            pytest.fail("Message was not put in queue")
 
 
 # =============================================================================
