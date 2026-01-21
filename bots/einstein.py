@@ -1,16 +1,21 @@
 """
 ==============================================================================
-EINSTEIN BOT - The Probability Calculator
+EINSTEIN BOT v3 - The Probability Mastermind
 ==============================================================================
 
-Einstein leverages probability calculations to make optimal decisions.
-Strategy:
-1. Calculate the probability of drawing an Exploding Kitten at any moment
-2. Hoard cards to build a powerful hand (more options = more control)
-3. Only play cards when strategically valuable (avoid wasting resources)
-4. Use See the Future to eliminate uncertainty before critical draws
-5. Strategically place defused kittens based on opponent threat assessment
-6. Nope only when the expected value is positive (protect self or hurt leaders)
+Einstein uses probability calculations and strategic reasoning to dominate.
+
+Core Strategy:
+1. Calculate explosion probability to make informed decisions
+2. Defensive: Nope any hurtful actions against himself
+3. Evasive: Use Attack > Skip > Shuffle when danger is known (prefer Attack)
+4. After Shuffle, consider risk lower (deck is randomized)
+5. Combo Priority:
+   a. 5-different: ONLY if we KNOW FOR SURE there's a Defuse in discard
+   b. 3-of-a-kind: Target player who should have Defuse, name "DefuseCard"
+   c. 2-of-a-kind: Target player likely with Defuse, random steal
+   d. Favor: As backup to get good cards
+6. Strategic defuse placement to maximize opponent elimination
 """
 
 from game.bots.base import (
@@ -27,18 +32,18 @@ from game.history import GameEvent, EventType
 
 class Einstein(Bot):
     """
-    A probability-focused bot that calculates risk and hoards cards.
+    A probability-focused bot that calculates risk and plays strategically.
     
     Core Philosophy:
-    - Knowledge is power (track everything)
-    - Calculate expected values before acting
-    - Hoard cards unless playing provides clear advantage
-    - Minimize personal risk while maximizing opponent risk
+    - Calculate explosion probability for every decision
+    - Defend against all hurtful actions with Nope
+    - Prioritize Attack over Skip over Shuffle for evasion
+    - Use combos strategically to steal Defuse cards
     """
     
     def __init__(self) -> None:
         """Initialize Einstein with state tracking."""
-        # Track the top cards from See the Future
+        # Track top cards from See the Future
         self._known_top_cards: list[str] = []
         
         # Track draws since last peek
@@ -47,62 +52,79 @@ class Einstein(Bot):
         # Track if deck was shuffled since peek
         self._deck_shuffled_since_peek: bool = False
         
-        # Track number of Exploding Kittens in deck
-        # Initial = num_players - 1, but we update as they explode
-        self._known_kittens_in_deck: int | None = None
+        # When True, we just shuffled - risk is "reset"
+        self._just_shuffled: bool = False
         
-        # Track eliminated players to calculate remaining kittens
-        self._eliminated_players: set[str] = set()
-        
-        # Track how many players we started with
+        # Track initial player count for kitten calculations
         self._initial_player_count: int | None = None
         
-        # Track defuse count in our hand (for risk assessment)
-        self._last_known_defuse_count: int = 0
+        # Track eliminated players
+        self._eliminated_count: int = 0
         
-        # Einstein quotes for personality
-        self._genius_quotes: list[str] = [
-            "E = mc² ... of course.",
-            "God does not play dice with the universe... but I do!",
-            "Imagination is more important than knowledge.",
-            "The only source of knowledge is experience.",
-            "I have no special talents. I am only passionately curious.",
-        ]
+        # Track who has used Defuse (they likely don't have another)
+        self._players_who_defused: set[str] = set()
         
-        self._calculation_quotes: list[str] = [
-            "Calculating probabilities...",
-            "The math says: safe to proceed.",
-            "According to my calculations...",
-            "Interesting probability distribution...",
-            "Let me think about this relatively...",
+        # Track players who we KNOW have Defuse (not used yet)
+        # At start, everyone has one Defuse
+        self._players_with_defuse: set[str] = set()
+        
+        # Track if Defuse is in discard pile
+        self._defuse_in_discard: bool = False
+        
+        # Einstein personality quotes
+        self._smart_quotes: list[str] = [
+            "E = mc²",
+            "Probability favors the prepared.",
+            "The math is never wrong.",
+            "Calculating optimal strategy...",
         ]
         
         self._danger_quotes: list[str] = [
-            "The probability of catastrophe is too high!",
-            "My calculations indicate danger ahead!",
-            "This requires evasive action!",
-            "Theory suggests I should skip this!",
+            "Evasive maneuvers!",
+            "The probability is... unfavorable!",
+            "Strategic retreat required!",
+        ]
+        
+        self._attack_quotes: list[str] = [
+            "Your problem now!",
+            "Taste my probability!",
+            "Passing the equation!",
+        ]
+        
+        self._skip_quotes: list[str] = [
+            "Skipping to safety!",
+            "The math says: skip!",
+            "Not today, kitten!",
+        ]
+        
+        self._shuffle_quotes: list[str] = [
+            "Reshuffling the probabilities!",
+            "Randomizing the universe!",
+            "Chaos theory in action!",
+        ]
+        
+        self._steal_quotes: list[str] = [
+            "I require your Defuse!",
+            "For science!",
+            "Your cards are now my cards!",
         ]
         
         self._defuse_quotes: list[str] = [
-            "Elementary physics, my dear kitten.",
-            "As I predicted.",
-            "E = mc²... and D = Defused!",
-            "Probability of survival: now 100%.",
+            "Elementary.",
+            "As my calculations predicted.",
+            "Probability of survival: 100%",
         ]
         
         self._nope_quotes: list[str] = [
-            "Your theory has been disproven.",
-            "That hypothesis is rejected!",
-            "Peer review: DENIED.",
-            "Counter-example provided!",
+            "Hypothesis rejected!",
+            "Your theory is flawed!",
+            "NOPE! Not on my watch!",
         ]
         
-        self._explosion_quotes: list[str] = [
-            "Even geniuses make errors occasionally...",
-            "The probability was supposed to be lower...",
-            "My calculations... were wrong?!",
-            "Relativity caught up with me...",
+        self._death_quotes: list[str] = [
+            "Even geniuses err...",
+            "The probability was... wrong?",
+            "Impossible!",
         ]
 
     @property
@@ -114,136 +136,121 @@ class Einstein(Bot):
     # PROBABILITY CALCULATIONS
     # =========================================================================
     
-    def _calculate_explosion_probability(self, view: BotView) -> float:
+    def _calc_explosion_probability(self, view: BotView) -> float:
         """
-        Calculate the probability of drawing an Exploding Kitten.
+        Calculate probability of drawing an Exploding Kitten.
         
         P(explosion) = kittens_in_deck / draw_pile_size
         
-        Inputs: view - The bot's view of the game
+        If we just shuffled, we consider risk "reset" to base probability.
+        
         Returns: Probability from 0.0 to 1.0
         """
         draw_pile_size = view.draw_pile_count
-        
         if draw_pile_size == 0:
-            return 0.0  # Empty deck = no risk
+            return 0.0
         
-        # Estimate kittens in deck
-        kittens_in_deck = self._estimate_kittens_in_deck(view)
+        kittens = self._estimate_kittens(view)
+        base_prob = kittens / draw_pile_size
         
-        return kittens_in_deck / draw_pile_size
+        # After shuffle, we don't have any intel - just use base probability
+        # This is logically correct, but we treat it as slightly lower
+        # because the danger isn't "concentrated" at top
+        if self._just_shuffled:
+            return base_prob  # No adjustment needed, but no known danger
+        
+        return base_prob
     
-    def _estimate_kittens_in_deck(self, view: BotView) -> int:
+    def _estimate_kittens(self, view: BotView) -> int:
         """
-        Estimate how many Exploding Kittens are in the deck.
+        Estimate kittens remaining in deck.
         
-        Rule: num_players - 1 kittens at start
-        After eliminations, some kittens may have caused explosions.
-        
-        Inputs: view - The bot's view of the game
-        Returns: Estimated number of kittens in deck
+        Initial = players - 1
+        Each elimination removes one kitten (usually exploded).
         """
-        if self._known_kittens_in_deck is not None:
-            return self._known_kittens_in_deck
+        if self._initial_player_count is None:
+            total = len(view.other_players) + 1
+            return max(0, total - 1)
         
-        # Initial estimate: (initial_players - 1) - eliminated_players
-        # Each eliminated player took one kitten with them (usually)
-        if self._initial_player_count is not None:
-            initial_kittens = self._initial_player_count - 1
-            eliminated = len(self._eliminated_players)
-            return max(0, initial_kittens - eliminated)
-        
-        # Fallback: players_still_alive is a proxy
-        # If 4 players playing, 3 kittens. If 1 eliminated, ~2 kittens left.
-        total_players = len(view.other_players) + 1
-        return max(0, total_players - 1)
+        initial_kittens = self._initial_player_count - 1
+        return max(0, initial_kittens - self._eliminated_count)
     
-    def _get_known_top_danger(self, positions: int = 1) -> bool:
-        """
-        Check if we know an Exploding Kitten is in the top N positions.
-        
-        Inputs: positions - How many top positions to check
-        Returns: True if we're certain a kitten is in those positions
-        """
-        if self._deck_shuffled_since_peek:
+    def _is_top_dangerous(self) -> bool:
+        """Check if we KNOW the top card is an Exploding Kitten."""
+        if self._deck_shuffled_since_peek or not self._known_top_cards:
             return False
         
-        if not self._known_top_cards:
-            return False
-        
-        # Account for cards drawn since we peeked
-        effective_start = self._cards_drawn_since_peek
-        effective_end = effective_start + positions
-        
-        # Check if any known position in range has an Exploding Kitten
-        for i in range(effective_start, min(effective_end, len(self._known_top_cards))):
-            if self._known_top_cards[i] == "ExplodingKittenCard":
-                return True
-        
+        idx = self._cards_drawn_since_peek
+        if idx < len(self._known_top_cards):
+            return self._known_top_cards[idx] == "ExplodingKittenCard"
         return False
     
-    def _get_known_safe_draws(self) -> int:
-        """
-        Get the number of draws we KNOW are safe.
-        
-        Returns: Number of guaranteed safe draws (0 if unknown)
-        """
-        if self._deck_shuffled_since_peek:
+    def _safe_draws_known(self) -> int:
+        """How many draws are we CERTAIN are safe?"""
+        if self._deck_shuffled_since_peek or not self._known_top_cards:
             return 0
         
-        if not self._known_top_cards:
-            return 0
-        
-        safe_draws = 0
-        effective_start = self._cards_drawn_since_peek
-        
-        for i in range(effective_start, len(self._known_top_cards)):
+        safe = 0
+        for i in range(self._cards_drawn_since_peek, len(self._known_top_cards)):
             if self._known_top_cards[i] == "ExplodingKittenCard":
                 break
-            safe_draws += 1
-        
-        return safe_draws
+            safe += 1
+        return safe
     
     # =========================================================================
-    # STRATEGIC ASSESSMENTS
+    # PLAYER ANALYSIS
     # =========================================================================
     
-    def _get_threat_level(self, player_id: str, view: BotView) -> float:
+    def _get_players_with_likely_defuse(self, view: BotView) -> list[str]:
         """
-        Assess how threatening an opponent is.
+        Get players who LIKELY have a Defuse card.
         
-        Threat = card_count (more cards = more options = more dangerous)
+        A player likely has Defuse if:
+        - They haven't used one yet
+        - They have more cards (more chances)
         
-        Inputs:
-            player_id - The opponent to assess
-            view - The bot's view of the game
-        Returns: Threat score (higher = more threatening)
+        Returns: List of player IDs sorted by likelihood (highest first)
         """
-        card_count = view.other_player_card_counts.get(player_id, 0)
-        return float(card_count)
+        likely: list[tuple[str, float]] = []
+        
+        for player in view.other_players:
+            if player in self._players_who_defused:
+                # They used their Defuse, probably don't have another
+                score = 0.1
+            elif player in self._players_with_defuse:
+                # We know they started with one and haven't used it
+                score = 1.0
+            else:
+                # Unknown - estimate based on card count
+                card_count = view.other_player_card_counts.get(player, 0)
+                score = 0.5 + (card_count * 0.05)
+            
+            likely.append((player, score))
+        
+        # Sort by score descending
+        likely.sort(key=lambda x: x[1], reverse=True)
+        return [p for p, _ in likely]
     
-    def _get_most_threatening_player(self, view: BotView) -> str | None:
-        """
-        Find the opponent with the highest threat level.
-        
-        Inputs: view - The bot's view of the game
-        Returns: Player ID of the most threatening opponent
-        """
+    def _get_weakest_opponent(self, view: BotView) -> str | None:
+        """Find opponent with fewest cards (least options)."""
         if not view.other_players:
             return None
-        
+        return min(
+            view.other_players,
+            key=lambda p: view.other_player_card_counts.get(p, 0)
+        )
+    
+    def _get_strongest_opponent(self, view: BotView) -> str | None:
+        """Find opponent with most cards (biggest threat)."""
+        if not view.other_players:
+            return None
         return max(
             view.other_players,
-            key=lambda p: self._get_threat_level(p, view)
+            key=lambda p: view.other_player_card_counts.get(p, 0)
         )
     
     def _get_next_player(self, view: BotView) -> str | None:
-        """
-        Get the next player in turn order after us.
-        
-        Inputs: view - The bot's view of the game
-        Returns: Next player's ID or None
-        """
+        """Get the next player in turn order."""
         if not view.other_players:
             return None
         
@@ -251,647 +258,580 @@ class Einstein(Bot):
         if view.my_id not in turn_order:
             return view.other_players[0]
         
-        my_index = turn_order.index(view.my_id)
-        alive_players = set(view.other_players) | {view.my_id}
+        my_idx = turn_order.index(view.my_id)
+        alive = set(view.other_players) | {view.my_id}
         
         for i in range(1, len(turn_order)):
-            next_index = (my_index + i) % len(turn_order)
-            candidate = turn_order[next_index]
-            if candidate in alive_players and candidate != view.my_id:
+            candidate = turn_order[(my_idx + i) % len(turn_order)]
+            if candidate in alive and candidate != view.my_id:
                 return candidate
         
         return view.other_players[0]
     
-    def _should_hoard(self, view: BotView) -> bool:
-        """
-        Decide if we should continue hoarding cards vs. playing.
+    def _get_next_player_after(self, player_id: str, view: BotView) -> str | None:
+        """Get next player after a specific player."""
+        turn_order = list(view.turn_order)
+        if player_id not in turn_order:
+            return None
         
-        Einstein hoards when:
-        - We have room to grow (not too many cards)
-        - Explosion probability is acceptable
-        - We have a defuse as insurance
+        idx = turn_order.index(player_id)
+        alive = set(view.other_players) | {view.my_id}
         
-        Inputs: view - The bot's view of the game
-        Returns: True if we should hoard (just draw), False if we should play
-        """
-        explosion_prob = self._calculate_explosion_probability(view)
-        has_defuse = view.has_card_type("DefuseCard")
-        hand_size = len(view.my_hand)
-        
-        # If we KNOW the top is dangerous, don't hoard
-        if self._get_known_top_danger():
-            return False
-        
-        # If probability is very low (< 15%), hoard unless we have many cards
-        if explosion_prob < 0.15:
-            return hand_size < 12  # Keep hoarding up to 12 cards
-        
-        # If probability is moderate (15-30%) and we have defuse, continue hoarding
-        if explosion_prob < 0.30 and has_defuse:
-            return hand_size < 10  # More conservative threshold
-        
-        # If probability is higher, only hoard if we have defuse and small hand
-        if explosion_prob < 0.40 and has_defuse:
-            return hand_size < 8
-        
-        # High probability: stop hoarding, play defensively
-        return False
-    
-    def _calculate_play_value(
-        self, card: Card, view: BotView
-    ) -> float:
-        """
-        Calculate the strategic value of playing a specific card.
-        
-        Higher value = more beneficial to play now.
-        Negative value = should save for later.
-        
-        Inputs:
-            card - The card to evaluate
-            view - The bot's view of the game
-        Returns: Value score (higher = more valuable to play)
-        """
-        card_type = card.card_type
-        explosion_prob = self._calculate_explosion_probability(view)
-        has_defuse = view.has_card_type("DefuseCard")
-        known_danger = self._get_known_top_danger()
-        
-        # Skip Card: Value increases with danger
-        if card_type == "SkipCard":
-            if known_danger:
-                return 100.0  # Critical play!
-            if explosion_prob > 0.4:
-                return 50.0
-            if explosion_prob > 0.25:
-                return 20.0
-            return -10.0  # Save it for when needed
-        
-        # Attack Card: Similar to skip but passes danger
-        if card_type == "AttackCard":
-            if known_danger:
-                return 95.0  # Almost as good as skip
-            if explosion_prob > 0.4:
-                return 45.0
-            if explosion_prob > 0.25:
-                return 15.0
-            return -15.0  # Save it
-        
-        # See the Future: Valuable when uncertain
-        if card_type == "SeeTheFutureCard":
-            if self._deck_shuffled_since_peek or not self._known_top_cards:
-                safe_draws = self._get_known_safe_draws()
-                if safe_draws == 0:
-                    return 30.0  # High value - we need intel
-            return -5.0  # We already know the future
-        
-        # Shuffle: Valuable when danger is known on top
-        if card_type == "ShuffleCard":
-            if known_danger:
-                return 80.0  # Reroll the danger
-            return -20.0  # Don't waste it
-        
-        # Favor: Moderate value for stealing cards
-        if card_type == "FavorCard":
-            if view.other_players:
-                target = self._get_most_threatening_player(view)
-                if target:
-                    target_cards = view.other_player_card_counts.get(target, 0)
-                    if target_cards > 5:
-                        return 10.0  # Worth using
-            return -10.0  # Save it
-        
-        # Nope: Never play proactively
-        if card_type == "NopeCard":
-            return -100.0  # Only for reactions
-        
-        # Defuse: Never play proactively
-        if card_type == "DefuseCard":
-            return -200.0  # This is our lifeline
-        
-        # Cat cards: Only valuable in combos
-        if "Cat" in card_type:
-            return -50.0  # Save for combos
-        
-        return 0.0
-    
-    def _find_best_combo(
-        self, view: BotView
-    ) -> tuple[str, tuple[Card, ...], str | None] | None:
-        """
-        Find the best combo to play, if any is worthwhile.
-        
-        Inputs: view - The bot's view of the game
-        Returns: (combo_type, cards, target_id) or None
-        """
-        hand = view.my_hand
-        
-        # Group cards by type
-        by_type: dict[str, list[Card]] = {}
-        for card in hand:
-            if card.can_combo():
-                if card.card_type not in by_type:
-                    by_type[card.card_type] = []
-                by_type[card.card_type].append(card)
-        
-        # Einstein prefers three-of-a-kind (can request specific card)
-        for card_type, cards_of_type in by_type.items():
-            if len(cards_of_type) >= 3 and view.other_players:
-                # Target the player with most cards
-                target = self._get_most_threatening_player(view)
-                return ("three_of_a_kind", tuple(cards_of_type[:3]), target)
-        
-        # Two-of-a-kind if we have many duplicates (4+) - can spare 2
-        for card_type, cards_of_type in by_type.items():
-            if len(cards_of_type) >= 4 and view.other_players:
-                target = self._get_most_threatening_player(view)
-                return ("two_of_a_kind", tuple(cards_of_type[:2]), target)
-        
-        # Five different for discard pile if valuable cards there
-        if len(by_type) >= 5:
-            # Check if discard pile has defuse or nope
-            valuable_in_discard = [
-                c for c in view.discard_pile
-                if c.card_type in ("DefuseCard", "NopeCard")
-            ]
-            if valuable_in_discard:
-                five_cards: list[Card] = []
-                for card_type in list(by_type.keys())[:5]:
-                    five_cards.append(by_type[card_type][0])
-                return ("five_different", tuple(five_cards), None)
-        
+        for i in range(1, len(turn_order)):
+            candidate = turn_order[(idx + i) % len(turn_order)]
+            if candidate in alive:
+                return candidate
         return None
     
     # =========================================================================
-    # NOPE DECISION LOGIC
+    # COMBO STRATEGIES
+    # =========================================================================
+    
+    def _can_play_five_different(self, view: BotView) -> tuple[Card, ...] | None:
+        """
+        Check if we can play a 5-different combo.
+        
+        ONLY returns cards if we KNOW FOR SURE there's a Defuse in discard.
+        
+        Returns: Tuple of 5 cards, or None
+        """
+        # First check: Is there a Defuse in the discard pile?
+        if not self._defuse_in_discard:
+            return None
+        
+        # Verify by checking actual discard pile
+        has_defuse = any(c.card_type == "DefuseCard" for c in view.discard_pile)
+        if not has_defuse:
+            return None
+        
+        # Group combo-eligible cards by type
+        by_type: dict[str, list[Card]] = {}
+        for card in view.my_hand:
+            if card.can_combo():
+                by_type.setdefault(card.card_type, []).append(card)
+        
+        if len(by_type) < 5:
+            return None
+        
+        # Build the 5 different cards
+        five_cards: list[Card] = []
+        for card_type in list(by_type.keys())[:5]:
+            five_cards.append(by_type[card_type][0])
+        
+        return tuple(five_cards)
+    
+    def _can_play_three_of_kind(self, view: BotView) -> tuple[tuple[Card, ...], str] | None:
+        """
+        Check if we can play 3-of-a-kind to steal Defuse.
+        
+        Target: Player who should have a Defuse for sure.
+        
+        Returns: (cards, target_id) or None
+        """
+        # Group combo-eligible cards by type
+        by_type: dict[str, list[Card]] = {}
+        for card in view.my_hand:
+            if card.can_combo():
+                by_type.setdefault(card.card_type, []).append(card)
+        
+        # Find a type with 3+ cards
+        three_cards: tuple[Card, ...] | None = None
+        for cards in by_type.values():
+            if len(cards) >= 3:
+                three_cards = tuple(cards[:3])
+                break
+        
+        if three_cards is None:
+            return None
+        
+        # Find target who likely has Defuse
+        likely_defuse = self._get_players_with_likely_defuse(view)
+        if not likely_defuse:
+            return None
+        
+        # Target the one most likely to have Defuse
+        return (three_cards, likely_defuse[0])
+    
+    def _can_play_two_of_kind(self, view: BotView) -> tuple[tuple[Card, ...], str] | None:
+        """
+        Check if we can play 2-of-a-kind to random steal.
+        
+        Target: Player who likely still has Defuse.
+        
+        Returns: (cards, target_id) or None
+        """
+        # Group combo-eligible cards by type
+        by_type: dict[str, list[Card]] = {}
+        for card in view.my_hand:
+            if card.can_combo():
+                by_type.setdefault(card.card_type, []).append(card)
+        
+        # Find a type with 2+ cards
+        two_cards: tuple[Card, ...] | None = None
+        for cards in by_type.values():
+            if len(cards) >= 2:
+                two_cards = tuple(cards[:2])
+                break
+        
+        if two_cards is None:
+            return None
+        
+        # Target player who likely has Defuse
+        likely_defuse = self._get_players_with_likely_defuse(view)
+        if not likely_defuse:
+            # Target strongest opponent if no one likely has Defuse
+            target = self._get_strongest_opponent(view)
+            if target:
+                return (two_cards, target)
+            return None
+        
+        return (two_cards, likely_defuse[0])
+    
+    # =========================================================================
+    # NOPE LOGIC (DEFENSIVE)
     # =========================================================================
     
     def _is_targeting_me(self, event: GameEvent, view: BotView) -> bool:
-        """
-        Check if an event is targeting this bot.
-        
-        Inputs:
-            event - The game event to check
-            view - Current game view
-        Returns: True if targeting me
-        """
-        # Direct targeting
-        target = event.data.get("target_player_id")
-        if target == view.my_id:
+        """Check if an action is targeting this bot."""
+        # Direct target
+        if event.data.get("target_player_id") == view.my_id:
+            return True
+        if event.data.get("target") == view.my_id:
             return True
         
         # Attack targets next player
         card_type = event.data.get("card_type")
         if card_type == "AttackCard":
-            attacker_id = event.player_id
-            if attacker_id and attacker_id != view.my_id:
-                next_after_attacker = self._get_next_player_after(
-                    attacker_id, view
-                )
-                if next_after_attacker == view.my_id:
+            attacker = event.player_id
+            if attacker:
+                next_p = self._get_next_player_after(attacker, view)
+                if next_p == view.my_id:
                     return True
         
         return False
     
-    def _get_next_player_after(
-        self, player_id: str, view: BotView
-    ) -> str | None:
+    def _is_hurtful_to_me(self, event: GameEvent, view: BotView) -> bool:
         """
-        Get the next player after a specific player.
+        Check if this event is hurtful to Einstein.
         
-        Inputs:
-            player_id - The player to start from
-            view - Current game view
-        Returns: Next player's ID
-        """
-        turn_order = list(view.turn_order)
-        if player_id not in turn_order:
-            return None
-        
-        player_index = turn_order.index(player_id)
-        alive_players = set(view.other_players) | {view.my_id}
-        
-        for i in range(1, len(turn_order)):
-            next_index = (player_index + i) % len(turn_order)
-            candidate = turn_order[next_index]
-            if candidate in alive_players:
-                return candidate
-        
-        return None
-    
-    def _should_nope(self, event: GameEvent, view: BotView) -> bool:
-        """
-        Decide if we should Nope this event.
-        
-        Einstein's Nope Strategy:
-        1. ALWAYS Nope attacks/favors/combos targeting me
-        2. Consider Noping actions that benefit leading players
-        3. Conserve Nopes otherwise (they're valuable)
-        
-        Inputs:
-            event - The triggering event
-            view - Current game view
-        Returns: True if we should play a Nope
+        Hurtful events:
+        - Attack targeting me
+        - Favor targeting me
+        - Combo steal targeting me
         """
         card_type = event.data.get("card_type")
         combo_type = event.data.get("combo_type")
         
-        # ALWAYS Nope attacks targeting me
+        # Attack me
         if card_type == "AttackCard" and self._is_targeting_me(event, view):
             return True
         
-        # ALWAYS Nope favors targeting me
+        # Favor me
         if card_type == "FavorCard" and self._is_targeting_me(event, view):
             return True
         
-        # ALWAYS Nope combos targeting me
+        # Combo steal me
         if combo_type in ("two_of_a_kind", "three_of_a_kind"):
             if self._is_targeting_me(event, view):
                 return True
         
-        # Consider Noping See the Future by leading player
-        # (but only if we have 2+ Nopes)
+        return False
+    
+    def _should_nope(self, event: GameEvent, view: BotView) -> bool:
+        """
+        Decide if we should nope this event.
+        
+        Einstein:
+        1. ALWAYS nopes hurtful actions against himself
+        2. Nopes opponents' See the Future when we have 2+ Nopes
+        3. Nopes opponents' Shuffle when we know safe draws
+        """
+        # Always protect ourselves
+        if self._is_hurtful_to_me(event, view):
+            return True
+        
+        # Strategic noping with spare Nopes
         nope_count = view.count_cards_of_type("NopeCard")
         if nope_count >= 2:
-            actor = event.player_id
-            if actor and card_type == "SeeTheFutureCard":
-                # If this player is leading (most cards), consider noping
-                if actor == self._get_most_threatening_player(view):
-                    threat = self._get_threat_level(actor, view)
-                    if threat > 8:  # Very high card count
-                        return True
+            card_type = event.data.get("card_type")
+            
+            # Nope See the Future by opponents (deny them intel)
+            if card_type == "SeeTheFutureCard" and event.player_id != view.my_id:
+                return True
+            
+            # Nope Shuffle when we know safe draws (preserve our knowledge)
+            if card_type == "ShuffleCard" and self._safe_draws_known() > 0:
+                return True
         
         return False
     
     # =========================================================================
-    # REQUIRED: take_turn
+    # MAIN TURN LOGIC
     # =========================================================================
     
     def take_turn(self, view: BotView) -> Action:
         """
-        Einstein's turn logic:
+        Einstein's turn strategy:
         
-        1. If danger is KNOWN on top → Avoid drawing (Skip/Attack/Shuffle)
-        2. If uncertain → Use See the Future for intel
-        3. If safe or low probability → Hoard (just draw)
-        4. If probability is high → Play best card
-        
-        Inputs: view - The bot's view of the game state
-        Returns: The action to take
+        1. DANGER KNOWN: If top is exploding kitten, use Attack > Skip > Shuffle
+        2. INTEL GATHERING: Use See-the-Future if we don't know what's coming
+        3. COMBO PRIORITY: 5-diff (if Defuse in discard) > 3-of-kind > 2-of-kind > Favor
+        4. HIGH PROBABILITY: Use evasion cards if explosion prob > threshold
+        5. DRAW: If safe enough
         """
         import random
         
-        hand = view.my_hand
-        explosion_prob = self._calculate_explosion_probability(view)
-        known_danger = self._get_known_top_danger()
+        explosion_prob = self._calc_explosion_probability(view)
+        known_danger = self._is_top_dangerous()
         has_defuse = view.has_card_type("DefuseCard")
+        safe_draws = self._safe_draws_known()
+        
+        # Reset "just shuffled" flag at start of decision
+        self._just_shuffled = False
         
         # =====================================================================
-        # PHASE 1: KNOWN DANGER - Immediate evasive action
+        # PHASE 1: KNOWN DANGER - Use Attack > Skip > Shuffle
         # =====================================================================
         
         if known_danger:
             view.say(random.choice(self._danger_quotes))
             
-            # Prefer Skip (least waste)
-            skip_cards = view.get_cards_of_type("SkipCard")
-            if skip_cards:
-                return PlayCardAction(card=skip_cards[0])
+            # PREFER ATTACK - passes the problem to next player
+            attacks = view.get_cards_of_type("AttackCard")
+            if attacks and view.other_players:
+                view.say(random.choice(self._attack_quotes))
+                return PlayCardAction(card=attacks[0])
             
-            # Attack passes danger to next player
-            attack_cards = view.get_cards_of_type("AttackCard")
-            if attack_cards and view.other_players:
-                return PlayCardAction(card=attack_cards[0])
+            # SECOND: Skip - avoids drawing
+            skips = view.get_cards_of_type("SkipCard")
+            if skips:
+                view.say(random.choice(self._skip_quotes))
+                return PlayCardAction(card=skips[0])
             
-            # Shuffle randomizes the danger
-            shuffle_cards = view.get_cards_of_type("ShuffleCard")
-            if shuffle_cards:
-                return PlayCardAction(card=shuffle_cards[0])
+            # THIRD: Shuffle - rerolls the danger
+            shuffles = view.get_cards_of_type("ShuffleCard")
+            if shuffles:
+                view.say(random.choice(self._shuffle_quotes))
+                return PlayCardAction(card=shuffles[0])
             
-            # Last resort: Must draw (hopefully have defuse)
-            if has_defuse:
-                view.say("I have prepared for this eventuality.")
+            # Must draw - hope we have defuse
             return DrawCardAction()
         
         # =====================================================================
-        # PHASE 2: GATHER INTELLIGENCE
+        # PHASE 2: INTEL - Use See the Future heavily to eliminate guessing
         # =====================================================================
         
-        # If we don't have current intel, get it
-        safe_draws = self._get_known_safe_draws()
-        need_intel = (
-            safe_draws == 0 and
-            (self._deck_shuffled_since_peek or not self._known_top_cards)
+        # We need intel if we don't know what's coming
+        no_current_intel = (safe_draws == 0) and (
+            self._deck_shuffled_since_peek or not self._known_top_cards
         )
         
-        if need_intel:
-            see_future = view.get_cards_of_type("SeeTheFutureCard")
-            if see_future:
-                view.say(random.choice(self._calculation_quotes))
-                return PlayCardAction(card=see_future[0])
+        # Use STF aggressively when:
+        # 1. We don't have current intel, OR
+        # 2. Risk is above 20% and we're uncertain
+        risk_threshold = 0.20
+        should_use_stf = no_current_intel or (
+            explosion_prob > risk_threshold and safe_draws == 0
+        )
+        
+        if should_use_stf:
+            stf = view.get_cards_of_type("SeeTheFutureCard")
+            if stf:
+                view.say(random.choice(self._smart_quotes))
+                return PlayCardAction(card=stf[0])
         
         # =====================================================================
-        # PHASE 3: HOARDING MODE
+        # PHASE 3: COMBOS (priority order)
         # =====================================================================
         
-        # If conditions are favorable, just draw to build our hand
-        if self._should_hoard(view):
-            if random.random() < 0.1:  # Occasional genius quote
-                view.say(random.choice(self._genius_quotes))
-            return DrawCardAction()
+        # 3a. Five Different - ONLY if Defuse is in discard pile
+        five_cards = self._can_play_five_different(view)
+        if five_cards:
+            view.say("Retrieving that Defuse from the discard!")
+            return PlayComboAction(cards=five_cards)
         
-        # =====================================================================
-        # PHASE 4: STRATEGIC PLAYS
-        # =====================================================================
+        # 3b. Three of a Kind - Target player with Defuse, steal it
+        three_combo = self._can_play_three_of_kind(view)
+        if three_combo:
+            cards, target = three_combo
+            view.say(f"I require your Defuse, {target}!")
+            return PlayComboAction(cards=cards, target_player_id=target)
         
-        # Find the best card to play based on value calculations
-        playable_cards = [c for c in hand if c.can_play(view, is_own_turn=True)]
-        
-        if playable_cards:
-            best_card = None
-            best_value = -float("inf")
-            
-            for card in playable_cards:
-                value = self._calculate_play_value(card, view)
-                if value > best_value:
-                    best_value = value
-                    best_card = card
-            
-            # Only play if value is positive
-            if best_card and best_value > 0:
-                card_type = best_card.card_type
-                
-                # Skip or Attack need no target
-                if card_type in ("SkipCard", "ShuffleCard", "SeeTheFutureCard"):
-                    return PlayCardAction(card=best_card)
-                
-                # Attack might want to target specific player
-                if card_type == "AttackCard":
-                    return PlayCardAction(card=best_card)
-                
-                # Favor needs a target
-                if card_type == "FavorCard" and view.other_players:
-                    target = self._get_most_threatening_player(view)
-                    if target:
-                        return PlayCardAction(
-                            card=best_card, target_player_id=target
-                        )
-        
-        # Check for valuable combos
-        combo = self._find_best_combo(view)
-        if combo:
-            combo_type, cards, target = combo
-            if target:
-                view.say(f"Theoretical analysis complete: stealing from {target}!")
+        # 3c. Two of a Kind - Random steal from likely Defuse holder
+        two_combo = self._can_play_two_of_kind(view)
+        if two_combo:
+            cards, target = two_combo
+            target_count = view.other_player_card_counts.get(target, 0)
+            # Use if target has at least 2 cards
+            if target_count >= 2:
+                view.say(random.choice(self._steal_quotes))
                 return PlayComboAction(cards=cards, target_player_id=target)
-            else:
-                # Five different combo (grab from discard)
-                view.say("Recovering valuable research materials!")
-                # Find defuse or nope in discard
-                target_card = None
-                for c in view.discard_pile:
-                    if c.card_type == "DefuseCard":
-                        target_card = c
-                        break
-                    if c.card_type == "NopeCard":
-                        target_card = c
-                if target_card:
-                    return PlayComboAction(cards=cards, target_card=target_card)
+        
+        # 3d. Favor - Use more aggressively to get cards
+        favors = view.get_cards_of_type("FavorCard")
+        if favors and view.other_players:
+            target = self._get_strongest_opponent(view)
+            if target:
+                target_count = view.other_player_card_counts.get(target, 0)
+                if target_count >= 2:
+                    view.say("Hand over something good!")
+                    return PlayCardAction(card=favors[0], target_player_id=target)
+        
+        # 3e. Strategic Attack - Attack vulnerable next player proactively
+        next_player = self._get_next_player(view)
+        if next_player:
+            # Attack if next player used their Defuse (vulnerable!)
+            if next_player in self._players_who_defused:
+                attacks = view.get_cards_of_type("AttackCard")
+                if attacks:
+                    view.say("Targeting the vulnerable one!")
+                    return PlayCardAction(card=attacks[0])
+            
+            # Also attack if next player has very few cards
+            next_cards = view.other_player_card_counts.get(next_player, 0)
+            if next_cards <= 2 and explosion_prob > 0.25:
+                attacks = view.get_cards_of_type("AttackCard")
+                if attacks:
+                    view.say("You seem short on options!")
+                    return PlayCardAction(card=attacks[0])
         
         # =====================================================================
-        # PHASE 5: DEFAULT - Draw
+        # PHASE 4: HIGH PROBABILITY - Evasive action
         # =====================================================================
         
-        # If probability is acceptable or we have a defuse, draw
-        if explosion_prob < 0.4 or has_defuse:
-            if random.random() < 0.1:
-                view.say(random.choice(self._calculation_quotes))
-            return DrawCardAction()
+        # Thresholds based on whether we have Defuse
+        danger_threshold = 0.40 if has_defuse else 0.30
         
-        # High danger, no defuse - try any evasive action
-        skip_cards = view.get_cards_of_type("SkipCard")
-        if skip_cards:
-            view.say("I must recalculate the odds!")
-            return PlayCardAction(card=skip_cards[0])
+        if explosion_prob > danger_threshold:
+            view.say(random.choice(self._danger_quotes))
+            
+            # Attack first
+            attacks = view.get_cards_of_type("AttackCard")
+            if attacks and view.other_players:
+                view.say(random.choice(self._attack_quotes))
+                return PlayCardAction(card=attacks[0])
+            
+            # Skip second
+            skips = view.get_cards_of_type("SkipCard")
+            if skips:
+                view.say(random.choice(self._skip_quotes))
+                return PlayCardAction(card=skips[0])
+            
+            # Shuffle third
+            shuffles = view.get_cards_of_type("ShuffleCard")
+            if shuffles:
+                view.say(random.choice(self._shuffle_quotes))
+                return PlayCardAction(card=shuffles[0])
         
-        attack_cards = view.get_cards_of_type("AttackCard")
-        if attack_cards and view.other_players:
-            view.say("Passing this problem to a peer!")
-            return PlayCardAction(card=attack_cards[0])
+        # =====================================================================
+        # PHASE 5: DRAW - Probability is acceptable
+        # =====================================================================
         
-        # No choice but to draw
-        view.say("The universe demands a draw...")
+        if random.random() < 0.1:
+            view.say(random.choice(self._smart_quotes))
+        
         return DrawCardAction()
     
     # =========================================================================
-    # REQUIRED: on_event
+    # EVENT TRACKING
     # =========================================================================
     
     def on_event(self, event: GameEvent, view: BotView) -> None:
-        """
-        Track game state for probability calculations.
-        
-        Inputs:
-            event - The event that occurred
-            view - Current game view
-        """
-        # Skip chat events
+        """Track game state for probability calculations."""
         if event.event_type == EventType.BOT_CHAT:
             return
         
-        # Track game start to know initial player count
+        # Track game start - everyone has 1 Defuse
         if event.event_type == EventType.GAME_START:
             player_ids = event.data.get("player_ids", [])
             self._initial_player_count = len(player_ids)
-            self._known_kittens_in_deck = self._initial_player_count - 1
+            # Everyone starts with a Defuse
+            self._players_with_defuse = set(player_ids)
+            if view.my_id in self._players_with_defuse:
+                pass  # We know we have one
         
         # Track eliminations
         if event.event_type == EventType.PLAYER_ELIMINATED:
-            eliminated_id = event.player_id
-            if eliminated_id:
-                self._eliminated_players.add(eliminated_id)
-                # An elimination usually means a kitten took them out
-                # Reduce our estimate of kittens in deck
-                if self._known_kittens_in_deck is not None:
-                    self._known_kittens_in_deck = max(
-                        0, self._known_kittens_in_deck - 1
-                    )
+            self._eliminated_count += 1
+            eliminated = event.player_id
+            if eliminated:
+                self._players_with_defuse.discard(eliminated)
+                self._players_who_defused.discard(eliminated)
         
-        # Track deck shuffles (invalidates our knowledge)
+        # Track Defuse usage
+        if event.event_type == EventType.EXPLODING_KITTEN_DEFUSED:
+            player = event.player_id
+            if player:
+                self._players_who_defused.add(player)
+                self._players_with_defuse.discard(player)
+        
+        # Track if Defuse is discarded
+        if event.event_type == EventType.CARD_DISCARDED:
+            card_type = event.data.get("card_type")
+            if card_type == "DefuseCard":
+                self._defuse_in_discard = True
+        
+        # Track cards played (some end up in discard)
+        if event.event_type == EventType.CARD_PLAYED:
+            card_type = event.data.get("card_type")
+            if card_type == "DefuseCard":
+                self._defuse_in_discard = True
+        
+        # Track shuffles (invalidates our knowledge)
         if event.event_type == EventType.DECK_SHUFFLED:
             self._known_top_cards = []
             self._deck_shuffled_since_peek = True
             self._cards_drawn_since_peek = 0
+            self._just_shuffled = True  # Mark that we just shuffled
         
-        # Track card draws (shifts our knowledge window)
+        # Track draws
         if event.event_type == EventType.CARD_DRAWN:
             self._cards_drawn_since_peek += 1
+            # If someone draws from discard, they might take the Defuse
+            if event.data.get("from") == "discard":
+                card_type = event.data.get("card_type")
+                if card_type == "DefuseCard":
+                    self._defuse_in_discard = False
         
-        # Track our own See the Future results
+        # Track our See-the-Future
         if event.event_type == EventType.CARDS_PEEKED:
             if event.player_id == view.my_id:
-                peeked = event.data.get("card_types", [])
-                self._known_top_cards = list(peeked)
+                self._known_top_cards = list(event.data.get("card_types", []))
                 self._deck_shuffled_since_peek = False
                 self._cards_drawn_since_peek = 0
         
-        # Track Exploding Kitten insertions from other players
+        # Track kitten insertions (invalidates our knowledge if not us)
         if event.event_type == EventType.EXPLODING_KITTEN_INSERTED:
             if event.player_id != view.my_id:
-                # Our knowledge is now stale
                 self._known_top_cards = []
                 self._deck_shuffled_since_peek = True
         
-        # Track defused kittens (kitten went back into deck)
-        if event.event_type == EventType.EXPLODING_KITTEN_DEFUSED:
-            # A defused kitten is STILL in the deck (not removed)
-            # So no change to kitten count needed
-            pass
+        # Check discard pile for Defuse (belt and suspenders)
+        for card in view.discard_pile:
+            if card.card_type == "DefuseCard":
+                self._defuse_in_discard = True
+                break
     
     # =========================================================================
-    # REQUIRED: react
+    # REACT
     # =========================================================================
     
     def react(self, view: BotView, triggering_event: GameEvent) -> Action | None:
         """
-        Decide whether to Nope an event.
+        Decide whether to nope an action.
         
-        Einstein only Nopes when:
-        1. The action directly threatens him
-        2. A leading player gains too much advantage
-        
-        Inputs:
-            view - Current game view
-            triggering_event - The event we can react to
-        Returns: PlayCardAction with Nope, or None
+        Einstein ALWAYS nopes hurtful actions against himself!
         """
         import random
         
-        nope_cards = view.get_cards_of_type("NopeCard")
-        
-        if nope_cards and self._should_nope(triggering_event, view):
+        nopes = view.get_cards_of_type("NopeCard")
+        if nopes and self._should_nope(triggering_event, view):
             view.say(random.choice(self._nope_quotes))
-            return PlayCardAction(card=nope_cards[0])
+            return PlayCardAction(card=nopes[0])
         
         return None
     
     # =========================================================================
-    # REQUIRED: choose_defuse_position
+    # DEFUSE POSITION
     # =========================================================================
     
     def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
         """
-        Choose optimal position for the Exploding Kitten.
+        Choose where to place the defused kitten.
         
-        Einstein's Strategy:
-        - Place kitten where next player is most likely to draw it
-        - Account for their likely card usage (Skip, Attack, etc.)
-        - Position 1-2 is usually optimal (not 0, as they might Skip)
-        
-        Inputs:
-            view - Current game view
-            draw_pile_size - Size of draw pile
-        Returns: Position to insert (0 = top)
+        Strategy:
+        - Target a player who likely LACKS Defuse (used one, or few cards)
+        - Calculate how many draws until it reaches them
+        - Place kitten at that position
         """
         import random
         
         view.say(random.choice(self._defuse_quotes))
         
-        if draw_pile_size == 0:
+        if draw_pile_size <= 1:
             return 0
         
-        if draw_pile_size == 1:
-            return 0  # Only one spot
+        # Find the most vulnerable opponent
+        # Priority: 1) Already used Defuse, 2) Fewest cards
+        most_vulnerable = None
         
-        # Get next player's card count
-        next_player = self._get_next_player(view)
-        if next_player:
-            next_cards = view.other_player_card_counts.get(next_player, 0)
-            
-            # If they have many cards, they likely have Skip/Attack
-            # Place kitten slightly deeper so Skip doesn't save them
-            if next_cards > 6:
-                # Place at position 2-3 (they might skip 1)
-                return min(random.randint(2, 3), draw_pile_size)
-            else:
-                # They probably can't skip - put it at top
-                return random.randint(0, min(1, draw_pile_size))
+        for player in view.other_players:
+            if player in self._players_who_defused:
+                most_vulnerable = player
+                break
         
-        # Default: near the top
+        if most_vulnerable is None:
+            most_vulnerable = self._get_weakest_opponent(view)
+        
+        # Calculate their position in turn order from us
+        if most_vulnerable:
+            turn_order = list(view.turn_order)
+            if view.my_id in turn_order:
+                my_idx = turn_order.index(view.my_id)
+                alive = set(view.other_players) | {view.my_id}
+                
+                steps = 0
+                for i in range(1, len(turn_order)):
+                    candidate = turn_order[(my_idx + i) % len(turn_order)]
+                    if candidate in alive:
+                        steps += 1
+                        if candidate == most_vulnerable:
+                            break
+                
+                # Place kitten so it's drawn on their turn
+                target_pos = max(0, min(steps - 1, draw_pile_size))
+                return target_pos
+        
+        # Default: put it near the top for next player
         return random.randint(0, min(1, draw_pile_size))
     
     # =========================================================================
-    # REQUIRED: choose_card_to_give
+    # CARD TO GIVE
     # =========================================================================
     
     def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
-        """
-        Choose which card to give when targeted by Favor.
-        
-        Einstein's Priority (always give least valuable):
-        1. Cat cards (useless alone)
-        2. Skip/Shuffle (expendable)
-        3. See the Future (nice but not critical)
-        4. Attack (useful but replaceable)
-        5. NEVER give Nope or Defuse if avoidable
-        
-        Inputs:
-            view - Current game view
-            requester_id - Who's requesting
-        Returns: Card to give away
-        """
+        """Give the least valuable card when targeted by Favor."""
         import random
         
         hand = list(view.my_hand)
         
-        view.say("Fine, take some of my early research...")
+        # Priority: Cat cards > Skip/Shuffle > STF > Attack > Favor > Nope > Defuse
         
-        # 1. Give cat cards first (worthless alone)
         cats = [c for c in hand if "Cat" in c.card_type]
         if cats:
             return random.choice(cats)
         
-        # 2. Give Skip or Shuffle
         expendable = [c for c in hand if c.card_type in ("SkipCard", "ShuffleCard")]
         if expendable:
             return random.choice(expendable)
         
-        # 3. Give See the Future
         stf = [c for c in hand if c.card_type == "SeeTheFutureCard"]
         if stf:
             return random.choice(stf)
         
-        # 4. Give Attack
         attacks = [c for c in hand if c.card_type == "AttackCard"]
         if attacks:
             return random.choice(attacks)
         
-        # 5. Give Favor back (if we have it)
         favors = [c for c in hand if c.card_type == "FavorCard"]
         if favors:
             return random.choice(favors)
         
-        # 6. Avoid Nope
-        non_nope = [c for c in hand if c.card_type != "NopeCard" and c.card_type != "DefuseCard"]
-        if non_nope:
-            return random.choice(non_nope)
+        non_critical = [c for c in hand if c.card_type not in ("NopeCard", "DefuseCard")]
+        if non_critical:
+            return random.choice(non_critical)
         
-        # 7. Avoid Defuse at all costs
         non_defuse = [c for c in hand if c.card_type != "DefuseCard"]
         if non_defuse:
             return random.choice(non_defuse)
         
-        # 8. Last resort
         return random.choice(hand)
     
     # =========================================================================
-    # REQUIRED: on_explode
+    # ON EXPLODE
     # =========================================================================
     
     def on_explode(self, view: BotView) -> None:
-        """
-        Famous last words.
-        
-        Inputs: view - Current game view
-        """
+        """Famous last words."""
         import random
-        view.say(random.choice(self._explosion_quotes))
+        view.say(random.choice(self._death_quotes))
