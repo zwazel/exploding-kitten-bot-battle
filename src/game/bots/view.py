@@ -8,11 +8,63 @@ cannot access hidden information like other players' hands or the draw pile.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+import queue
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from game.cards.base import Card
     from game.history import GameEvent
+
+
+class ChatProxy:
+    """
+    A secure, write-only proxy for the chat queue.
+    
+    This class prevents bots from:
+    - Directly accessing the underlying queue
+    - Spoofing player IDs in messages
+    - Draining or manipulating the queue
+    
+    Bots can only send messages through the `send()` method.
+    """
+    
+    __slots__ = ('_queue', '_player_id', '_max_length')
+    
+    def __init__(self, q: queue.Queue[tuple[str, str]], player_id: str, max_length: int = 200) -> None:
+        """
+        Initialize the chat proxy.
+        
+        Args:
+            q: The underlying queue to send messages to.
+            player_id: The ID of the player this proxy is for (cannot be changed).
+            max_length: Maximum message length (truncated if longer).
+        """
+        object.__setattr__(self, '_queue', q)
+        object.__setattr__(self, '_player_id', player_id)
+        object.__setattr__(self, '_max_length', max_length)
+    
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Prevent modification of proxy attributes."""
+        raise AttributeError("ChatProxy is read-only")
+    
+    def __delattr__(self, name: str) -> None:
+        """Prevent deletion of proxy attributes."""
+        raise AttributeError("ChatProxy is read-only")
+    
+    def send(self, message: str) -> None:
+        """
+        Send a chat message.
+        
+        Args:
+            message: The message to send (will be truncated to max_length).
+        """
+        if not isinstance(message, str):
+            return  # Silently ignore non-string messages
+        
+        # Truncate message to prevent spam
+        truncated = message[:self._max_length] if message else ""
+        if truncated:
+            self._queue.put((self._player_id, truncated))
 
 
 class BotView:
@@ -51,7 +103,7 @@ class BotView:
         turn_order: tuple[str, ...],
         is_my_turn: bool,
         recent_events: tuple[GameEvent, ...],
-        chat_queue: Any | None = None,
+        chat_proxy: ChatProxy | None = None,
     ) -> None:
         """
         Initialize the bot view.
@@ -68,7 +120,7 @@ class BotView:
             turn_order: The order of play.
             is_my_turn: Whether it's currently this bot's turn.
             recent_events: Recent game events for context.
-            chat_queue: Internal queue for chat messages (set by engine).
+            chat_proxy: Secure proxy for sending chat messages.
         """
         self.my_id: str = my_id
         self.my_hand: tuple[Card, ...] = my_hand
@@ -81,7 +133,7 @@ class BotView:
         self.turn_order: tuple[str, ...] = turn_order
         self.is_my_turn: bool = is_my_turn
         self.recent_events: tuple[GameEvent, ...] = recent_events
-        self._chat_queue: Any | None = chat_queue
+        self._chat_proxy: ChatProxy | None = chat_proxy
     
     def say(self, message: str) -> None:
         """
@@ -111,8 +163,8 @@ class BotView:
             - Messages are truncated to 200 characters.
             - Chat messages appear in the log with [CHAT] prefix.
         """
-        if self._chat_queue is not None:
-            self._chat_queue.put((self.my_id, message))
+        if self._chat_proxy is not None:
+            self._chat_proxy.send(message)
     
     def get_cards_of_type(self, card_type: str) -> tuple[Card, ...]:
         """
