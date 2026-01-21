@@ -201,3 +201,54 @@ lambda: bot.on_event(event, view)
 lambda b=bot, e=event, v=view: b.on_event(e, v)
 ```
 This is critical in loops where the lambda is executed in a thread after the loop variable has changed.
+
+## Anti-Cheat Security Measures
+
+The engine implements multiple layers of protection against malicious bots:
+
+### 1. ChatProxy (Write-Only Queue Access)
+Bots cannot access the raw chat queue. Instead, they receive a `ChatProxy` instance that:
+- Only exposes a `send(message)` method
+- Automatically enforces the correct player ID (no spoofing)
+- Truncates messages to 200 characters
+- Uses `__slots__` and blocks `__setattr__` to prevent attribute modification
+
+### 2. Event Isolation (Deep Copy)
+All events passed to bots are **deep copies** of the originals:
+- Events in `view.recent_events` are deep copied
+- Events passed to `on_event()` are deep copied
+- Mutations by bots cannot affect history or other bots
+
+### 3. Exception Handling
+Bot exceptions are caught and sandboxed:
+- `SystemExit` and `KeyboardInterrupt` are converted to `RuntimeError`
+- Exceptions in `on_event()` are silently caught (game continues)
+- Exceptions in `take_turn()` propagate but don't crash the process
+
+### 4. Input Validation
+The engine validates all bot actions independently:
+- Cards must be in the player's hand (identity check)
+- Target players must exist and be alive
+- Reaction cards are validated via `can_play_as_reaction()`
+- Actions per turn are limited to 1000 (prevents infinite loops)
+
+### Security Test Suite
+The `tests/test_anti_cheat.py` file contains 31 tests covering 15 potential cheating vectors:
+1. Object graph traversal via cards
+2. Queue object inspection
+3. Frozen dataclass bypass
+4. Playing fabricated cards
+5. Target player ID manipulation
+6. Invalid action types
+7. Out-of-bounds defuse position
+8. Combo card counting manipulation
+9. Reaction card spoofing
+10. Exception injection
+11. Memory/resource exhaustion
+12. Global state pollution
+13. Card reference leaking
+14. GameEvent.data mutation
+15. RNG prediction
+
+### Known Limitations
+**Global State Pollution**: Bots run in the same Python process and CAN monkey-patch classes. Full isolation would require subprocess sandboxing, which is out of scope for this educational framework. The framework trusts that bots are not intentionally malicious at the Python module level.

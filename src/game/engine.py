@@ -7,6 +7,7 @@ coordinates bots, handles card plays, and records all events.
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from typing import Any, Callable, TypeVar
 import threading
@@ -23,7 +24,7 @@ from game.bots.base import (
     PlayComboAction,
 )
 from game.bots.loader import BotLoader
-from game.bots.view import BotView
+from game.bots.view import BotView, ChatProxy
 from game.cards.base import Card
 from game.cards import register_all_cards
 from game.cards.registry import CardRegistry
@@ -184,7 +185,7 @@ class GameEngine:
             try:
                 result = func()
                 result_queue.put((True, result))
-            except Exception as e:
+            except BaseException as e:  # Catch SystemExit, KeyboardInterrupt too
                 result_queue.put((False, e))
         
         thread = threading.Thread(target=worker, daemon=True)
@@ -226,7 +227,11 @@ class GameEngine:
             if success:
                 return value
             else:
-                # Re-raise any exception from the bot
+                # Re-raise any exception from the bot (but convert SystemExit to RuntimeError)
+                if isinstance(value, SystemExit):
+                    raise RuntimeError(f"Bot called SystemExit: {value}")
+                elif isinstance(value, KeyboardInterrupt):
+                    raise RuntimeError(f"Bot caused KeyboardInterrupt: {value}")
                 raise value
         except queue.Empty:
             # Thread finished but no result - shouldn't happen
@@ -327,8 +332,20 @@ class GameEngine:
                 other_player_ids.append(pid)
         
         # Get recent events (last 10 for context)
+        # Deep copy events to prevent bots from mutating shared event data
         all_events: tuple[GameEvent, ...] = self._history.get_events()
-        recent: tuple[GameEvent, ...] = all_events[-10:] if all_events else ()
+        recent: tuple[GameEvent, ...] = tuple(
+            GameEvent(
+                event_type=e.event_type,
+                step=e.step,
+                player_id=e.player_id,
+                data=copy.deepcopy(e.data),
+            )
+            for e in all_events[-10:]
+        ) if all_events else ()
+        
+        # Create a secure chat proxy for this player
+        chat_proxy = ChatProxy(self._chat_queue, player_id)
         
         return BotView(
             my_id=player_id,
@@ -337,12 +354,12 @@ class GameEngine:
             discard_pile=tuple(self._state.discard_pile),
             draw_pile_count=self._state.draw_pile_count,
             other_players=tuple(other_player_ids),
-            other_player_card_counts=other_player_counts,
+            other_player_card_counts=dict(other_player_counts),  # Copy dict too
             current_player=current_player_id,
             turn_order=self._turn_manager.turn_order,
             is_my_turn=(player_id == current_player_id),
             recent_events=recent,
-            chat_queue=self._chat_queue,
+            chat_proxy=chat_proxy,
         )
     
     # --- Event Recording ---
@@ -361,14 +378,24 @@ class GameEngine:
             player_state = self._state.players.get(pid, None)
             if player_state is not None and player_state.is_alive:
                 view: BotView = self._create_bot_view(pid)
+                # Create a deep copy of the event for each bot to prevent mutation
+                event_copy = GameEvent(
+                    event_type=event.event_type,
+                    step=event.step,
+                    player_id=event.player_id,
+                    data=copy.deepcopy(event.data),
+                )
                 try:
                     self._call_with_timeout(
-                        lambda b=bot, e=event, v=view: b.on_event(e, v),
+                        lambda b=bot, e=event_copy, v=view: b.on_event(e, v),
                         pid,
                         "on_event",
                     )
                 except BotTimeoutError:
                     # Just skip notification for slow bots, don't eliminate
+                    pass
+                except Exception:
+                    # Catch all exceptions from on_event - don't let bots crash the game
                     pass
         
         return event
