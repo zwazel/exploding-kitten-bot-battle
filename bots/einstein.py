@@ -540,6 +540,18 @@ class Einstein(Bot):
                 view.say(random.choice(self._smart_quotes))
                 return PlayCardAction(card=stf[0])
         
+        # 2b. Use Shuffle if we know danger is in position 2 or 3 (coming soon)
+        if not self._deck_shuffled_since_peek and self._known_top_cards:
+            idx = self._cards_drawn_since_peek
+            for i in range(idx + 1, min(idx + 3, len(self._known_top_cards))):
+                if self._known_top_cards[i] == "ExplodingKittenCard":
+                    # Danger is coming soon - shuffle to randomize
+                    shuffles = view.get_cards_of_type("ShuffleCard")
+                    if shuffles:
+                        view.say(random.choice(self._shuffle_quotes))
+                        return PlayCardAction(card=shuffles[0])
+                    break
+        
         # =====================================================================
         # PHASE 3: COMBOS (priority order)
         # =====================================================================
@@ -599,8 +611,8 @@ class Einstein(Bot):
         # PHASE 4: HIGH PROBABILITY - Evasive action
         # =====================================================================
         
-        # Thresholds based on whether we have Defuse
-        danger_threshold = 0.40 if has_defuse else 0.30
+        # Lower thresholds for being more cautious
+        danger_threshold = 0.35 if has_defuse else 0.25
         
         if explosion_prob > danger_threshold:
             view.say(random.choice(self._danger_quotes))
@@ -779,11 +791,15 @@ class Einstein(Bot):
                             break
                 
                 # Place kitten so it's drawn on their turn
+                # If vulnerable player is next (steps=1), put at top (0)
+                if steps == 1:
+                    return 0  # Top of deck - next draw gets it!
+                
                 target_pos = max(0, min(steps - 1, draw_pile_size))
                 return target_pos
         
-        # Default: put it near the top for next player
-        return random.randint(0, min(1, draw_pile_size))
+        # Default: put it at the top for next player
+        return 0
     
     # =========================================================================
     # CARD TO GIVE
