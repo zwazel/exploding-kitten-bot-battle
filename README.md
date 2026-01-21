@@ -176,7 +176,9 @@ if len(cat_cards) >= 2 and view.other_players:
 ### Playing Cards
 
 ```python
-# Find playable cards
+# Find playable cards during your turn
+# is_own_turn=True: filters for cards you can play proactively on your turn
+# is_own_turn=False: would filter for reaction cards (but use react() for that)
 playable = [c for c in view.my_hand if c.can_play(view, is_own_turn=True)]
 
 # Play a simple card
