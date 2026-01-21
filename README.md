@@ -14,8 +14,20 @@ A bot battle card game framework for educational coding exercises. Students impl
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/ -v
 ```
+
+### IDE Setup
+
+If you see import errors (red squiggles) in your bot files, you need to tell your IDE where the game code is located.
+
+**PyCharm:**
+1. Right-click the `src` folder in the project view.
+2. Select **Mark Directory as** > **Sources Root**.
+
+**VS Code:**
+1. Ensure you have installed the package using the command above.
+2. Select the correct Python interpreter (the one where you installed the package).
+
 
 ## Running a Game
 
