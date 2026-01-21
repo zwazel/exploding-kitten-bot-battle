@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, TypeVar
 import threading
 import queue
+import time
 
 from game.bots.base import (
     Action,
@@ -89,6 +90,7 @@ class GameEngine:
         self._quiet_mode: bool = quiet_mode
         self._chat_enabled: bool = chat_enabled
         self._bot_timeout: float | None = bot_timeout
+        self._chat_queue: queue.Queue = queue.Queue()
         
         # Register all game cards
         register_all_cards(self._registry)
@@ -176,10 +178,6 @@ class GameEngine:
         Raises:
             BotTimeoutError: If the function doesn't complete within the timeout.
         """
-        if self._bot_timeout is None:
-            # No timeout configured, call directly
-            return func()
-        
         result_queue: queue.Queue[tuple[bool, Any]] = queue.Queue()
         
         def worker() -> None:
@@ -191,11 +189,36 @@ class GameEngine:
         
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
-        thread.join(timeout=self._bot_timeout)
+        
+        # Monitor thread and chat queue
+        start_time = time.time()
+        timeout = self._bot_timeout
+        
+        while True:
+            # Process any pending chat messages
+            try:
+                while True:
+                    pid, msg = self._chat_queue.get_nowait()
+                    self._handle_chat(pid, msg)
+            except queue.Empty:
+                pass
+            
+            # Check if thread finished
+            if not thread.is_alive():
+                break
+            
+            # Check timeout
+            if timeout is not None:
+                elapsed = time.time() - start_time
+                if elapsed > timeout:
+                    break
+            
+            # Wait a bit to prevent busy loop, but verify frequently
+            thread.join(timeout=0.05)
         
         if thread.is_alive():
             # Bot timed out!
-            raise BotTimeoutError(player_id, method_name, self._bot_timeout)
+            raise BotTimeoutError(player_id, method_name, timeout or 0.0)
         
         # Get result from queue
         try:
@@ -207,7 +230,7 @@ class GameEngine:
                 raise value
         except queue.Empty:
             # Thread finished but no result - shouldn't happen
-            raise BotTimeoutError(player_id, method_name, self._bot_timeout)
+            raise BotTimeoutError(player_id, method_name, timeout or 0.0)
     
     def _eliminate_for_timeout(self, player_id: str, method_name: str) -> None:
         """
@@ -307,9 +330,6 @@ class GameEngine:
         all_events: tuple[GameEvent, ...] = self._history.get_events()
         recent: tuple[GameEvent, ...] = all_events[-10:] if all_events else ()
         
-        # Always provide chat callback - bots can talk in any context
-        chat_callback = self._handle_chat
-        
         return BotView(
             my_id=player_id,
             my_hand=tuple(player_state.hand) if player_state else (),
@@ -322,7 +342,7 @@ class GameEngine:
             turn_order=self._turn_manager.turn_order,
             is_my_turn=(player_id == current_player_id),
             recent_events=recent,
-            chat_callback=chat_callback,
+            chat_queue=self._chat_queue,
         )
     
     # --- Event Recording ---

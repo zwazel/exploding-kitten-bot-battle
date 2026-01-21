@@ -15,6 +15,7 @@ This is a Python-based bot battle card game framework. Students write bots that 
 - `GameState` is **never** exposed directly to bots
 - Bots receive a `BotView` - a safe, read-only snapshot
 - `BotView` only contains information the bot is allowed to see
+- Callbacks that could expose the engine instance (like chat) are replaced with `queue.Queue` to break reference chains (BotView -> Queue -> Engine)
 
 ### Card System
 - Each card type is a class extending `Card` base class
