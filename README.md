@@ -74,61 +74,139 @@ python -m game.main --no-chat
 
 ## Creating a Bot
 
-Create a Python file in `bots/` implementing the `Bot` interface:
+Create a Python file in `bots/` implementing the `Bot` interface. See `bots/random_bot.py` for a fully documented reference implementation!
+
+### Required Imports
 
 ```python
-from game.bots.base import Bot, Action, DrawCardAction, PlayCardAction, ChatAction
-from game.bots.view import BotView
-from game.cards.base import Card
-from game.history import GameEvent
+from game.bots.base import (
+    Bot,              # Base class (required)
+    Action,           # Type alias for all actions
+    DrawCardAction,   # End turn by drawing
+    PlayCardAction,   # Play a single card
+    PlayComboAction,  # Play multiple cards as a combo
+)
+from game.bots.view import BotView       # Your view of the game
+from game.cards.base import Card          # Card objects
+from game.history import GameEvent, EventType  # Event tracking
+```
 
+### Bot Template
+
+```python
 class MyBot(Bot):
     @property
     def name(self) -> str:
+        """Return your bot's display name."""
         return "MyBot"
     
     def take_turn(self, view: BotView) -> Action:
-        # Play a card, chat, or draw
+        """
+        Called when it's your turn.
+        
+        Available via view:
+        - view.my_hand: Your cards (tuple of Card objects)
+        - view.my_id: Your player ID
+        - view.other_players: IDs of alive opponents
+        - view.draw_pile_count: Cards remaining in deck
+        - view.discard_pile: Visible discard pile
+        - view.other_player_card_counts: Card count per opponent
+        - view.say(message): Send a chat message
+        
+        MUST return DrawCardAction() to end your turn!
+        """
         return DrawCardAction()
     
     def on_event(self, event: GameEvent, view: BotView) -> None:
-        # React to game events (optional)
+        """
+        Called for every game event (informational only).
+        
+        Useful event types:
+        - EventType.CARD_PLAYED
+        - EventType.CARD_DRAWN
+        - EventType.PLAYER_ELIMINATED
+        - EventType.DECK_SHUFFLED
+        """
         pass
     
     def react(self, view: BotView, triggering_event: GameEvent) -> Action | None:
-        # Play Nope card to cancel an action (optional)
+        """
+        Called during reaction rounds.
+        Return PlayCardAction with a Nope card to cancel, or None to pass.
+        """
         return None
     
     def choose_defuse_position(self, view: BotView, draw_pile_size: int) -> int:
-        # Where to put Exploding Kitten after defusing (0=top, next draw)
+        """
+        Choose where to reinsert the Exploding Kitten after defusing.
+        0 = top (next draw), draw_pile_size = bottom (safest).
+        """
         return 0
     
     def choose_card_to_give(self, view: BotView, requester_id: str) -> Card:
-        # Which card to give when targeted by Favor
+        """Choose which card to give when targeted by Favor."""
         return view.my_hand[0]
+    
+    def on_explode(self, view: BotView) -> None:
+        """
+        Called when you're about to explode (no Defuse).
+        Use view.say() for your last words!
+        """
+        view.say("Goodbye cruel world!")
+```
+
+### Card Combos
+
+Bots can play card combos using `PlayComboAction`:
+
+| Combo | Cards Required | Effect |
+|-------|----------------|--------|
+| **Two of a Kind** | 2 cards, same type | Steal random card from target |
+| **Three of a Kind** | 3 cards, same type | Name a card type, steal it from target |
+| **Five Different** | 5 cards, different types | Take any card from discard pile |
+
+```python
+# Example: Playing a two-of-a-kind combo
+cat_cards = [c for c in view.my_hand if c.card_type == "TacoCatCard"]
+if len(cat_cards) >= 2 and view.other_players:
+    target = view.other_players[0]
+    return PlayComboAction(cards=tuple(cat_cards[:2]), target_player_id=target)
+```
+
+### Playing Cards
+
+```python
+# Find playable cards
+playable = [c for c in view.my_hand if c.can_play(view, is_own_turn=True)]
+
+# Play a simple card
+return PlayCardAction(card=playable[0])
+
+# Play a card that targets a player (Favor, Attack)
+return PlayCardAction(card=favor_card, target_player_id=target_id)
 ```
 
 ## Bot Chat System
 
-Bots can send chat messages during their turn using `view.say()`:
+Bots can send chat messages anytime using `view.say()`:
 
 ```python
 def take_turn(self, view: BotView) -> Action:
-    # Send a chat message - simple!
-    view.say("Let's gooo!")
-    
-    # Then continue with your action
-    return DrawCardAction()
+    view.say("Let's gooo!")  # Send chat message
+    return DrawCardAction()  # Continue with action
+
+def on_explode(self, view: BotView) -> None:
+    view.say("NOOOOO!")  # Famous last words
 ```
 
 **Chat Rules:**
-- Bots can only chat during their own turn
-- Just call `view.say()` and continue with your action
+- Call `view.say()` in any bot method (`take_turn`, `react`, `on_event`, etc.)
 - Messages are truncated to 200 characters
-- All bots can see chat messages via `view.recent_events`
-- Chat events appear in game logs with `[CHAT]` prefix
+- All bots see chat via `view.recent_events`
+- Logs show `[CHAT]` prefix for chat, `[GAME]` for game events
+- **Tip:** Avoid responding to `BOT_CHAT` events in `on_event` to prevent infinite loops!
 
-See `bots/random_bot.py` for a working example with chat!
+See `bots/random_bot.py` for a complete example with chat integration!
 
 ## Project Structure
 
