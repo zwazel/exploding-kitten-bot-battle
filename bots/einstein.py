@@ -679,14 +679,23 @@ class Einstein(Bot):
         
         # 3. AGGRESSIVE STEALING (Vulture & Farming)
         if has_defuse:
+             # 3a. PROACTIVE DEFUSE THEFT: Steal Defuses from next player
+             three_combo = self._can_play_three_of_kind(view)
+             if three_combo:
+                  cards, target = three_combo
+                  next_player = self._get_next_player(view)
+                  if next_player and next_player not in self._players_who_defused:
+                       view.say("I'll take that Defuse!")
+                       return PlayComboAction(cards=cards, target_player_id=next_player, target_card_type="DefuseCard")
+             
              two_combo = self._can_play_two_of_kind(view)
              if two_combo:
                  base_cards, default_target = two_combo
                  
-                 # 3a. Vulture: Finish off weaklings (1 card left)
+                 # 3a. Vulture: Finish off weaklings (1-2 cards left)
                  for opponent in view.other_players:
-                      if view.other_player_card_counts.get(opponent, 0) == 1:
-                           view.say(f"Preying on the weak {opponent}!")
+                      if view.other_player_card_counts.get(opponent, 0) <= 2:
+                           view.say("Preying on the weak!")
                            return PlayComboAction(cards=base_cards, target_player_id=opponent)
                  
                  # 3b. Farming: Steal from rich if we have plenty of cards
@@ -696,13 +705,13 @@ class Einstein(Bot):
                            view.say(f"Taxing the rich {strongest}!")
                            return PlayComboAction(cards=base_cards, target_player_id=strongest)
 
-        # 3c. Favor - Use to get cards from strong opponents
+        # 3c. Favor - Use to get cards from opponents (low cost, high value)
         favors = view.get_cards_of_type("FavorCard")
         if favors and view.other_players:
             target = self._get_strongest_opponent(view)
             if target:
                 target_count = view.other_player_card_counts.get(target, 0)
-                if target_count >= 3:  # Only if they have plenty
+                if target_count >= 2:  # Use if they have any spare cards
                     view.say("Hand over something good!")
                     return PlayCardAction(card=favors[0], target_player_id=target)
         
@@ -733,6 +742,18 @@ class Einstein(Bot):
         # Without Defuse: 15% (Same, be cautious)
         # Originally 0.25 for has_defuse, but preserving Defuse is better than burning it.
         danger_threshold = 0.15
+        
+        # LATE-GAME DESPERATION: When deck is tiny, every draw is risky
+        # Burn resources to avoid drawing at all costs
+        if view.draw_pile_count <= 3:
+            attacks = view.get_cards_of_type("AttackCard")
+            if attacks and view.other_players:
+                view.say("Endgame protocol activated!")
+                return PlayCardAction(card=attacks[0])
+            skips = view.get_cards_of_type("SkipCard")
+            if skips:
+                view.say("Endgame skip!")
+                return PlayCardAction(card=skips[0])
         
         if explosion_prob > danger_threshold:
             view.say(random.choice(self._danger_quotes))
