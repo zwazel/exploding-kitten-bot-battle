@@ -41,10 +41,12 @@ The 3-of-a-kind combo allows you to **name a specific card type** to steal from 
 - Use `PlayComboAction(cards=..., target_player_id=..., target_card_type="DefuseCard")` to specify the card.
 - This is powerful for hunting Defuse cards when you know an opponent is hoarding them.
 
-### 5-Different Combo (Pop from Discard)
-The **5-different** combo draws the **TOP card** from the discard pile (`discard_pile.pop()`).
-- Before playing this combo, check `view.discard_pile[-1]` to verify the top card is desirable (e.g., Defuse).
-- Do not play it blindly hoping for a specific card buried deeper in the discard pile.
+### 5-Different Combo (Pick from Discard)
+The **5-different** combo allows you to **pick any card** currently in the discard pile.
+- Use `PlayComboAction(cards=..., target_card_type="DefuseCard")` to specify the card you want.
+- The engine will search the discard pile for a card of that type.
+- If found, you get it. If not found (or specified), it defaults to the top card (or nothing if empty).
+- **Tip**: Check `view.discard_pile` to see what's available before asking!
 
 ## File Organization
 

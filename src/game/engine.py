@@ -949,8 +949,8 @@ class GameEngine:
         
         Combo patterns:
         - 2 of a kind: steal random card from target player
-        - 3 of a kind: name and steal specific card (placeholder: random)
-        - 5 different card types: draw a card from the discard pile
+        - 3 of a kind: name and steal specific card
+        - 5 different card types: pick any card from the discard pile
         
         Args:
             player_id: The player playing the combo.
@@ -1077,12 +1077,49 @@ class GameEngine:
                  self.log(f"  -> 3-of-a-kind played but no card named! Wasted.")
         
         elif combo_type == "five_different":
-            # Draw a card from the discard pile
-            drawn_card = self._draw_from_discard(player_id)
-            if drawn_card:
-                self.log(f"  -> Drew from discard: {drawn_card.name}")
-            else:
+            # Pick a specific card from the discard pile
+            player_state = self._state.get_player(player_id)
+            if not player_state:
+                return
+
+            if not self._state.discard_pile:
                 self.log(f"  -> Discard pile is empty!")
+                return
+
+            picked_card = None
+            
+            # If bot requested a specific type, try to find it
+            if target_card_type:
+                # Find the LAST instance (most recently played?) or just any instance.
+                # Searching from end (top) to start (bottom) makes sense to find most recent.
+                found_index = -1
+                for i in range(len(self._state.discard_pile) - 1, -1, -1):
+                    if self._state.discard_pile[i].card_type == target_card_type:
+                        found_index = i
+                        break
+                
+                if found_index != -1:
+                    picked_card = self._state.discard_pile.pop(found_index)
+                    self.log(f"  -> Picked named card from discard: {picked_card.name}")
+                else:
+                    self.log(f"  -> Requested {target_card_type} not found in discard.")
+                    # Fallback: Don't give anything? Or give top?
+                    # Rule usually implies you must pick a card that Exists. If you ask for one that doesn't, you get nothing.
+                    self.log(f"  -> Combo wasted.")
+                    return
+            else:
+                # No type specified - default to top card (backward compatibility)
+                picked_card = self._state.discard_pile.pop()
+                self.log(f"  -> No card named, picked top of discard: {picked_card.name}")
+
+            if picked_card:
+                player_state.hand.append(picked_card)
+                
+                self._record_event(
+                    EventType.CARD_DRAWN,
+                    player_id,
+                    {"card_type": picked_card.card_type, "from": "discard", "method": "combo_5"},
+                )
     
     def _steal_card_from_player(
         self,
