@@ -34,12 +34,12 @@ This is a Python-based bot battle card game framework. Students write bots that 
 
 ## Bot Implementation Gotchas
 
-### 3-of-a-kind is Inferior
-The game engine implements **3-of-a-kind** (Combo) as a **RANDOM STEAL**, effectively identical to 2-of-a-kind but costing 3 cards.
-- **Do NOT implement 3-of-a-kind logic.**
-- Always play 2-of-a-kind instead if you have a pair.
-- If you have 3 matching cards, play 2 (keep 1).
-- This saves 1 card for the exact same effect.
+### 3-of-a-kind (Named Steal)
+The 3-of-a-kind combo allows you to **name a specific card type** to steal from a target.
+- If the target has the card, they MUST give it to you.
+- If the target does NOT have the card, nothing happens (combo wasted).
+- Use `PlayComboAction(cards=..., target_player_id=..., target_card_type="DefuseCard")` to specify the card.
+- This is powerful for hunting Defuse cards when you know an opponent is hoarding them.
 
 ### 5-Different Combo (Pop from Discard)
 The **5-different** combo draws the **TOP card** from the discard pile (`discard_pile.pop()`).
