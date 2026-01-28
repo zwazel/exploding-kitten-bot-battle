@@ -15,7 +15,7 @@ A bot battle card game framework for educational coding exercises. Students impl
 > ⚠️ **IMPORTANT:** You MUST run this command before anything else works!
 
 ```bash
-pip install -e ".[dev]"
+pip install -e .
 ```
 
 This installs the game module so Python can find it. Run this **once** from the project root folder.
