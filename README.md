@@ -12,9 +12,29 @@ A bot battle card game framework for educational coding exercises. Students impl
 
 ## Setup
 
+> ⚠️ **IMPORTANT:** You MUST run this command before anything else works!
+
 ```bash
-pip install -e ".[dev]"
+pip install -e .
 ```
+
+This installs the game module so Python can find it. Run this **once** from the project root folder.
+
+### Troubleshooting: "No module named 'game'"
+
+If you see this error when running `python -m game.main`:
+
+```
+ModuleNotFoundError: No module named 'game'
+```
+
+**Causes & Solutions:**
+
+| Cause                         | Solution                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| Didn't run `pip install -e .` | Run `pip install -e ".[dev]"` from the project root                             |
+| Wrong terminal/environment    | Make sure you're in the project folder and using the correct Python environment |
+| Using a different Python      | Check with `where python` (Windows) — use the same Python you installed to      |
 
 ### IDE Setup
 
@@ -59,18 +79,18 @@ python -m game.main --no-chat
 
 ### CLI Options
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--bots-dir` | `./bots` | Directory with bot files |
-| `--bot FILE[:N]` | - | Load bot file (N copies, default 1) |
-| `--deck-config` | `configs/default_deck.json` | Deck configuration |
-| `--seed` | Random | Seed for reproducibility |
-| `--history` | - | Save history JSON |
-| `--stats` | Off | Run statistics mode (runs verification first, disqualifies slow bots) |
-| `--iterations` | `100` | Number of games to run in statistics mode |
-| `--workers` | CPU count | Parallel workers for statistics mode |
-| `--no-chat` | Off | Disable chat output (keeps console cleaner) |
-| `--timeout` | `5.0` | Bot timeout in seconds (0 to disable). Used in verification run |
+| Option           | Default                     | Description                                                           |
+| ---------------- | --------------------------- | --------------------------------------------------------------------- |
+| `--bots-dir`     | `./bots`                    | Directory with bot files                                              |
+| `--bot FILE[:N]` | -                           | Load bot file (N copies, default 1)                                   |
+| `--deck-config`  | `configs/default_deck.json` | Deck configuration                                                    |
+| `--seed`         | Random                      | Seed for reproducibility                                              |
+| `--history`      | -                           | Save history JSON                                                     |
+| `--stats`        | Off                         | Run statistics mode (runs verification first, disqualifies slow bots) |
+| `--iterations`   | `100`                       | Number of games to run in statistics mode                             |
+| `--workers`      | CPU count                   | Parallel workers for statistics mode                                  |
+| `--no-chat`      | Off                         | Disable chat output (keeps console cleaner)                           |
+| `--timeout`      | `5.0`                       | Bot timeout in seconds (0 to disable). Used in verification run       |
 
 ## Creating a Bot
 
@@ -159,11 +179,11 @@ class MyBot(Bot):
 
 Bots can play card combos using `PlayComboAction`:
 
-| Combo | Cards Required | Effect |
-|-------|----------------|--------|
-| **Two of a Kind** | 2 cards, same type | Steal random card from target |
-| **Three of a Kind** | 3 cards, same type | Name a card type, steal it from target |
-| **Five Different** | 5 cards, different types | Take any card from discard pile |
+| Combo               | Cards Required           | Effect                                 |
+| ------------------- | ------------------------ | -------------------------------------- |
+| **Two of a Kind**   | 2 cards, same type       | Steal random card from target          |
+| **Three of a Kind** | 3 cards, same type       | Name a card type, steal it from target |
+| **Five Different**  | 5 cards, different types | Take any card from discard pile        |
 
 ```python
 # Example: Playing a two-of-a-kind combo
