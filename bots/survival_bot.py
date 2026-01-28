@@ -355,7 +355,22 @@ class SurvivalBot(Bot):
                         )
                         phrase = random.choice(self._survival_taunts)
                         view.say(phrase)
-                        return PlayComboAction(cards=combo_cards, target_player_id=target)
+                        
+                        target_card_type = None
+                        if combo_type == "three_of_a_kind":
+                            # Survival priority: Get Defuse if we're low, otherwise Nope
+                            if defuse_count < 1:
+                                target_card_type = "DefuseCard"
+                            elif nope_count < 1:
+                                target_card_type = "NopeCard"
+                            else:
+                                target_card_type = "DefuseCard" # Always good to have more
+                                
+                        return PlayComboAction(
+                            cards=combo_cards, 
+                            target_player_id=target,
+                            target_card_type=target_card_type
+                        )
         
         # Play Favor if we're well-defended
         if defuse_count >= 1 and nope_count >= 1:

@@ -514,7 +514,13 @@ class Einstein(Bot):
         
         if not has_defuse:
             # CRITICAL: Try to steal a Defuse first!
-            # note: 3-of-a-kind is disabled because engine implements it as random steal (same as 2-of-a-kind)
+            # 3-of-a-kind: We can NAME the card now!
+            three_combo = self._can_play_three_of_kind(view)
+            if three_combo:
+                cards, target = three_combo
+                view.say("CRITICAL: I need that Defuse!")
+                # Name "DefuseCard" to force them to give it if they have it
+                return PlayComboAction(cards=cards, target_player_id=target, target_card_type="DefuseCard")
             
             # Try 2-of-a-kind steal
             two_combo = self._can_play_two_of_kind(view)
