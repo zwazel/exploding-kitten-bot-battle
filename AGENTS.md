@@ -32,6 +32,20 @@ This is a Python-based bot battle card game framework. Students write bots that 
 - Same seed = same game outcome (given same bot behavior)
 - Useful for testing and debugging
 
+## Bot Implementation Gotchas
+
+### 3-of-a-kind (Named Steal)
+The 3-of-a-kind combo allows you to **name a specific card type** to steal from a target.
+- If the target has the card, they MUST give it to you.
+- If the target does NOT have the card, nothing happens (combo wasted).
+- Use `PlayComboAction(cards=..., target_player_id=..., target_card_type="DefuseCard")` to specify the card.
+- This is powerful for hunting Defuse cards when you know an opponent is hoarding them.
+
+### 5-Different Combo (Pop from Discard)
+The **5-different** combo draws the **TOP card** from the discard pile (`discard_pile.pop()`).
+- Before playing this combo, check `view.discard_pile[-1]` to verify the top card is desirable (e.g., Defuse).
+- Do not play it blindly hoping for a specific card buried deeper in the discard pile.
+
 ## File Organization
 
 ```

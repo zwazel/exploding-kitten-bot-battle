@@ -942,6 +942,7 @@ class GameEngine:
         player_id: str,
         cards: list[Card],
         target_player_id: str | None = None,
+        target_card_type: str | None = None,
     ) -> bool:
         """
         Play a combo of cards.
@@ -1007,6 +1008,7 @@ class GameEngine:
                 "count": len(cards),
                 "combo_type": combo_type,
                 "target": target_player_id,
+                "target_card_type": target_card_type,
             },
         )
         
@@ -1016,7 +1018,7 @@ class GameEngine:
             return False
         
         # Execute combo effect based on pattern
-        self._execute_combo_effect(player_id, combo_type, target_player_id)
+        self._execute_combo_effect(player_id, combo_type, target_player_id, target_card_type)
         
         return True
     
@@ -1025,6 +1027,7 @@ class GameEngine:
         player_id: str,
         combo_type: str,
         target_player_id: str | None,
+        target_card_type: str | None = None,
     ) -> None:
         """
         Execute the effect of a combo based on its type.
@@ -1048,18 +1051,30 @@ class GameEngine:
                 self.log(f"  -> Target has no cards to steal!")
         
         elif combo_type == "three_of_a_kind":
-            # In the real game, player names a card to steal
-            # For placeholder, just steal a random card from target
+            # 3-of-a-kind: player names a card to steal
             stolen_card = None
-            if target_player_id:
-                stolen_card = self._steal_card_from_player(player_id, target_player_id)
+            if target_player_id and target_card_type:
+                target_state = self._state.get_player(target_player_id)
+                if target_state:
+                    # Look for the specific card
+                    found_card = next((c for c in target_state.hand if c.card_type == target_card_type), None)
+                    if found_card:
+                        target_state.hand.remove(found_card)
+                        self._state.get_player(player_id).hand.append(found_card)
+                        stolen_card = found_card
+                        self.log(f"  -> NAMED {target_card_type} and stole it from {target_player_id}!")
+                        
+                        # Record the steal event
+                        self._record_event(
+                            EventType.CARD_STOLEN,
+                            player_id,
+                            {"target": target_player_id, "card_type": stolen_card.card_type, "method": "named_steal"},
+                        )
+                    else:
+                         self.log(f"  -> NAMED {target_card_type} but {target_player_id} doesn't have it!")
             else:
-                stolen_card = self.steal_random_card(player_id)
-            
-            if stolen_card:
-                self.log(f"  -> Named and stole: {stolen_card.name}")
-            else:
-                self.log(f"  -> Target doesn't have that card!")
+                 # Fallback if no card named (shouldn't happen with correct bots)
+                 self.log(f"  -> 3-of-a-kind played but no card named! Wasted.")
         
         elif combo_type == "five_different":
             # Draw a card from the discard pile
@@ -1297,7 +1312,12 @@ class GameEngine:
             elif isinstance(action, PlayComboAction):
                 cards: list[Card] = list(action.cards)
                 if len(cards) >= 2 and all(c.can_combo() for c in cards):
-                    self._play_combo(player_id, cards, action.target_player_id)
+                    self._play_combo(
+                        player_id, 
+                        cards, 
+                        action.target_player_id,
+                        getattr(action, "target_card_type", None)
+                    )
                 else:
                     self.log(f"{player_id} tried to play invalid combo")
         
