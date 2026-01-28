@@ -456,6 +456,12 @@ class Einstein(Bot):
         if combo_type in ("two_of_a_kind", "three_of_a_kind"):
             if self._is_targeting_me(event, view):
                 return True
+                
+        # Prevent opponents from retrieving Defuse (5-different)
+        if combo_type == "five_different":
+            target_type = event.data.get("target_card_type")
+            if target_type == "DefuseCard":
+                return True
         
         return False
     
@@ -525,7 +531,15 @@ class Einstein(Bot):
         # =====================================================================
         
         if not has_defuse:
-            # CRITICAL: Try to steal a Defuse first!
+            # CRITICAL: Try to get a Defuse via 5-different (Guaranteed from discard)
+            five_combo = self._can_play_five_different(view)
+            if five_combo:
+                cards, target_type = five_combo
+                if target_type == "DefuseCard":
+                     view.say("Retrieving that Defuse from the discard!")
+                     return PlayComboAction(cards=cards, target_card_type=target_type)
+            
+            # CRITICAL: Try to steal a Defuse!
             # 3-of-a-kind: We can NAME the card now!
             three_combo = self._can_play_three_of_kind(view)
             if three_combo:
@@ -543,14 +557,15 @@ class Einstein(Bot):
                     view.say("Desperate times call for desperate measures!")
                     return PlayComboAction(cards=cards, target_player_id=target)
             
-            # 5-different to get Defuse from discard
-            five_combo = self._can_play_five_different(view)
+            # 5-different (cleanup if we didn't use it for Defuse above)
             if five_combo:
                 cards, target_type = five_combo
-                if target_type == "DefuseCard":
-                     view.say("Retrieving that Defuse from the discard!")
-                     return PlayComboAction(cards=cards, target_card_type=target_type)
-            
+                 # If we are here, target wasn't Defuse (or we prioritized 3/2 combo... wait no)
+                 # Actually if we are panic mode, we take whatever we can get?
+                 # If we can get a Nope or Attack, that's good too.
+                view.say(f"Retrieving {target_type} from discard!")
+                return PlayComboAction(cards=cards, target_card_type=target_type)
+
             # Use Favor to try to get cards (maybe Defuse)
             favors = view.get_cards_of_type("FavorCard")
             if favors and view.other_players:
@@ -702,9 +717,10 @@ class Einstein(Bot):
         # =====================================================================
         
         # LOWERED thresholds for maximum survival
-        # With Defuse: 25% (we have insurance)
-        # Without Defuse: 15% (be extremely cautious)
-        danger_threshold = 0.25 if has_defuse else 0.15
+        # With Defuse: 15% (Preserve Defuse! Only use if risk is low-ish)
+        # Without Defuse: 15% (Same, be cautious)
+        # Originally 0.25 for has_defuse, but preserving Defuse is better than burning it.
+        danger_threshold = 0.15
         
         if explosion_prob > danger_threshold:
             view.say(random.choice(self._danger_quotes))
