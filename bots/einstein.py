@@ -288,23 +288,35 @@ class Einstein(Bot):
     # COMBO STRATEGIES
     # =========================================================================
     
-    def _can_play_five_different(self, view: BotView) -> tuple[Card, ...] | None:
+    def _can_play_five_different(self, view: BotView) -> tuple[tuple[Card, ...], str | None] | None:
         """
         Check if we can play a 5-different combo.
         
-        ONLY returns cards if we KNOW FOR SURE there's a Defuse in discard.
+        Retrieves the BEST card available in the discard pile.
         
-        Returns: Tuple of 5 cards, or None
+        Returns: Tuple of 5 cards, plus the target card type to retrieve.
         """
-        # First check: Is there a Defuse in the discard pile?
-        if not self._defuse_in_discard:
-            return None
-        
-        # Verify by checking actual discard pile (Engine pops TOP card)
         if not view.discard_pile:
             return None
-        if view.discard_pile[-1].card_type != "DefuseCard":
-            return None
+            
+        # Scan discard pile for valuable cards
+        discard_types = {c.card_type for c in view.discard_pile}
+        
+        target_type = None
+        if "DefuseCard" in discard_types:
+            target_type = "DefuseCard"
+        elif "NopeCard" in discard_types:
+            target_type = "NopeCard"
+        elif "AttackCard" in discard_types:
+            target_type = "AttackCard"
+            
+        if not target_type:
+            # Nothing super valuable, maybe don't play? Or just take whatever?
+            # If we're safe, save the combo. If we need cards, maybe take STF?
+            if "SeeTheFutureCard" in discard_types:
+                target_type = "SeeTheFutureCard"
+            else:
+                return None
         
         # Group combo-eligible cards by type
         by_type: dict[str, list[Card]] = {}
@@ -320,7 +332,7 @@ class Einstein(Bot):
         for card_type in list(by_type.keys())[:5]:
             five_cards.append(by_type[card_type][0])
         
-        return tuple(five_cards)
+        return (tuple(five_cards), target_type)
     
     def _can_play_three_of_kind(self, view: BotView) -> tuple[tuple[Card, ...], str] | None:
         """
@@ -532,10 +544,12 @@ class Einstein(Bot):
                     return PlayComboAction(cards=cards, target_player_id=target)
             
             # 5-different to get Defuse from discard
-            five_cards = self._can_play_five_different(view)
-            if five_cards:
-                view.say("Retrieving that Defuse from the discard!")
-                return PlayComboAction(cards=five_cards)
+            five_combo = self._can_play_five_different(view)
+            if five_combo:
+                cards, target_type = five_combo
+                if target_type == "DefuseCard":
+                     view.say("Retrieving that Defuse from the discard!")
+                     return PlayComboAction(cards=cards, target_card_type=target_type)
             
             # Use Favor to try to get cards (maybe Defuse)
             favors = view.get_cards_of_type("FavorCard")

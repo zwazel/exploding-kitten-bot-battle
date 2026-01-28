@@ -371,6 +371,24 @@ class SurvivalBot(Bot):
                             target_player_id=target,
                             target_card_type=target_card_type
                         )
+                
+                if combo_type == "five_different":
+                    # Survival priority from discard: Defuse > Nope > Attack
+                    target_card_type = None
+                    discard_types = {c.card_type for c in view.discard_pile}
+                    
+                    if "DefuseCard" in discard_types:
+                        target_card_type = "DefuseCard"
+                    elif "NopeCard" in discard_types:
+                        target_card_type = "NopeCard"
+                    elif "AttackCard" in discard_types:
+                        target_card_type = "AttackCard"
+                    elif view.discard_pile:
+                        # Take anything if our priority isn't there
+                        target_card_type = view.discard_pile[-1].card_type
+                        
+                    view.say("Scavenging resources...")
+                    return PlayComboAction(cards=combo_cards, target_card_type=target_card_type)
         
         # Play Favor if we're well-defended
         if defuse_count >= 1 and nope_count >= 1:
