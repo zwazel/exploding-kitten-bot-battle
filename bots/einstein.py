@@ -482,15 +482,17 @@ class Einstein(Bot):
         nope_count = view.count_cards_of_type("NopeCard")
         card_type = event.data.get("card_type")
         
-        # AGGRESSIVE: Deny intel to the NEXT player even with just 1 Nope
-        # The next player seeing the future is a direct threat to us
-        if card_type == "SeeTheFutureCard" and nope_count >= 1:
-            next_player = self._get_next_player(view)
-            if event.player_id == next_player:
-                return True  # Critical: deny immediate threat's intel
+        # V5: ALWAYS reserve 1 Nope for self-defense.
+        # Only use offensive Nopes if we have 2+ (keep 1 in reserve).
         
-        # Strategic noping with spare Nopes
+        # Strategic noping with spare Nopes (2+ means we can spare one)
         if nope_count >= 2:
+            # Deny intel to the NEXT player (direct threat)
+            if card_type == "SeeTheFutureCard":
+                next_player = self._get_next_player(view)
+                if event.player_id == next_player:
+                    return True  # Critical: deny immediate threat's intel
+            
             # Nope See the Future by any opponent (deny them intel)
             if card_type == "SeeTheFutureCard" and event.player_id != view.my_id:
                 return True
@@ -525,6 +527,15 @@ class Einstein(Bot):
         
         # Reset "just shuffled" flag at start of decision
         self._just_shuffled = False
+        
+        # =====================================================================
+        # PHASE -1: KNOWN SAFE - If we KNOW top card(s) are safe, just draw!
+        # This saves evasion cards for when we actually need them.
+        # =====================================================================
+        
+        if safe_draws >= 1:
+            # We KNOW the next draw is safe - don't waste resources
+            return DrawCardAction()
         
         # =====================================================================
         # PHASE 0: PANIC MODE - No Defuse = Maximum Survival Priority
@@ -598,19 +609,20 @@ class Einstein(Bot):
         if known_danger:
             view.say(random.choice(self._danger_quotes))
             
-            # PREFER ATTACK - passes the problem to next player
+            # KILL COMBO: Attack forces next player to draw the kitten!
+            # This is the most valuable use of Attack when danger is at top.
             attacks = view.get_cards_of_type("AttackCard")
             if attacks and view.other_players:
-                view.say(random.choice(self._attack_quotes))
+                view.say("Enjoy the kitten!")
                 return PlayCardAction(card=attacks[0])
             
-            # SECOND: Skip - avoids drawing
+            # SECOND: Skip - avoids drawing (but doesn't harm opponents)
             skips = view.get_cards_of_type("SkipCard")
             if skips:
                 view.say(random.choice(self._skip_quotes))
                 return PlayCardAction(card=skips[0])
             
-            # THIRD: Shuffle - rerolls the danger
+            # THIRD: Shuffle - rerolls the danger (last resort)
             shuffles = view.get_cards_of_type("ShuffleCard")
             if shuffles:
                 view.say(random.choice(self._shuffle_quotes))
