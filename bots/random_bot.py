@@ -279,7 +279,14 @@ class RandomBot(Bot):
                     )
             # Five different doesn't need a target (draws from discard)
             elif combo_type == "five_different":
-                return PlayComboAction(cards=combo_cards)
+                # Pick a random type that is actually in the discard pile
+                # If discard is empty, we play it blindly (game will log it empty)
+                target_card_type = None
+                if view.discard_pile:
+                    random_card = random.choice(view.discard_pile)
+                    target_card_type = random_card.card_type
+                
+                return PlayComboAction(cards=combo_cards, target_card_type=target_card_type)
         
         # =====================================================================
         # STRATEGY: 50% chance to play a card, 50% to just draw
