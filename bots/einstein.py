@@ -487,6 +487,10 @@ class Einstein(Bot):
         
         # Strategic noping with spare Nopes (2+ means we can spare one)
         if nope_count >= 2:
+            # CRITICAL: Nope Attack when top is a kitten - trap them!
+            if card_type == "AttackCard" and self._is_top_dangerous():
+                return True
+            
             # Deny intel to the NEXT player (direct threat)
             if card_type == "SeeTheFutureCard":
                 next_player = self._get_next_player(view)
@@ -692,17 +696,17 @@ class Einstein(Bot):
              if two_combo:
                  base_cards, default_target = two_combo
                  
-                 # 3a. Vulture: Finish off weaklings (1-2 cards left)
+                 # 3b. Vulture: Finish off weaklings (1-2 cards left)
                  for opponent in view.other_players:
-                      if view.other_player_card_counts.get(opponent, 0) <= 2:
-                           view.say("Preying on the weak!")
-                           return PlayComboAction(cards=base_cards, target_player_id=opponent)
+                     if view.other_player_card_counts.get(opponent, 0) <= 2:
+                         view.say("Preying on the weak!")
+                         return PlayComboAction(cards=base_cards, target_player_id=opponent)
                  
-                 # 3b. Farming: Steal from rich if we have plenty of cards
+                 # 3c. Farming: Steal from rich if we have plenty of cards
                  if len(view.my_hand) >= 6:
                       strongest = self._get_strongest_opponent(view)
                       if strongest:
-                           view.say(f"Taxing the rich {strongest}!")
+                           view.say("Taxing the rich!")
                            return PlayComboAction(cards=base_cards, target_player_id=strongest)
 
         # 3c. Favor - Use to get cards from opponents (low cost, high value)
@@ -732,6 +736,7 @@ class Einstein(Bot):
                 if attacks:
                     view.say("You seem short on options!")
                     return PlayCardAction(card=attacks[0])
+        
         
         # =====================================================================
         # PHASE 4: HIGH PROBABILITY - Evasive action
