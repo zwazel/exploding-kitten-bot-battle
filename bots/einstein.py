@@ -300,9 +300,10 @@ class Einstein(Bot):
         if not self._defuse_in_discard:
             return None
         
-        # Verify by checking actual discard pile
-        has_defuse = any(c.card_type == "DefuseCard" for c in view.discard_pile)
-        if not has_defuse:
+        # Verify by checking actual discard pile (Engine pops TOP card)
+        if not view.discard_pile:
+            return None
+        if view.discard_pile[-1].card_type != "DefuseCard":
             return None
         
         # Group combo-eligible cards by type
@@ -368,8 +369,16 @@ class Einstein(Bot):
                 by_type.setdefault(card.card_type, []).append(card)
         
         # Find a type with 2+ cards
+        # V5 Optimization: Don't waste valuable cards on combos!
+        valuable_types = {
+            "AttackCard", "SkipCard", "ShuffleCard", 
+            "NopeCard", "DefuseCard", "SeeTheFutureCard"
+        }
+        
         two_cards: tuple[Card, ...] | None = None
-        for cards in by_type.values():
+        for card_type, cards in by_type.items():
+            if card_type in valuable_types:
+                continue
             if len(cards) >= 2:
                 two_cards = tuple(cards[:2])
                 break
@@ -505,11 +514,7 @@ class Einstein(Bot):
         
         if not has_defuse:
             # CRITICAL: Try to steal a Defuse first!
-            three_combo = self._can_play_three_of_kind(view)
-            if three_combo:
-                cards, target = three_combo
-                view.say("CRITICAL: I need that Defuse!")
-                return PlayComboAction(cards=cards, target_player_id=target)
+            # note: 3-of-a-kind is disabled because engine implements it as random steal (same as 2-of-a-kind)
             
             # Try 2-of-a-kind steal
             two_combo = self._can_play_two_of_kind(view)
@@ -624,9 +629,27 @@ class Einstein(Bot):
         # =====================================================================
         
         # If we have a Defuse, conserve combo cards - they're valuable
-        # Only use Favor for card advantage, not combos
         
-        # 3a. Favor - Use to get cards from strong opponents
+        # 3. AGGRESSIVE STEALING (Vulture & Farming)
+        if has_defuse:
+             two_combo = self._can_play_two_of_kind(view)
+             if two_combo:
+                 base_cards, default_target = two_combo
+                 
+                 # 3a. Vulture: Finish off weaklings (1 card left)
+                 for opponent in view.other_players:
+                      if view.other_player_card_counts.get(opponent, 0) == 1:
+                           view.say(f"Preying on the weak {opponent}!")
+                           return PlayComboAction(cards=base_cards, target_player_id=opponent)
+                 
+                 # 3b. Farming: Steal from rich if we have plenty of cards
+                 if len(view.my_hand) >= 6:
+                      strongest = self._get_strongest_opponent(view)
+                      if strongest:
+                           view.say(f"Taxing the rich {strongest}!")
+                           return PlayComboAction(cards=base_cards, target_player_id=strongest)
+
+        # 3c. Favor - Use to get cards from strong opponents
         favors = view.get_cards_of_type("FavorCard")
         if favors and view.other_players:
             target = self._get_strongest_opponent(view)
@@ -873,14 +896,14 @@ class Einstein(Bot):
         stf = [c for c in hand if c.card_type == "SeeTheFutureCard"]
         if stf:
             return random.choice(stf)
-        
-        attacks = [c for c in hand if c.card_type == "AttackCard"]
-        if attacks:
-            return random.choice(attacks)
-        
+            
         favors = [c for c in hand if c.card_type == "FavorCard"]
         if favors:
             return random.choice(favors)
+
+        attacks = [c for c in hand if c.card_type == "AttackCard"]
+        if attacks:
+            return random.choice(attacks)
         
         non_critical = [c for c in hand if c.card_type not in ("NopeCard", "DefuseCard")]
         if non_critical:

@@ -32,6 +32,20 @@ This is a Python-based bot battle card game framework. Students write bots that 
 - Same seed = same game outcome (given same bot behavior)
 - Useful for testing and debugging
 
+## Bot Implementation Gotchas
+
+### 3-of-a-kind is Inferior
+The game engine implements **3-of-a-kind** (Combo) as a **RANDOM STEAL**, effectively identical to 2-of-a-kind but costing 3 cards.
+- **Do NOT implement 3-of-a-kind logic.**
+- Always play 2-of-a-kind instead if you have a pair.
+- If you have 3 matching cards, play 2 (keep 1).
+- This saves 1 card for the exact same effect.
+
+### 5-Different Combo (Pop from Discard)
+The **5-different** combo draws the **TOP card** from the discard pile (`discard_pile.pop()`).
+- Before playing this combo, check `view.discard_pile[-1]` to verify the top card is desirable (e.g., Defuse).
+- Do not play it blindly hoping for a specific card buried deeper in the discard pile.
+
 ## File Organization
 
 ```
@@ -172,14 +186,14 @@ The engine enforces time limits on bot method calls to prevent games from hangin
 - CLI: `--timeout 5` or `--timeout 0` (0 = disabled)
 
 ### Timeout Behavior by Method
-| Method | On Timeout |
-|--------|------------|
-| `take_turn()` | Bot eliminated, Exploding Kitten removed from deck |
-| `react()` | Reaction skipped (no penalty, bot stays alive) |
-| `choose_card_to_give()` | Random card given to requester, then bot eliminated |
-| `choose_defuse_position()` | Random position chosen, game continues |
-| `on_event()` | Notification skipped (no penalty) |
-| `on_explode()` | Last words skipped (no additional penalty) |
+| Method                     | On Timeout                                          |
+| -------------------------- | --------------------------------------------------- |
+| `take_turn()`              | Bot eliminated, Exploding Kitten removed from deck  |
+| `react()`                  | Reaction skipped (no penalty, bot stays alive)      |
+| `choose_card_to_give()`    | Random card given to requester, then bot eliminated |
+| `choose_defuse_position()` | Random position chosen, game continues              |
+| `on_event()`               | Notification skipped (no penalty)                   |
+| `on_explode()`             | Last words skipped (no additional penalty)          |
 
 ### Game Balance (N-1 Rule)
 The game always maintains exactly **(players - 1)** Exploding Kittens. When a bot is eliminated for timeout (or any other reason outside of normal explosion), one Exploding Kitten is removed from the deck to maintain this balance.
